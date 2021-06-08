@@ -1,0 +1,6 @@
+dvc
+pytorch-lightning
+torch
+torchvision
+tensorboard
+numpy
