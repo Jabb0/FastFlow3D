@@ -6,6 +6,7 @@
 - https://pytorch-lightning.readthedocs.io/en/latest/starter/converting.html
 - https://pytorch-lightning.readthedocs.io/en/latest/benchmarking/performance.html
 - https://pytorch-lightning.readthedocs.io/en/latest/starter/style_guide.html
+- https://niessner.github.io/I2DL/ Exercise 7
 
 - Do not use .cuda() or .cpu() anymore. Lightning does the handling.
 
