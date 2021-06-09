@@ -3,7 +3,7 @@ import tensorflow as tf
 import math
 import numpy as np
 import itertools
-
+import open3d as o3d
 #tf.enable_eager_execution()
 
 from waymo_open_dataset.utils import range_image_utils
@@ -159,6 +159,14 @@ def convert_range_image_to_point_cloud2(frame,
 
   return points, cp_points, flows
 
+
+def visualize_point_cloud(points):
+    """ Input must be a point cloud of shape (n_points, 3) """
+    point_cloud = o3d.geometry.PointCloud()
+    point_cloud.points = o3d.utility.Vector3dVector(points)
+    o3d.visualization.draw_geometries([point_cloud])
+
+
 points, cp_points, flows = convert_range_image_to_point_cloud2(
     frame,
     range_images,
@@ -185,6 +193,7 @@ cp_points_all_ri2 = np.concatenate(cp_points_ri2, axis=0)
 
 
 print(points_all.shape) # I guess they are in the AV reference frame
+visualize_point_cloud(points_all)
 print(cp_points_all.shape)
 print(points_all[0:2])
 print(cp_points_all[5000:5003])

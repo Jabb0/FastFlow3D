@@ -6,3 +6,4 @@ tensorboard
 numpy
 waymo-open-dataset-tf-2-4-0
 tensorflow==2.5.0
+open3d
