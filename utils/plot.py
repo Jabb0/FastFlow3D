@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import open3d as o3d
+import numpy as np
 
 
 def plot_pillars_center(pillars, grid_max, grid_min):
@@ -15,22 +16,44 @@ def plot_pillars_center(pillars, grid_max, grid_min):
     plt.show()
 
 
-def plot_pillars(pillars):
-    fig = plt.figure()
+def plot_pillars(cp, pillars, grid_size):
+    fig = plt.figure(figsize=(15, 15))
     ax = plt.axes(projection="3d")
 
     x_pos, y_pos, z_pos = [], [], []
     x_size, y_size, z_size = [], [], []
     for p in pillars:
-        x_pos.append(p.x_c)
-        y_pos.append(p.y_c)
+        x_pos.append(p.x)
+        y_pos.append(p.y)
         z_pos.append(0)
 
-        x_size.append(1)
-        y_size.append(1)
+        x_size.append(grid_size)
+        y_size.append(grid_size)
         z_size.append(len(p))
 
-    ax.bar3d(x_pos, y_pos, z_pos, x_size, y_size, z_size)
+    print(np.max(z_size))
+
+    ax.bar3d(x_pos, y_pos, z_pos, x_size, y_size, z_size, edgecolor='black')
+
+    x, y, z = [], [], []
+    for p in cp:
+        x.append(p[0])
+        y.append(p[1])
+        z.append(np.max(z_size) * 1.1)
+
+    ax.scatter3D(x, y, z, color="green")
+
+    plt.show()
+
+
+def plot_2d_point_cloud(cp):
+    fig, ax = plt.subplots(figsize=(15, 15))
+
+    x, y = [], []
+    for p in cp:
+        x.append(p[0])
+        y.append(p[1])
+    ax.scatter(x, y, color="green")
     plt.show()
 
 
