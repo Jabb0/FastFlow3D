@@ -44,6 +44,7 @@ class Pillar:
 
 
 def create_pillars(cp, grid_size=1):
+    """ Creates same sized pillars on the x-y plane of the given point cloud."""
     x_max = np.max(cp[:, 0])
     x_min = np.min(cp[:, 0])
 

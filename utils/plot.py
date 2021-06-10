@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import open3d as o3d
 
 
 def plot_pillars_center(pillars, grid_max, grid_min):
@@ -31,3 +32,10 @@ def plot_pillars(pillars):
 
     ax.bar3d(x_pos, y_pos, z_pos, x_size, y_size, z_size)
     plt.show()
+
+
+def visualize_point_cloud(points):
+    """ Input must be a point cloud of shape (n_points, 3) """
+    point_cloud = o3d.geometry.PointCloud()
+    point_cloud.points = o3d.utility.Vector3dVector(points)
+    o3d.visualization.draw_geometries([point_cloud])
