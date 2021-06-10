@@ -55,8 +55,8 @@ if __name__ == '__main__':
     print(points_all.shape)  # I guess they are in the AV reference frame
     visualize_point_cloud(points_all)
 
-    pillars = create_pillars(points_all)
-    assign_points_to_pillars(points_all, pillars)
-    plot_pillars(pillars)
+    #pillars = create_pillars(points_all)
+    #assign_points_to_pillars(points_all, pillars)
+    #plot_pillars(pillars)
 
 
