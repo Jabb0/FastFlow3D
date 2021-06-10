@@ -1,4 +1,3 @@
-import math
 import numpy as np
 
 
@@ -51,15 +50,9 @@ def create_pillars(cp, grid_size=1):
     y_max = np.max(cp[:, 1])
     y_min = np.min(cp[:, 1])
 
-    # get max value in x and y direction and round to higher int
-    grid_max = int(math.ceil(np.max([x_max, y_max])))
-    grid_min = np.min([x_min, y_min])  # get max value in x and y
-    # round to lower int, if it is negative, otherwise take higher int
-    grid_min = int(math.ceil(grid_min)) if grid_min >= 0 else -int(math.ceil(np.abs(grid_min)))
-
     # Get all centered pillar points
-    x_grid = np.arange(grid_min, grid_max, grid_size)
-    y_grid = np.arange(grid_min, grid_max, grid_size)
+    x_grid = np.arange(x_min, x_max, grid_size)
+    y_grid = np.arange(y_min, y_max, grid_size)
 
     pillars = list()
     for px in x_grid:
@@ -68,7 +61,6 @@ def create_pillars(cp, grid_size=1):
             pillars.append(pillar)
 
     # Plot pillar centered points
-    # TODO
     # plot_pillars_center(pillars, grid_max, grid_min)
 
     return pillars
