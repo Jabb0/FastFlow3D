@@ -12,7 +12,7 @@ from waymo_open_dataset.utils import  frame_utils
 from waymo_open_dataset import dataset_pb2 as open_dataset
 from waymo_open_dataset import dataset_pb2
 
-FILENAME = '../data/train_segment-10072140764565668044_4060_000_4080_000_with_camera_labels.tfrecord'
+FILENAME = '../data/train/train_segment-10072140764565668044_4060_000_4080_000_with_camera_labels.tfrecord'
 
 dataset = tf.data.TFRecordDataset(FILENAME, compression_type='')
 counter = 0

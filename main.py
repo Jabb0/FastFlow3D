@@ -45,7 +45,7 @@ def read_data(fname):
 if __name__ == '__main__':
     disable_gpu()  # FIXME cannot execute the code without disabling GPU
 
-    fname = 'data/train_segment-10072140764565668044_4060_000_4080_000_with_camera_labels.tfrecord'
+    fname = 'data/train/train_segment-10072140764565668044_4060_000_4080_000_with_camera_labels.tfrecord'
     points, cp_points, flows = read_data(fname=fname)
 
     # 3d points in vehicle frame.
@@ -53,7 +53,7 @@ if __name__ == '__main__':
     flows_all = np.concatenate(flows, axis=0)
 
     print(points_all.shape)  # I guess they are in the AV reference frame
-    visualize_point_cloud(points_all)
+    #visualize_point_cloud(points_all)
 
     # Pillar transformation
     cp = points_all
