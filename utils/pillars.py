@@ -24,6 +24,7 @@ class Pillar:
 
 
 def create_pillars(pc, grid_size):
+    """ If points on border will fall into the next pillar """
     x_max = np.max(pc[:, 0])
     x_min = np.min(pc[:, 0])
 
@@ -31,8 +32,8 @@ def create_pillars(pc, grid_size):
     y_min = np.min(pc[:, 1])
 
     # Get number of pillars in x and y direction
-    n_pillars_x = math.ceil((x_max - x_min) / grid_size)
-    n_pillars_y = math.ceil((y_max - y_min) / grid_size)
+    n_pillars_x = math.floor((x_max - x_min) / grid_size)
+    n_pillars_y = math.floor((y_max - y_min) / grid_size)
 
     # Create 2d matrix, where each entry contains a pillar
     pillar_matrix = [
@@ -41,8 +42,8 @@ def create_pillars(pc, grid_size):
 
     for point in pc:
         x, y, z = point
-        pillar_idx_x = math.ceil((x - x_min) / grid_size)
-        pillar_idx_y = math.ceil((y - y_min) / grid_size)
+        pillar_idx_x = math.floor((x - x_min) / grid_size)
+        pillar_idx_y = math.floor((y - y_min) / grid_size)
 
         pillar_matrix[pillar_idx_x][pillar_idx_y].add_point(point=point)
 
