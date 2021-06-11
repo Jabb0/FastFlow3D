@@ -16,7 +16,7 @@ def plot_pillars_center(pillars, grid_max, grid_min):
     plt.show()
 
 
-def plot_pillars(cp, pillars, grid_size):
+def plot_pillars(pc, pillars, grid_size):
     fig = plt.figure(figsize=(15, 15))
     ax = plt.axes(projection="3d")
 
@@ -31,12 +31,10 @@ def plot_pillars(cp, pillars, grid_size):
         y_size.append(grid_size)
         z_size.append(len(p))
 
-    print(np.max(z_size))
-
     ax.bar3d(x_pos, y_pos, z_pos, x_size, y_size, z_size, edgecolor='black')
 
     x, y, z = [], [], []
-    for p in cp:
+    for p in pc:
         x.append(p[0])
         y.append(p[1])
         z.append(np.max(z_size) * 1.1)
@@ -46,11 +44,11 @@ def plot_pillars(cp, pillars, grid_size):
     plt.show()
 
 
-def plot_2d_point_cloud(cp):
+def plot_2d_point_cloud(pc):
     fig, ax = plt.subplots(figsize=(15, 15))
 
     x, y = [], []
-    for p in cp:
+    for p in pc:
         x.append(p[0])
         y.append(p[1])
     ax.scatter(x, y, color="green")

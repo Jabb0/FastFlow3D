@@ -1,15 +1,16 @@
 import numpy as np
+import math
 
 
 class Pillar:
-    def __init__(self, x, y, x_c, y_c, grid_size):
+    def __init__(self, x, y, grid_size):
         # Lower left point of the pillar rectangle
         self.x = x
         self.y = y
 
         # Center point of the pillar
-        self.x_c = x_c
-        self.y_c = y_c
+        self.x_c = x + grid_size/2
+        self.y_c = y + grid_size/2
 
         self.grid_size = grid_size
 
@@ -18,61 +19,32 @@ class Pillar:
     def add_point(self, point):
         self.points.append(point)
 
-    def is_empty(self):
-        if len(self.points) == 0:
-            return True
-        else:
-            return False
-
-    def point_in_pillar(self, point):
-        """ Checks if the given point lies in the rectangle spanned by the pillar. """
-        minX = self.x
-        maxX = self.x + self.grid_size
-
-        minY = self.y
-        maxY = self.y + self.grid_size
-
-        x, y, _ = point
-        if minX <= x < maxX:
-            if minY <= y < maxY:
-                return True
-        return False
-
     def __len__(self):
         return len(self.points)
 
 
-def create_pillars(cp, grid_size=1):
-    """ Creates same sized pillars on the x-y plane of the given point cloud."""
-    x_max = np.max(cp[:, 0])
-    x_min = np.min(cp[:, 0])
+def create_pillars(pc, grid_size):
+    x_max = np.max(pc[:, 0])
+    x_min = np.min(pc[:, 0])
 
-    y_max = np.max(cp[:, 1])
-    y_min = np.min(cp[:, 1])
+    y_max = np.max(pc[:, 1])
+    y_min = np.min(pc[:, 1])
 
-    # Get all centered pillar points
-    x_grid = np.arange(x_min, x_max, grid_size)
-    y_grid = np.arange(y_min, y_max, grid_size)
+    # Get number of pillars in x and y direction
+    n_pillars_x = math.ceil((x_max - x_min) / grid_size)
+    n_pillars_y = math.ceil((y_max - y_min) / grid_size)
 
-    pillars = list()
-    for px in x_grid:
-        for py in y_grid:
-            pillar = Pillar(x=px, y=py, x_c=px + grid_size / 2, y_c=py + grid_size / 2, grid_size=grid_size)
-            pillars.append(pillar)
+    # Create 2d matrix, where each entry contains a pillar
+    pillar_matrix = [
+        [Pillar(x=x_min + j*grid_size, y=y_min + i*grid_size, grid_size=grid_size) for i in range(n_pillars_y + 1)]
+        for j in range(n_pillars_x + 1)]
 
-    # Plot pillar centered points
-    # plot_pillars_center(pillars, grid_max, grid_min)
+    for point in pc:
+        x, y, z = point
+        pillar_idx_x = math.ceil((x - x_min) / grid_size)
+        pillar_idx_y = math.ceil((y - y_min) / grid_size)
 
-    return pillars
+        pillar_matrix[pillar_idx_x][pillar_idx_y].add_point(point=point)
 
+    return pillar_matrix
 
-def assign_points_to_pillars(cp, pillars):
-    """
-    Goes through each point in the point cloud (cp) and assigns each point to the corresponding pillar.
-    A point is assigned to a pillar, if the point lies in the rectangle spanned by the pillar.
-    """
-    for point in cp:
-        for p in pillars:
-            if p.point_in_pillar(point):
-                p.add_point(point)
-    return pillars

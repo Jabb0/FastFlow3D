@@ -3,7 +3,7 @@ import tensorflow as tf
 
 from utils.plot import visualize_point_cloud, plot_pillars, plot_2d_point_cloud
 from data.util import convert_range_image_to_point_cloud, parse_range_image_and_camera_projection
-from utils.pillars import create_pillars, assign_points_to_pillars
+from utils.pillars import create_pillars
 
 from waymo_open_dataset import dataset_pb2 as open_dataset
 
@@ -56,11 +56,15 @@ if __name__ == '__main__':
     #visualize_point_cloud(points_all)
 
     # Pillar transformation
-    cp = points_all
-    grid_size = 10
-    pillars = create_pillars(cp, grid_size=grid_size)
-    assign_points_to_pillars(cp, pillars)
-    plot_pillars(cp=cp, pillars=pillars, grid_size=grid_size)
-    plot_2d_point_cloud(cp=cp)
+    grid_size = 2
+    from itertools import chain
+    import time
+    t = time.time()
+    pillar_matrix = create_pillars(points_all, grid_size=grid_size)
+    print(f"Pillar transformation duration: {(time.time() - t):.2f} s")
+    # flatten 2d matrix
+    pillar_flatten_matrix = list(chain.from_iterable(pillar_matrix))
+    plot_pillars(pc=points_all, pillars=pillar_flatten_matrix, grid_size=grid_size)
+    plot_2d_point_cloud(pc=points_all)
 
 
