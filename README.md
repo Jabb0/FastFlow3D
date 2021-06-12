@@ -33,3 +33,13 @@ PyTorch modules
 ### Data
 All dataloading routines and transformations.
 
+#### WaymoDataset
+It reads the WaymoDataset with the extended flow information. It can be found [here](http://google.com). You have to register into Waymo to be able to see it. Then, it should be downloaded into *data/train* and *data/val*, respectively.
+
+Each of the file is a session compressed, which has to be decompressed and parsed to access to their field. A session has a number of frames and in each frame is all the information needed. The information of each frame is available [here](https://github.com/waymo-research/waymo-open-dataset/blob/master/waymo_open_dataset/dataset.proto). Note that that may a field cannot be accessed in a direct way, so [these](https://github.com/Jabb0/FastFlowNet3D/blob/main/data/util.py) functions should be extended.
+
+Regarding general information about the fields, we are interesented in the 3D LiDAR points. The car in which this information has been logged had 3D LiDARS sensors and, per each sensor, it records the first and second return:
+
+![Returns illustration](https://desktop.arcgis.com/es/arcmap/10.3/manage-data/las-dataset/GUID-0AE5C4B0-4EF6-43F1-B3EE-DC0BBEED4E9A-web.png)
+
+When calling the _utils_ functions, we take into consideration both returns from the five LiDARs and concatenate all of them, so all of them are treated equally.
