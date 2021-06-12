@@ -6,10 +6,21 @@ from data.util import convert_range_image_to_point_cloud, parse_range_image_and_
 from utils.pillars import create_pillars, assign_points_to_pillars
 import numpy as np
 
+# TODO: Do not include pillar transformation here
+# TODO: add transform
+
 class WaymoDataset(Dataset):
+    """Waymo Custom Dataset for flow estimation."""
 
     # Transform to convert the getitem to tensor
     def __init__(self, data_path, pillars_grid=10, transform=None):
+        """
+        Args:
+            data_path (string): Folder with the compressed data.
+            transform (callable, optional): Optional transform to be applied
+                on a sample.
+        """
+
         #super().__init__()
         self.data_path = data_path
         self.transform = transform
@@ -30,8 +41,6 @@ class WaymoDataset(Dataset):
                 else:
                     self.compressed_samples.append((frame, previous_frame))
                     previous_frame = frame
-
-        kk = 0
 
     def __len__(self) -> int:
         return len(self.compressed_samples)
@@ -61,6 +70,7 @@ class WaymoDataset(Dataset):
 
     # This method is exclusively for training so pillars should be applied
     # TODO convert coordinates from one frame to another
+    # TODO: This should return two 3D point clouds in the same reference frame
     def __getitem__(self, index):
         current_frame = self.compressed_samples[index][0]
         current_frame = self.get_uncompressed_frame(current_frame)
