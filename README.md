@@ -42,4 +42,4 @@ Regarding general information about the fields, we are interesented in the 3D Li
 
 ![Returns illustration](https://desktop.arcgis.com/es/arcmap/10.3/manage-data/las-dataset/GUID-0AE5C4B0-4EF6-43F1-B3EE-DC0BBEED4E9A-web.png)
 
-When calling the _utils_ functions, we take into consideration both returns from the five LiDARs and concatenate all of them, so all of them are treated equally.
+When calling the _utils_ functions, we take into consideration both returns from the five LiDARs and concatenate all of them, so all of them are treated equally. [main.py](https://github.com/Jabb0/FastFlowNet3D/blob/main/main.py) file includes an example on how to read the data of a frame.
