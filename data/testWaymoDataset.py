@@ -2,6 +2,8 @@ from data.WaymoDataset import WaymoDataset
 import os
 from utils.plot import visualize_point_cloud, plot_pillars, plot_2d_point_cloud
 
+# Debuging the WaymoDataset, not that much to care about this
+
 train_path = './train'
 arr = os.listdir(train_path)
 waymo_dataset = WaymoDataset(train_path)

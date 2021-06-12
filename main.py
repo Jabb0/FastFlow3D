@@ -25,9 +25,9 @@ def read_data(fname):
     counter = 0
     for data in dataset:
         frame = open_dataset.Frame()
-        frame.ParseFromString(bytearray(data.numpy()))
+        frame.ParseFromString(bytearray(data.numpy()))  # Uncompress frame
         counter += 1
-        if counter > 100:
+        if counter > 100:  # 100 in order to not take the first frame in case there is no flow information
             break
 
     range_images, camera_projections, point_flows, range_image_top_pose = parse_range_image_and_camera_projection(frame)
