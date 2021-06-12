@@ -6,6 +6,7 @@ from data.util import convert_range_image_to_point_cloud, parse_range_image_and_
 from utils.pillars import create_pillars, assign_points_to_pillars
 import numpy as np
 
+
 class WaymoDataset(Dataset):
 
     # Transform to convert the getitem to tensor

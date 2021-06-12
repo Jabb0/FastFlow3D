@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-from waymo_open_dataset.utils import  frame_utils
+from waymo_open_dataset.utils import frame_utils
 from waymo_open_dataset import dataset_pb2
 
 

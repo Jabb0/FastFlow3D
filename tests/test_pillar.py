@@ -1,6 +1,7 @@
 from utils.pillars import create_pillars
 import numpy as np
 
+
 def test_create_pillars():
     grid_size = 1
 

@@ -1,3 +1,14 @@
+# FastFlow3D Implementation
+## References
+- Jund et al.: Scalable Scene Flow from Point Clouds in the Real World (2021)
+- Liu et al.: FlowNet3D: Learning Scene Flow in 3D Point Clouds (2019)
+- Dewan et al.: Rigid Scene Flow of 3D Lidar Scans
+- Waymo dataset: https://waymo.com/open/
+
+
+## Architecture
+
+
 # Template PyTorch Project Repository
 
 ## References
