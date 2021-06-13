@@ -67,8 +67,8 @@ if __name__ == '__main__':
     y_max = np.max(points_all[:, 1])
     y_min = np.min(points_all[:, 1])
 
-    z_max = np.max(points_all[:, 2])
-    z_min = np.min(points_all[:, 2])
+    z_max = 3
+    z_min = -3
 
     t = time.time()
     # TODO Restrict grid of a given size e.g. (512, 512) and visualize pillars

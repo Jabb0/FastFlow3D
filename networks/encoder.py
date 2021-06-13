@@ -24,6 +24,7 @@ class PillarFeatureNet(torch.nn.Module):
 
         self.linear = torch.nn.Linear(in_features=in_features, out_features=out_features)
         self.batch_norm = torch.nn.BatchNorm1d(out_features)
+        self.relu = torch.nn.ReLU()
 
     def forward(self, x, indices):
         """ Input must be the augmented point cloud of shape (n_points, 6) """
@@ -31,6 +32,7 @@ class PillarFeatureNet(torch.nn.Module):
         # linear transformation
         x = self.linear(x)
         x = self.batch_norm(x)
+        x = self.relu(x)
 
         # Snap-to-grid
         grid = torch.zeros(size=(self.n_pillars_x, self.n_pillars_y, self.out_features))
