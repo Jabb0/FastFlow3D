@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import open3d as o3d
 import numpy as np
+from itertools import chain
 
 
 def plot_pillars_center(pillars, grid_max, grid_min):
@@ -16,7 +17,8 @@ def plot_pillars_center(pillars, grid_max, grid_min):
     plt.show()
 
 
-def plot_pillars(pc, pillars, grid_size):
+def plot_pillars(pc, pillar_matrix, grid_size):
+    pillars = list(chain.from_iterable(pillar_matrix))
     fig = plt.figure(figsize=(15, 15))
     ax = plt.axes(projection="3d")
 

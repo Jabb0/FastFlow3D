@@ -4,6 +4,7 @@ import tensorflow as tf
 from utils.plot import visualize_point_cloud, plot_pillars, plot_2d_point_cloud
 from data.util import convert_range_image_to_point_cloud, parse_range_image_and_camera_projection
 from utils.pillars import create_pillars
+from networks.encoder import PillarFeatureNet
 
 from waymo_open_dataset import dataset_pb2 as open_dataset
 
@@ -56,15 +57,30 @@ if __name__ == '__main__':
     #visualize_point_cloud(points_all)
 
     # Pillar transformation
-    grid_size = 2
-    from itertools import chain
+    grid_cell_size = 0.16
+
     import time
+
+    x_max = np.max(points_all[:, 0])
+    x_min = np.min(points_all[:, 0])
+
+    y_max = np.max(points_all[:, 1])
+    y_min = np.min(points_all[:, 1])
+
+    z_max = np.max(points_all[:, 2])
+    z_min = np.min(points_all[:, 2])
+
     t = time.time()
-    pillar_matrix = create_pillars(points_all, grid_size=grid_size)
+    # TODO Restrict grid of a given size e.g. (512, 512) and visualize pillars
+    points, indices = create_pillars(points_all, grid_cell_size=grid_cell_size, x_min=x_min, x_max=x_max,
+                                     y_min=y_min, y_max=y_max, z_min=z_min, z_max=z_max)
     print(f"Pillar transformation duration: {(time.time() - t):.2f} s")
-    # flatten 2d matrix
-    pillar_flatten_matrix = list(chain.from_iterable(pillar_matrix))
-    plot_pillars(pc=points_all, pillars=pillar_flatten_matrix, grid_size=grid_size)
-    plot_2d_point_cloud(pc=points_all)
+    import torch
+    pfn = PillarFeatureNet(x_max=x_max, x_min=x_min, y_max=y_max, y_min=y_min, grid_cell_size=grid_cell_size)
+    output = pfn(torch.tensor(points, dtype=torch.float32), torch.tensor(indices, dtype=torch.float32))
+    print(points.shape)
+    print(indices.shape)
+    print(output.shape)
+
 
 

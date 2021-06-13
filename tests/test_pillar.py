@@ -3,7 +3,7 @@ import numpy as np
 
 
 def test_create_pillars():
-    grid_size = 1
+    grid_cell_size = 1
 
     # create points in range of (0, 0) and (3, 3)
     points = np.array([
@@ -15,23 +15,27 @@ def test_create_pillars():
         [1, 2, 1]
     ])
 
-    pillar_matrix = create_pillars(points, grid_size=grid_size)
+    x_max = np.max(points[:, 0])
+    x_min = np.min(points[:, 0])
 
-    rows = len(pillar_matrix)
-    cols = len(pillar_matrix[0])
+    y_max = np.max(points[:, 1])
+    y_min = np.min(points[:, 1])
 
+    z_max = np.max(points[:, 2])
+    z_min = np.min(points[:, 2])
 
-    for i in range(rows):
-        for j in range(cols):
-            pillar_matrix[i][j] = len(pillar_matrix[i][j])
+    points, indices = create_pillars(points, grid_cell_size=grid_cell_size, x_min=x_min, x_max=x_max,
+                                     y_min=y_min, y_max=y_max, z_min=z_min, z_max=z_max)
 
-    true_pillar_matrix = [
-        [2, 1, 0],
-        [0, 0, 1],
-        [0, 0, 2]
-    ]
+    true_indices = np.array([[0, 0],
+                             [0, 0],
+                             [0, 1],
+                             [2, 2],
+                             [2, 2],
+                             [1, 2]]
+                            )
 
-    assert true_pillar_matrix == pillar_matrix
+    assert np.all(indices == true_indices)
 
 
 if __name__ == '__main__':
