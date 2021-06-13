@@ -15,14 +15,14 @@ def test_create_pillars():
         [1, 2, 1]
     ])
 
-    x_max = np.max(points[:, 0])
-    x_min = np.min(points[:, 0])
+    x_max = 4
+    x_min = 0
 
-    y_max = np.max(points[:, 1])
-    y_min = np.min(points[:, 1])
+    y_max = 4
+    y_min = 0
 
-    z_max = np.max(points[:, 2])
-    z_min = np.min(points[:, 2])
+    z_max = 4
+    z_min = -4
 
     points, indices = create_pillars(points, grid_cell_size=grid_cell_size, x_min=x_min, x_max=x_max,
                                      y_min=y_min, y_max=y_max, z_min=z_min, z_max=z_max)

@@ -61,8 +61,8 @@ if __name__ == '__main__':
 
     import time
 
-    x_max = np.max(points_all[:, 0])
-    x_min = np.min(points_all[:, 0])
+    x_max = 82
+    x_min = 0
 
     y_max = np.max(points_all[:, 1])
     y_min = np.min(points_all[:, 1])

@@ -45,8 +45,8 @@ class Pillar:
 
 def create_pillars(pc, grid_cell_size, x_min, x_max, y_min, y_max, z_min, z_max):
     # Get number of pillars in x and y direction
-    n_pillars_x = math.floor((x_max - x_min) / grid_cell_size) + 1
-    n_pillars_y = math.floor((y_max - y_min) / grid_cell_size) + 1
+    n_pillars_x = math.floor((x_max - x_min) / grid_cell_size)
+    n_pillars_y = math.floor((y_max - y_min) / grid_cell_size)
 
     points = list()
     indices = list()
@@ -59,7 +59,7 @@ def create_pillars(pc, grid_cell_size, x_min, x_max, y_min, y_max, z_min, z_max)
         x, y, z = point
 
         # Skip points, which are not in the given range.
-        if x < x_min or x > x_max or y < y_min or y > y_max or z < z_min or z > z_max:
+        if x < x_min or x >= x_max or y < y_min or y >= y_max or z < z_min or z >= z_max:
             continue
 
         # Compute indices of pillar for current point

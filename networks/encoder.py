@@ -17,8 +17,8 @@ class PillarFeatureNet(torch.nn.Module):
     """
     def __init__(self, x_max, x_min, y_max, y_min, grid_cell_size, in_features=6, out_features=64):
         super().__init__()
-        self.n_pillars_x = math.floor((x_max - x_min) / grid_cell_size) + 1
-        self.n_pillars_y = math.floor((y_max - y_min) / grid_cell_size) + 1
+        self.n_pillars_x = math.floor((x_max - x_min) / grid_cell_size)
+        self.n_pillars_y = math.floor((y_max - y_min) / grid_cell_size)
 
         self.out_features = out_features
 
