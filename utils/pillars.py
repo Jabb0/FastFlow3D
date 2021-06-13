@@ -20,30 +20,29 @@ class Pillar:
         self.points = list()
 
     def add_point(self, point):
+        """"
+        Augments each point by (x_c, y_c, z_c, x_delta, y_delta, z_delta)
+        and add the point to the pillar point list.
+
+        (x_c, y_c, z_c): Center of the pillar.
+        (x_delta, y_delta, z_delta): Offset from pillar center to the point
+        """
         x, y, z = point
         x_delta = x - self.x_c
         y_delta = y - self.y_c
         z_delta = z - self.z_c
         self.points.append(np.array([self.x_c, self.y_c, self.z_c, x_delta, y_delta, z_delta]))
 
-    def augment_point_representation(self):
-        """"
-        Augments each point by
-        (x_c, y_c, z_c): Center of the pillar.
-        (x_delta, y_delta, z_delta): Offset from pillar center to the point
-        """
-        for i in range(len(self.points)):
-            x, y, z = self.points[i]
-            x_delta = x - self.x_c
-            y_delta = y - self.y_c
-            z_delta = z - self.z_c
-            self.points[i] = np.array([self.x_c, self.y_c, self.z_c, x_delta, y_delta, z_delta])
-
     def __len__(self):
         return len(self.points)
 
 
 def create_pillars(pc, grid_cell_size, x_min, x_max, y_min, y_max, z_min, z_max):
+    """
+    Returns all points with augmented representation and with their corresponding pillar indices.
+    Pillar indices consists of a x and y coordinate, which tells to which pillar the point belongs.
+    """
+
     # Get number of pillars in x and y direction
     n_pillars_x = math.floor((x_max - x_min) / grid_cell_size)
     n_pillars_y = math.floor((y_max - y_min) / grid_cell_size)
@@ -79,7 +78,9 @@ def create_pillars(pc, grid_cell_size, x_min, x_max, y_min, y_max, z_min, z_max)
         # Add point to corresponding pillar
         pillar_matrix[pillar_idx_x, pillar_idx_y].add_point(point=point)
 
+        # Add augmented point
         points.append(pillar_matrix[pillar_idx_x, pillar_idx_y].points[-1])
+        # Add indices of the pillar in which the current point lies.
         indices.append([pillar_idx_x, pillar_idx_y])
 
     return np.array(points), np.array(indices)

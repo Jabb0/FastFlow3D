@@ -1,48 +1,34 @@
 import matplotlib.pyplot as plt
 import open3d as o3d
 import numpy as np
-from itertools import chain
+import math
 
 
-def plot_pillars_center(pillars, grid_max, grid_min):
-    """ pillars must be in shape (n_pillars, 2) """
-    x, y = [], []
-    for pillar in pillars:
-        x.append(pillar.x_c)
-        y.append(pillar.y_c)
-
-    plt.plot(x, y, marker='.', color='k', linestyle='none')
-    plt.ylim([grid_min, grid_max])
-    plt.xlim([grid_min, grid_max])
-    plt.show()
-
-
-def plot_pillars(pc, pillar_matrix, grid_size):
-    pillars = list(chain.from_iterable(pillar_matrix))
+def plot_pillars(indices, x_max, x_min, y_max, y_min, grid_cell_size):
     fig = plt.figure(figsize=(15, 15))
     ax = plt.axes(projection="3d")
 
+    n_pillars_x = math.floor((x_max - x_min) / grid_cell_size)
+    n_pillars_y = math.floor((y_max - y_min) / grid_cell_size)
+    pillar_matrix = np.zeros(shape=(n_pillars_x, n_pillars_y, 1))
+
+    for x, y in indices:
+        pillar_matrix[x, y] += 1
+
     x_pos, y_pos, z_pos = [], [], []
     x_size, y_size, z_size = [], [], []
-    for p in pillars:
-        x_pos.append(p.x)
-        y_pos.append(p.y)
-        z_pos.append(0)
 
-        x_size.append(grid_size)
-        y_size.append(grid_size)
-        z_size.append(len(p))
+    for i in range(pillar_matrix.shape[0]):
+        for j in range(pillar_matrix.shape[1]):
+            x_pos.append(i * grid_cell_size)
+            y_pos.append(j * grid_cell_size)
+            z_pos.append(0)
 
-    ax.bar3d(x_pos, y_pos, z_pos, x_size, y_size, z_size, edgecolor='black')
+            x_size.append(grid_cell_size)
+            y_size.append(grid_cell_size)
+            z_size.append(int(pillar_matrix[i, j]))
 
-    x, y, z = [], [], []
-    for p in pc:
-        x.append(p[0])
-        y.append(p[1])
-        z.append(np.max(z_size) * 1.1)
-
-    ax.scatter3D(x, y, z, color="green")
-
+    ax.bar3d(x_pos, y_pos, z_pos, x_size, y_size, z_size)
     plt.show()
 
 

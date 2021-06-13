@@ -55,8 +55,7 @@ if __name__ == '__main__':
     flows_all = np.concatenate(flows, axis=0)
 
     print(points_all.shape)  # I guess they are in the AV reference frame
-    #visualize_point_cloud(points_all)
-    plot_2d_point_cloud(pc=points_all)
+    # visualize_point_cloud(points_all)
 
     # Pillar transformation
     grid_cell_size = 0.16
@@ -71,10 +70,12 @@ if __name__ == '__main__':
     z_min = -3
 
     t = time.time()
-    # TODO visualize pillars
     points, indices = create_pillars(points_all, grid_cell_size=grid_cell_size, x_min=x_min, x_max=x_max,
                                      y_min=y_min, y_max=y_max, z_min=z_min, z_max=z_max)
     print(f"Pillar transformation duration: {(time.time() - t):.2f} s")
+    # plot_pillars(indices=indices, x_max=x_max, x_min=x_min, y_max=y_max, y_min=y_min, grid_cell_size=grid_cell_size)
+    # plot_2d_point_cloud(pc=points_all)
+
     import torch
     pfn = PillarFeatureNet(x_max=x_max, x_min=x_min, y_max=y_max, y_min=y_min, grid_cell_size=grid_cell_size)
     output = pfn(torch.tensor(points, dtype=torch.float32), torch.tensor(indices, dtype=torch.float32))
