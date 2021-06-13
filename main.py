@@ -1,5 +1,6 @@
 import numpy as np
 import tensorflow as tf
+import time
 
 from utils.plot import visualize_point_cloud, plot_pillars, plot_2d_point_cloud
 from data.util import convert_range_image_to_point_cloud, parse_range_image_and_camera_projection
@@ -55,23 +56,22 @@ if __name__ == '__main__':
 
     print(points_all.shape)  # I guess they are in the AV reference frame
     #visualize_point_cloud(points_all)
+    plot_2d_point_cloud(pc=points_all)
 
     # Pillar transformation
     grid_cell_size = 0.16
 
-    import time
-
-    x_max = 82
+    x_max = 81.92
     x_min = 0
 
-    y_max = np.max(points_all[:, 1])
-    y_min = np.min(points_all[:, 1])
+    y_max = 40.96
+    y_min = -40.96
 
     z_max = 3
     z_min = -3
 
     t = time.time()
-    # TODO Restrict grid of a given size e.g. (512, 512) and visualize pillars
+    # TODO visualize pillars
     points, indices = create_pillars(points_all, grid_cell_size=grid_cell_size, x_min=x_min, x_max=x_max,
                                      y_min=y_min, y_max=y_max, z_min=z_min, z_max=z_max)
     print(f"Pillar transformation duration: {(time.time() - t):.2f} s")
