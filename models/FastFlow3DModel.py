@@ -1,0 +1,112 @@
+import pytorch_lightning as pl
+import torch
+from torch.nn import functional as F
+from argparse import ArgumentParser
+
+from networks import PillarFeatureNet
+
+# TODO: Add a general forward step and steps to compute the mean episode rewards at the end of each epoch
+
+
+class FastFlow3DModel(pl.LightningModule):
+    def __init__(self, x_max, x_min, y_max, y_min, grid_cell_size, point_features=6, learning_rate=1e-3):
+        super(FastFlow3DModel, self).__init__()
+        self.save_hyperparameters()  # Store the constructor parameters into self.hparams
+
+        self.pillar_features = PillarFeatureNet(x_max, x_min, y_max, y_min, grid_cell_size,
+                                                in_features=point_features, out_features=64)
+
+
+    def forward(self, x):
+        """
+        The usual forward pass function of a torch module
+        :param x: (t-1, t0) the two point cloud images
+        :return:
+        """
+        point_cloud_prev, point_cloud_cur = x
+        # 1. Do scene encoding of each point cloud to get the grid with pillar embeddings
+        # Input is a point cloud each with shape (N_points, point_features)
+        pillar_embeddings_prev = self.pillar_features(point_cloud_prev)
+        pillar_embeddings_cur = self.pillar_features(point_cloud_cur)
+        # Output is a 512x512x64 2D embedding representing the point clouds
+
+        # 2. Apply the U-net encoder step
+        # TODO:
+
+        # 3. Apply the U-net decoder with skip connections
+        # TODO:
+
+        # 4. Applky the unpillar operation
+        # TODO:
+
+        # Return the final motion prediction of size (N_points_cur, 3)
+        return x
+
+    def training_step(self, batch, batch_idx):
+        """
+        This method is specific to pytorch lightning.
+        It is called for each minibatch that the model should be trained for.
+        Basically a part of the normal training loop is just moved here.
+
+        model.train() is already set!
+        :param batch: (data, target) of batch size
+        :param batch_idx: the id of this batch e.g. for discounting?
+        :return:
+        """
+        x, y = batch
+        y_hat = self(x)
+        loss = F.cross_entropy(y_hat, y)
+        # Need to return the loss to do backprop
+        return loss
+
+    def validation_step(self, batch, batch_idx):
+        """
+        Similar to the train step.
+        Already has model.eval() and torch.nograd() set!
+        :param batch:
+        :param batch_idx:
+        :return:
+        """
+        x, y = batch
+        y_hat = self(x)
+        loss = F.cross_entropy(y_hat, y)
+        # Log the metrics for this validation run. This directly logs to tensorboard
+        # E.g. also compute accuracy here
+        self.log('val/loss', loss)
+
+    def test_step(self, batch, batch_idx):
+        """
+        Similar to the train step.
+        Already has model.eval() and torch.nograd() set!
+        :param batch:
+        :param batch_idx:
+        :return:
+        """
+        x, y = batch
+        y_hat = self(x)
+        loss = F.cross_entropy(y_hat, y)
+        # Log the metrics for this validation run. This directly logs to tensorboard
+        # E.g. also compute accuracy here
+        self.log('test/loss', loss)
+
+    def configure_optimizers(self):
+        """
+        Also pytorch lightning specific.
+        Define the optimizers in here this will return the optimizer that is used to train this module.
+        Also define learning rate scheduler in here. Not sure how this works...
+        :return: The optimizer to use
+        """
+        return torch.optim.Adam(self.parameters(), lr=self.hparams.learning_rate)
+
+    @staticmethod
+    def add_model_specific_args(parent_parser):
+        """
+        Method to add all command line arguments specific to this module.
+        Used to dynamically add the correct arguments required.
+        :param parent_parser: The current argparser to add the options to
+        :return: the new argparser with the new options
+        """
+        parser = ArgumentParser(parents=[parent_parser], add_help=False)
+        parser.add_argument('--hidden_dim', type=int, default=128)
+        parser.add_argument('--learning_rate', type=float, default=0.0001)
+        return parser

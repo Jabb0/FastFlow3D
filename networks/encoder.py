@@ -5,7 +5,7 @@ import math
 class PillarFeatureNet(torch.nn.Module):
     """
     Transform the raw point cloud data of shape (n_points, 3) into a representation of shape (n_points, 6).
-    Each point consists of 6 features: (x_c, y_c, z_c, x_delta, y_delta, z_delta).
+    Each point consists of 6 features: (x_c, y_c, z_c, x_delta, y_delta, z_delta). TODO missing 2D of laser data.
     x_c, y_c, z_c: Center of the pillar to which the point belongs.
     x_delta, y_delta, z_delta: Offset from the pillar center to the point.
 
