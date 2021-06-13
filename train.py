@@ -25,6 +25,8 @@ def cli():
     model = DummyModel(args.hidden_dim, args.learning_rate)
     mnist_data_module = DummyDataModule(dataset_path, batch_size=args.batch_size, val_fraction=args.val_fraction)
 
+    # Max epochs can be configured here to, early stopping is also configurable.
+    # Some things are definiable as callback from pytorch_lightning.callback
     trainer = pl.Trainer.from_argparse_args(args,
                                             progress_bar_refresh_rate=25,  # Prevents Google Colab crashes
                                             gpus=1 if torch.cuda.is_available() else 0,

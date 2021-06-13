@@ -5,8 +5,6 @@ from argparse import ArgumentParser
 
 from networks import PillarFeatureNet
 
-# TODO: Add a general forward step and steps to compute the mean episode rewards at the end of each epoch
-
 
 class FastFlow3DModel(pl.LightningModule):
     def __init__(self, x_max, x_min, y_max, y_min, grid_cell_size, point_features=6, learning_rate=1e-3):
@@ -15,7 +13,7 @@ class FastFlow3DModel(pl.LightningModule):
 
         self.pillar_features = PillarFeatureNet(x_max, x_min, y_max, y_min, grid_cell_size,
                                                 in_features=point_features, out_features=64)
-
+        # TODO: Do weight init as specified by the paper
 
     def forward(self, x):
         """
@@ -31,16 +29,30 @@ class FastFlow3DModel(pl.LightningModule):
         # Output is a 512x512x64 2D embedding representing the point clouds
 
         # 2. Apply the U-net encoder step
+        # Note that weight sharing is used here. The same U-net is used for both point clouds.
         # TODO:
 
         # 3. Apply the U-net decoder with skip connections
         # TODO:
 
-        # 4. Applky the unpillar operation
+        # 4. Apply the unpillar operation
         # TODO:
 
         # Return the final motion prediction of size (N_points_cur, 3)
         return x
+
+    def general_step(self, batch, batch_idx, mode):
+        """
+        A function to share code between all different steps.
+        :param batch: the batch to perform on
+        :param batch_idx: the id of the batch
+        :param mode: str of "train", "val", "test". Useful if specific things are required.
+        :return:
+        """
+        x, y = batch
+        y_hat = self(x)
+        loss = F.mse_loss(y_hat, y)
+        return loss
 
     def training_step(self, batch, batch_idx):
         """
@@ -53,10 +65,10 @@ class FastFlow3DModel(pl.LightningModule):
         :param batch_idx: the id of this batch e.g. for discounting?
         :return:
         """
-        x, y = batch
-        y_hat = self(x)
-        loss = F.cross_entropy(y_hat, y)
-        # Need to return the loss to do backprop
+        loss = self.general_step(batch, batch_idx, "train")
+        # Automatically reduces this metric after each epoch
+        self.log('train/loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        # Return loss for backpropagation
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -67,12 +79,9 @@ class FastFlow3DModel(pl.LightningModule):
         :param batch_idx:
         :return:
         """
-        x, y = batch
-        y_hat = self(x)
-        loss = F.cross_entropy(y_hat, y)
-        # Log the metrics for this validation run. This directly logs to tensorboard
-        # E.g. also compute accuracy here
-        self.log('val/loss', loss)
+        loss = self.general_step(batch, batch_idx, "val")
+        # Automatically reduces this metric after each epoch
+        self.log('val/loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
 
     def test_step(self, batch, batch_idx):
         """
@@ -82,12 +91,9 @@ class FastFlow3DModel(pl.LightningModule):
         :param batch_idx:
         :return:
         """
-        x, y = batch
-        y_hat = self(x)
-        loss = F.cross_entropy(y_hat, y)
-        # Log the metrics for this validation run. This directly logs to tensorboard
-        # E.g. also compute accuracy here
-        self.log('test/loss', loss)
+        loss = self.general_step(batch, batch_idx, "test")
+        # Automatically reduces this metric after each epoch
+        self.log('test/loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
 
     def configure_optimizers(self):
         """
@@ -96,6 +102,7 @@ class FastFlow3DModel(pl.LightningModule):
         Also define learning rate scheduler in here. Not sure how this works...
         :return: The optimizer to use
         """
+        # TODO: Add all hyperparameters as specified by the paper
         return torch.optim.Adam(self.parameters(), lr=self.hparams.learning_rate)
 
     @staticmethod
@@ -107,6 +114,5 @@ class FastFlow3DModel(pl.LightningModule):
         :return: the new argparser with the new options
         """
         parser = ArgumentParser(parents=[parent_parser], add_help=False)
-        parser.add_argument('--hidden_dim', type=int, default=128)
         parser.add_argument('--learning_rate', type=float, default=0.0001)
         return parser

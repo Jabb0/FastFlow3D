@@ -21,8 +21,7 @@ class WaymoDataset(Dataset):
             transform (callable, optional): Optional transform to be applied
                 on a sample.
         """
-
-        #super().__init__()
+        super().__init__()
         self.data_path = data_path
         self.transform = transform
 
