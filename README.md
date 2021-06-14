@@ -96,7 +96,7 @@ These are the points that are considered to be seen be the LiDAR:
 For height (z-dimensions) a valid pillar range is from -3m to 3m.
 
 #### WaymoDataset
-It reads the WaymoDataset with the extended flow information. It can be found [here](http://google.com). You have to register into Waymo to be able to see it. Then, it should be downloaded into *data/train* and *data/val*, respectively.
+It reads the WaymoDataset with the extended flow information. It can be found [here](https://console.cloud.google.com/storage/browser/waymo_open_dataset_scene_flow). You have to register into Waymo to be able to see it. Then, it should be downloaded into *data/train* and *data/val*, respectively.
 
 Each of the file is a session compressed, which has to be decompressed and parsed to access to their field. A session has a number of frames and in each frame is all the information needed. The information of each frame is available [here](https://github.com/waymo-research/waymo-open-dataset/blob/master/waymo_open_dataset/dataset.proto). Note that that may a field cannot be accessed in a direct way, so [these](https://github.com/Jabb0/FastFlowNet3D/blob/main/data/util.py) functions should be extended.
 
@@ -106,6 +106,10 @@ Regarding general information about the fields, we are interesented in the 3D Li
 
 When calling the _utils_ functions, we take into consideration both returns from the five LiDARs and concatenate all of them, so all of them are treated equally. [main.py](https://github.com/Jabb0/FastFlowNet3D/blob/main/main.py) file includes an example on how to read the data of a frame.
 
+More details: https://waymo.com/open/data/perception/
+
+What is this? https://console.cloud.google.com/storage/browser/waymo_open_dataset_scene_flow
+And what is this? https://console.cloud.google.com/storage/browser/waymo_open_dataset_v_1_2_0
 
 
 # Template PyTorch Project Repository

@@ -1,6 +1,7 @@
 import pytorch_lightning as pl
 import torch
 from torch.nn import functional as F
+from pytorch_lightning.metrics import functional as FM
 from argparse import ArgumentParser
 
 from networks import PillarFeatureNet
@@ -67,6 +68,7 @@ class FastFlow3DModel(pl.LightningModule):
         """
         loss = self.general_step(batch, batch_idx, "train")
         # Automatically reduces this metric after each epoch
+        # Note: There is also a log_dict function that can log multiple metrics at a time.
         self.log('train/loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         # Return loss for backpropagation
         return loss

@@ -3,22 +3,25 @@ import pytorch_lightning as pl
 from torch.utils.data import DataLoader, random_split
 from torchvision import transforms
 
+from pathlib import Path
+
 from typing import Optional, Union, List, Dict
 
+from .WaymoDataset import WaymoDataset
 
-class DummyDataModule(pl.LightningDataModule):
+
+class WaymoDataModule(pl.LightningDataModule):
     """
-    A dummy data module to show how to use the PyTorch Lightning Data Module.
+    Data module to prepare and load the waymo dataset.
     Using a data module streamlines the data loading and preprocessing process.
     """
-    def __init__(self, dataset_directory, batch_size: int = 32, val_fraction=0.8):
-        super(DummyDataModule, self).__init__()
-        self._dataset_directory = dataset_directory
+    def __init__(self, dataset_directory, batch_size: int = 32):
+        super(WaymoDataModule, self).__init__()
+        self._dataset_directory = Path(dataset_directory)
         self._batch_size = batch_size
-        self._val_fraction = val_fraction
-        self.train = None
-        self.val = None
-        self.test = None
+        self._train_ = None
+        self._val_ = None
+        self._test_ = None
 
     def prepare_data(self) -> None:
         """
@@ -29,10 +32,8 @@ class DummyDataModule(pl.LightningDataModule):
             Later the dataset is then loaded by every worker in the setup() method.
         :return: None
         """
-        # Download the MNIST dataset using the torchvision dataset
-        _ = torchvision.datasets.MNIST(root=self._dataset_directory, download=True, train=True)
-        # Download the test dataset?
-        _ = torchvision.datasets.MNIST(root=self._dataset_directory, download=True, train=False)
+        # No need to download stuff
+        pass
 
     def setup(self, stage: Optional[str] = None) -> None:
         """
@@ -41,37 +42,27 @@ class DummyDataModule(pl.LightningDataModule):
         :param stage: either 'fit', 'validate', 'test' or 'predict'
         :return: None
         """
-        transform = transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize((0.5,), (0.5,))
-        ])
-
-        fashion_mnist_train_val = torchvision.datasets.MNIST(root=self._dataset_directory,
-                                                             download=False, train=True, transform=transform)
-        self.test = torchvision.datasets.MNIST(root=self._dataset_directory,
-                                               download=False, train=False, transform=transform)
-        train_val_len = len(fashion_mnist_train_val)
-        val_size = int(train_val_len * self._val_fraction)
-        train_size = train_val_len - val_size
-        self.train, self.val = random_split(fashion_mnist_train_val, [train_size, val_size])
+        self._train_ = WaymoDataset(self._dataset_directory.joinpath("train"))
+        self._val_ = WaymoDataset(self._dataset_directory.joinpath("valid"))
+        self._test_ = WaymoDataset(self._dataset_directory.joinpath("test"))
 
     def train_dataloader(self) -> Union[DataLoader, List[DataLoader], Dict[str, DataLoader]]:
         """
         Return a data loader for training
         :return: the dataloader to use
         """
-        return DataLoader(self.train, self._batch_size)
+        return DataLoader(self._train_, self._batch_size)
 
     def val_dataloader(self) -> Union[DataLoader, List[DataLoader], Dict[str, DataLoader]]:
         """
         Return a data loader for validation
         :return: the dataloader to use
         """
-        return DataLoader(self.val, self._batch_size)
+        return DataLoader(self._val_, self._batch_size, shuffle=False)
 
     def test_dataloader(self) -> Union[DataLoader, List[DataLoader], Dict[str, DataLoader]]:
         """
         Return a data loader for testing
         :return: the dataloader to use
         """
-        return DataLoader(self.test, self._batch_size)
+        return DataLoader(self._test_, self._batch_size, shuffle=False)
