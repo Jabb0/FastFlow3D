@@ -77,10 +77,20 @@ if __name__ == '__main__':
     # plot_2d_point_cloud(pc=points_all)
 
     import torch
-    pfn = PillarFeatureNet(x_max=x_max, x_min=x_min, y_max=y_max, y_min=y_min, grid_cell_size=grid_cell_size)
-    output = pfn(torch.tensor(points, dtype=torch.float32), torch.tensor(indices, dtype=torch.float32))
-    print(points.shape)
-    print(indices.shape)
+
+    # pfn = PillarFeatureNet(x_max=x_max, x_min=x_min, y_max=y_max, y_min=y_min, grid_cell_size=grid_cell_size)
+    # output = pfn(torch.tensor(points, dtype=torch.float32), torch.tensor(indices, dtype=torch.float32))
+    # print(points.shape)
+    # print(indices.shape)
+    # print(output.shape)
+
+    from networks.convEncoder import ConvEncoder
+    unet = ConvEncoder()
+    # batch_size x embedding_size x grid_size x grid_size
+    input = torch.rand(1, 64, 512, 512)
+
+    output = unet(input)
+
     print(output.shape)
 
 
