@@ -11,7 +11,7 @@ from models import FastFlow3DModel
 def cli():
     parser = ArgumentParser()
     parser.add_argument('data_directory', type=str)
-    parser.add_argument('--batch_size', default=32, type=int)
+    parser.add_argument('--batch_size', default=64, type=int)
     parser.add_argument('--val_fraction', default=0.8, type=float)
     parser = pl.Trainer.add_argparse_args(parser)  # Add arguments for the trainer
     # Add model specific arguments here
