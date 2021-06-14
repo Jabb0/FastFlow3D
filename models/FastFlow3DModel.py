@@ -4,17 +4,28 @@ from torch.nn import functional as F
 from pytorch_lightning.metrics import functional as FM
 from argparse import ArgumentParser
 
-from networks import PillarFeatureNet
+from networks import PillarFeatureNet, ConvEncoder
 
 
 class FastFlow3DModel(pl.LightningModule):
-    def __init__(self, x_max, x_min, y_max, y_min, grid_cell_size, point_features=6, learning_rate=1e-3):
+    def __init__(self, x_max, x_min, y_max, y_min, grid_cell_size, point_features=6,
+                 learning_rate=1e-6,
+                 adam_beta_1=0.9,
+                 adam_beta_2=0.999):
         super(FastFlow3DModel, self).__init__()
         self.save_hyperparameters()  # Store the constructor parameters into self.hparams
 
-        self.pillar_features = PillarFeatureNet(x_max, x_min, y_max, y_min, grid_cell_size,
-                                                in_features=point_features, out_features=64)
-        # TODO: Do weight init as specified by the paper
+        self._pillar_feature_net = PillarFeatureNet(x_max, x_min, y_max, y_min, grid_cell_size,
+                                                    in_features=point_features, out_features=64)
+        # Note: There is also xavier_normal_ but the paper does not state which one they used.
+        torch.nn.init.xavier_uniform_(self._pillar_feature_net.weight)
+
+        self._conv_encoder_net = ConvEncoder(in_channels=64, out_channels=256)
+        torch.nn.init.xavier_uniform_(self._conv_encoder_net.weight)
+
+
+        # TODO: Remaining networks
+
 
     def forward(self, x):
         """
@@ -25,13 +36,15 @@ class FastFlow3DModel(pl.LightningModule):
         point_cloud_prev, point_cloud_cur = x
         # 1. Do scene encoding of each point cloud to get the grid with pillar embeddings
         # Input is a point cloud each with shape (N_points, point_features)
-        pillar_embeddings_prev = self.pillar_features(point_cloud_prev)
-        pillar_embeddings_cur = self.pillar_features(point_cloud_cur)
+        pillar_embeddings_prev = self._pillar_feature_net(point_cloud_prev)
+        pillar_embeddings_cur = self._pillar_feature_net(point_cloud_cur)
         # Output is a 512x512x64 2D embedding representing the point clouds
 
         # 2. Apply the U-net encoder step
         # Note that weight sharing is used here. The same U-net is used for both point clouds.
-        # TODO:
+        # Corresponds to F, L and R from the paper
+        prev_64_conv, prev_128_conv, prev_256_conv = self._conv_encoder_net(pillar_embeddings_prev)
+        cur_64_conv, cur_128_conv, cur_256_conv = self._conv_encoder_net(pillar_embeddings_cur)
 
         # 3. Apply the U-net decoder with skip connections
         # TODO:
@@ -104,8 +117,12 @@ class FastFlow3DModel(pl.LightningModule):
         Also define learning rate scheduler in here. Not sure how this works...
         :return: The optimizer to use
         """
-        # TODO: Add all hyperparameters as specified by the paper
-        return torch.optim.Adam(self.parameters(), lr=self.hparams.learning_rate)
+        # Defaults are the same as for pytorch
+        betas = (
+            self.hparams.adam_beta_1 if self.hparams.adam_beta_1 is not None else 0.9,
+            self.hparams.adam_beta_1 if self.hparams.adam_beta_2 is not None else 0.999)
+
+        return torch.optim.Adam(self.parameters(), lr=self.hparams.learning_rate, betas=betas, weight_decay=0)
 
     @staticmethod
     def add_model_specific_args(parent_parser):
@@ -116,5 +133,5 @@ class FastFlow3DModel(pl.LightningModule):
         :return: the new argparser with the new options
         """
         parser = ArgumentParser(parents=[parent_parser], add_help=False)
-        parser.add_argument('--learning_rate', type=float, default=0.0001)
+        parser.add_argument('--learning_rate', type=float, default=1e-6)
         return parser
