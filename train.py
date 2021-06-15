@@ -19,6 +19,8 @@ def cli():
     parser.add_argument('--z_max', default=3, type=float)
     parser.add_argument('--z_min', default=-3, type=float)
     parser.add_argument('--grid_cell_size', default=0.16, type=float)
+    parser.add_argument('--test_data_available', default=False, type=bool)
+    parser.add_argument('--fast_dev_run', default=True, type=bool)
 
     # NOTE: Readd this to see all parameters of the trainer
     # parser = pl.Trainer.add_argparse_args(parser)  # Add arguments for the trainer
@@ -40,20 +42,21 @@ def cli():
     waymo_data_module = WaymoDataModule(dataset_path, grid_cell_size=args.grid_cell_size, x_min=args.x_min,
                                         x_max=args.x_max, y_min=args.y_min,
                                         y_max=args.y_max, z_min=args.z_min, z_max=args.z_max,
-                                        batch_size=args.batch_size)
+                                        batch_size=args.batch_size,
+                                        has_test=args.test_data_available)
 
     # Max epochs can be configured here to, early stopping is also configurable.
     # Some things are definiable as callback from pytorch_lightning.callback
     trainer = pl.Trainer.from_argparse_args(args,
                                             progress_bar_refresh_rate=25,  # Prevents Google Colab crashes
-                                            gpus=1 if torch.cuda.is_available() else 0,
-                                            fast_dev_run=True
+                                            gpus=1 if torch.cuda.is_available() else 0
                                             )  # Add Trainer hparams if desired
     # The actual train loop
     trainer.fit(model, waymo_data_module)
 
     # Run also the testing
-    # trainer.test()  # Also loads the best checkpoint automatically
+    if args.test_data_available and not args.fast_dev_run:
+        trainer.test()  # Also loads the best checkpoint automatically
 
 
 if __name__ == '__main__':
