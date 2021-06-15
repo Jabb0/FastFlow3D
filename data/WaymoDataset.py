@@ -46,7 +46,7 @@ class WaymoDataset(Dataset):
                     previous_frame = current_frame
 
     def __len__(self) -> int:
-        return len(self.compressed_samples)
+        return len(self.look_up_table)
 
     def get_uncompressed_frame(self, compressed_frame):
         """

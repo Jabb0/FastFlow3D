@@ -53,7 +53,7 @@ def cli():
     trainer.fit(model, waymo_data_module)
 
     # Run also the testing
-    trainer.test()  # Also loads the best checkpoint automatically
+    # trainer.test()  # Also loads the best checkpoint automatically
 
 
 if __name__ == '__main__':

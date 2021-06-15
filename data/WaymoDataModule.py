@@ -40,7 +40,9 @@ class WaymoDataModule(pl.LightningDataModule):
     def __init__(self, dataset_directory,
                  # These parameters are specific to the dataset
                  grid_cell_size, x_min, x_max, y_min, y_max, z_min, z_max,
-                 batch_size: int = 32):
+                 batch_size: int = 32,
+                 has_test=False,
+                 num_workers=1):
         super(WaymoDataModule, self).__init__()
         self._dataset_directory = Path(dataset_directory)
         self._batch_size = batch_size
@@ -50,6 +52,8 @@ class WaymoDataModule(pl.LightningDataModule):
         self._pillarization_transform = ApplyPillarization(grid_cell_size=grid_cell_size, x_min=x_min,
                                                            x_max=x_max, y_min=y_min, y_max=y_max,
                                                            z_min=z_min, z_max=z_max)
+        self._has_test = has_test
+        self._num_workers = num_workers
 
     def prepare_data(self) -> None:
         """
@@ -79,25 +83,28 @@ class WaymoDataModule(pl.LightningDataModule):
 
         self._train_ = WaymoDataset(self._dataset_directory.joinpath("train"), transform=transformations)
         self._val_ = WaymoDataset(self._dataset_directory.joinpath("valid"), transform=transformations)
-        self._test_ = WaymoDataset(self._dataset_directory.joinpath("test"), transform=transformations)
+        if self._has_test:
+            self._test_ = WaymoDataset(self._dataset_directory.joinpath("test"), transform=transformations)
 
     def train_dataloader(self) -> Union[DataLoader, List[DataLoader], Dict[str, DataLoader]]:
         """
         Return a data loader for training
         :return: the dataloader to use
         """
-        return DataLoader(self._train_, self._batch_size)
+        return DataLoader(self._train_, self._batch_size, num_workers=self._num_workers)
 
     def val_dataloader(self) -> Union[DataLoader, List[DataLoader], Dict[str, DataLoader]]:
         """
         Return a data loader for validation
         :return: the dataloader to use
         """
-        return DataLoader(self._val_, self._batch_size, shuffle=False)
+        return DataLoader(self._val_, self._batch_size, shuffle=False, num_workers=self._num_workers)
 
     def test_dataloader(self) -> Union[DataLoader, List[DataLoader], Dict[str, DataLoader]]:
         """
         Return a data loader for testing
         :return: the dataloader to use
         """
-        return DataLoader(self._test_, self._batch_size, shuffle=False)
+        if not self._has_test:
+            raise RuntimeError("No test dataset specified. Maybe set has_test=True in DataModule init.")
+        return DataLoader(self._test_, self._batch_size, shuffle=False, num_workers=self._num_workers)

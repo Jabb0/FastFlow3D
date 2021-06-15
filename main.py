@@ -59,7 +59,7 @@ if __name__ == '__main__':
     points_all = points_current_frame
 
     print(points_all.shape)  # I guess they are in the AV reference frame
-    # visualize_point_cloud(points_all)
+    visualize_point_cloud(points_all)
 
     # Pillar transformation
     grid_cell_size = 0.16

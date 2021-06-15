@@ -5,6 +5,7 @@ from pytorch_lightning.metrics import functional as FM
 from argparse import ArgumentParser
 
 from networks import PillarFeatureNet, ConvEncoder
+from .utils import init_weights
 
 
 class FastFlow3DModel(pl.LightningModule):
@@ -17,11 +18,10 @@ class FastFlow3DModel(pl.LightningModule):
 
         self._pillar_feature_net = PillarFeatureNet(n_pillars_x=n_pillars_x, n_pillars_y=n_pillars_y,
                                                     in_features=point_features, out_features=64)
-        # Note: There is also xavier_normal_ but the paper does not state which one they used.
-        torch.nn.init.xavier_uniform_(self._pillar_feature_net.weight)
+        self._pillar_feature_net.apply(init_weights)
 
         self._conv_encoder_net = ConvEncoder(in_channels=64, out_channels=256)
-        torch.nn.init.xavier_uniform_(self._conv_encoder_net.weight)
+        self._conv_encoder_net.apply(init_weights)
         # TODO: Remaining networks
 
 
