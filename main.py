@@ -50,8 +50,8 @@ if __name__ == '__main__':
     disable_gpu()  # FIXME cannot execute the code without disabling GPU
 
     # Getting points with the dataloader
-    train_path = './data/train'
-    # train_path = '/mnt/LinuxGames/deeplearninglab/dataset/waymo_flow/train'
+    # train_path = './data/train'
+    train_path = '/mnt/LinuxGames/deeplearninglab/dataset/waymo_flow/train'
     arr = os.listdir(train_path)
     waymo_dataset = WaymoDataset(train_path)
 
@@ -74,8 +74,8 @@ if __name__ == '__main__':
     z_min = -3
 
     t = time.time()
-    points, indices = create_pillars_matrix(points_all, grid_cell_size=grid_cell_size, x_min=x_min, x_max=x_max,
-                                            y_min=y_min, y_max=y_max, z_min=z_min, z_max=z_max)
+    points, indices, flows = create_pillars_matrix(points_all, flows, grid_cell_size=grid_cell_size, x_min=x_min,
+                                                   x_max=x_max, y_min=y_min, y_max=y_max, z_min=z_min, z_max=z_max)
     print(f"Pillar transformation duration: {(time.time() - t):.2f} s")
     # plot_pillars(indices=indices, x_max=x_max, x_min=x_min, y_max=y_max, y_min=y_min, grid_cell_size=grid_cell_size)
     # plot_2d_point_cloud(pc=points_all)
