@@ -2,56 +2,13 @@ import numpy as np
 import math
 
 
-class Pillar:
-    def __init__(self, x, y, grid_cell_size, z_min, z_max):
-        # Lower left point of the pillar rectangle
-        self.x = x
-        self.y = y
-
-        # Center point of the pillar
-        self.x_c = x + grid_cell_size/2
-        self.y_c = y + grid_cell_size/2
-        self.z_c = (z_max - z_min) * 1/2
-
-        # Size of the grid cell/pillar (x and y direction have the same size)
-        self.grid_cell_size = grid_cell_size
-
-        # List of points of this pillar.
-        self.points = list()
-
-    def add_point(self, point):
-        """"
-        Augments each point by (x_c, y_c, z_c, x_delta, y_delta, z_delta)
-        and add the point to the pillar point list.
-
-        (x_c, y_c, z_c): Center of the pillar.
-        (x_delta, y_delta, z_delta): Offset from pillar center to the point
-        """
-        x, y, z = point
-        x_delta = x - self.x_c
-        y_delta = y - self.y_c
-        z_delta = z - self.z_c
-        self.points.append(np.array([self.x_c, self.y_c, self.z_c, x_delta, y_delta, z_delta]))
-
-    def __len__(self):
-        return len(self.points)
-
-
 def create_pillars(pc, grid_cell_size, x_min, x_max, y_min, y_max, z_min, z_max):
     """
     Returns all points with augmented representation and with their corresponding pillar indices.
     Pillar indices consists of a x and y coordinate, which tells to which pillar the point belongs.
     """
-
-    # Get number of pillars in x and y direction
-    n_pillars_x = math.floor((x_max - x_min) / grid_cell_size)
-    n_pillars_y = math.floor((y_max - y_min) / grid_cell_size)
-
     points = list()
     indices = list()
-
-    # Init 2D matrix, where each entry contains a pillar
-    pillar_matrix = np.empty(shape=(n_pillars_x, n_pillars_y), dtype=Pillar)
 
     # Add points to pillars
     for point in pc:
@@ -65,21 +22,18 @@ def create_pillars(pc, grid_cell_size, x_min, x_max, y_min, y_max, z_min, z_max)
         pillar_idx_x = math.floor((x - x_min) / grid_cell_size)
         pillar_idx_y = math.floor((y - y_min) / grid_cell_size)
 
-        # Add Pillar if entry is none.
-        if pillar_matrix[pillar_idx_x, pillar_idx_y] is None:
-            pillar = Pillar(
-                x=x_min + pillar_idx_x*grid_cell_size,
-                y=y_min + pillar_idx_y*grid_cell_size,
-                grid_cell_size=grid_cell_size,
-                z_min=z_min,
-                z_max=z_max
-            )
-            pillar_matrix[pillar_idx_x, pillar_idx_y] = pillar
-        # Add point to corresponding pillar
-        pillar_matrix[pillar_idx_x, pillar_idx_y].add_point(point=point)
+        # Center of pillar
+        x_c = x + grid_cell_size / 2
+        y_c = y + grid_cell_size / 2
+        z_c = (z_max - z_min) * 1 / 2
+
+        # Offset from pillar to current point
+        x_delta = x - x_c
+        y_delta = y - y_c
+        z_delta = z - z_c
 
         # Add augmented point
-        points.append(pillar_matrix[pillar_idx_x, pillar_idx_y].points[-1])
+        points.append(np.array([x_c, y_c, z_c, x_delta, y_delta, z_delta]))
         # Add indices of the pillar in which the current point lies.
         indices.append([pillar_idx_x, pillar_idx_y])
 
