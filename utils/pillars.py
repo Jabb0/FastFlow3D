@@ -23,9 +23,11 @@ def create_pillars(pc, grid_cell_size, x_min, x_max, y_min, y_max, z_min, z_max)
         pillar_idx_y = math.floor((y - y_min) / grid_cell_size)
 
         # Center of pillar
-        x_c = x + grid_cell_size / 2
-        y_c = y + grid_cell_size / 2
-        z_c = (z_max - z_min) * 1 / 2
+        pillar_x = x_min + pillar_idx_x * grid_cell_size
+        pillar_y = y_min + pillar_idx_y * grid_cell_size
+        x_c = pillar_x + grid_cell_size / 2
+        y_c = pillar_y + grid_cell_size / 2
+        z_c = (z_max - z_min) * 1/2
 
         # Offset from pillar to current point
         x_delta = x - x_c
