@@ -8,14 +8,14 @@ from networks import PillarFeatureNet, ConvEncoder
 
 
 class FastFlow3DModel(pl.LightningModule):
-    def __init__(self, x_max, x_min, y_max, y_min, grid_cell_size, point_features=6,
+    def __init__(self, n_pillars_x, n_pillars_y, point_features=8,
                  learning_rate=1e-6,
                  adam_beta_1=0.9,
                  adam_beta_2=0.999):
         super(FastFlow3DModel, self).__init__()
         self.save_hyperparameters()  # Store the constructor parameters into self.hparams
 
-        self._pillar_feature_net = PillarFeatureNet(x_max, x_min, y_max, y_min, grid_cell_size,
+        self._pillar_feature_net = PillarFeatureNet(n_pillars_x=n_pillars_x, n_pillars_y=n_pillars_y,
                                                     in_features=point_features, out_features=64)
         # Note: There is also xavier_normal_ but the paper does not state which one they used.
         torch.nn.init.xavier_uniform_(self._pillar_feature_net.weight)

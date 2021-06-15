@@ -12,18 +12,35 @@ def cli():
     parser = ArgumentParser()
     parser.add_argument('data_directory', type=str)
     parser.add_argument('--batch_size', default=64, type=int)
-    parser.add_argument('--val_fraction', default=0.8, type=float)
-    parser = pl.Trainer.add_argparse_args(parser)  # Add arguments for the trainer
+    parser.add_argument('--x_max', default=81.92, type=float)
+    parser.add_argument('--x_min', default=0, type=float)
+    parser.add_argument('--y_max', default=40.96, type=float)
+    parser.add_argument('--y_min', default=-40.96, type=float)
+    parser.add_argument('--z_max', default=3, type=float)
+    parser.add_argument('--z_min', default=-3, type=float)
+    parser.add_argument('--grid_cell_size', default=0.16, type=float)
+
+    # NOTE: Readd this to see all parameters of the trainer
+    # parser = pl.Trainer.add_argparse_args(parser)  # Add arguments for the trainer
     # Add model specific arguments here
     parser = FastFlow3DModel.add_model_specific_args(parser)
     args = parser.parse_args()
 
     dataset_path = Path(args.data_directory)
-    # Create the dataset path
-    dataset_path.mkdir(parents=True, exist_ok=True)
+    # Check if the dataset exists
+    if not dataset_path.is_dir() or not dataset_path.exists():
+        print(f"Dataset directory not found: {dataset_path}")
+        exit(1)
 
-    model = FastFlow3DModel(args.learning_rate)
-    waymo_data_module = WaymoDataModule(dataset_path, batch_size=args.batch_size)
+    n_pillars_x = int(((args.x_max - args.x_min) / args.grid_cell_size))
+    n_pillars_y = int(((args.y_max - args.y_min) / args.grid_cell_size))
+
+    model = FastFlow3DModel(n_pillars_x=n_pillars_x, n_pillars_y=n_pillars_y, point_features=6,
+                            learning_rate=args.learning_rate)
+    waymo_data_module = WaymoDataModule(dataset_path, grid_cell_size=args.grid_cell_size, x_min=args.x_min,
+                                        x_max=args.x_max, y_min=args.y_min,
+                                        y_max=args.y_max, z_min=args.z_min, z_max=args.z_max,
+                                        batch_size=args.batch_size)
 
     # Max epochs can be configured here to, early stopping is also configurable.
     # Some things are definiable as callback from pytorch_lightning.callback
