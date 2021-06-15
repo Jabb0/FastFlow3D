@@ -22,20 +22,21 @@ class FastFlow3DModel(pl.LightningModule):
 
         self._conv_encoder_net = ConvEncoder(in_channels=64, out_channels=256)
         torch.nn.init.xavier_uniform_(self._conv_encoder_net.weight)
-
-
         # TODO: Remaining networks
 
 
     def forward(self, x):
         """
         The usual forward pass function of a torch module
-        :param x: (t-1, t0) the two point cloud images
+        :param x: (batch_size, (t-1, t0)) a batch of the two point cloud images
         :return:
         """
+        # (batch_size, 2, N_points, N_features)
         point_cloud_prev, point_cloud_cur = x
+
         # 1. Do scene encoding of each point cloud to get the grid with pillar embeddings
         # Input is a point cloud each with shape (N_points, point_features)
+        # TODO: Need to add the indices
         pillar_embeddings_prev = self._pillar_feature_net(point_cloud_prev)
         pillar_embeddings_cur = self._pillar_feature_net(point_cloud_cur)
         # Output is a 512x512x64 2D embedding representing the point clouds

@@ -4,7 +4,7 @@ import time
 
 from utils.plot import visualize_point_cloud, plot_pillars, plot_2d_point_cloud
 from data.util import convert_range_image_to_point_cloud, parse_range_image_and_camera_projection
-from utils.pillars import create_pillars
+from utils.pillars import create_pillars, create_pillars_matrix
 from networks.encoder import PillarFeatureNet
 from data.WaymoDataset import WaymoDataset
 import os
@@ -51,6 +51,7 @@ if __name__ == '__main__':
 
     # Getting points with the dataloader
     train_path = './data/train'
+    # train_path = '/mnt/LinuxGames/deeplearninglab/dataset/waymo_flow/train'
     arr = os.listdir(train_path)
     waymo_dataset = WaymoDataset(train_path)
 
@@ -73,12 +74,25 @@ if __name__ == '__main__':
     z_min = -3
 
     t = time.time()
-    points, indices = create_pillars(points_all, grid_cell_size=grid_cell_size, x_min=x_min, x_max=x_max,
-                                     y_min=y_min, y_max=y_max, z_min=z_min, z_max=z_max)
+    points, indices = create_pillars_matrix(points_all, grid_cell_size=grid_cell_size, x_min=x_min, x_max=x_max,
+                                            y_min=y_min, y_max=y_max, z_min=z_min, z_max=z_max)
     print(f"Pillar transformation duration: {(time.time() - t):.2f} s")
     # plot_pillars(indices=indices, x_max=x_max, x_min=x_min, y_max=y_max, y_min=y_min, grid_cell_size=grid_cell_size)
     # plot_2d_point_cloud(pc=points_all)
 
+    t = time.time()
+    points_python, indices_python = create_pillars(points_all, grid_cell_size=grid_cell_size, x_min=x_min, x_max=x_max,
+                                                   y_min=y_min, y_max=y_max, z_min=z_min, z_max=z_max)
+    print(f"Pillar-Python transformation duration: {(time.time() - t):.2f} s")
+    if not np.allclose(points, points_python):
+        print("Matrices of points are not the same")
+    else:
+        print("Points are same with np.allclose")
+    if not np.allclose(indices, indices_python):
+        print("Matrices of indices are not the same")
+    else:
+        print("Indices are same with np.allclose")
+    exit()
     import torch
 
     # pfn = PillarFeatureNet(x_max=x_max, x_min=x_min, y_max=y_max, y_min=y_min, grid_cell_size=grid_cell_size)
