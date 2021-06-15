@@ -27,20 +27,23 @@ class WaymoDataset(Dataset):
         self.data_path = data_path
         self.transform = transform
 
-        # Samples is a list of tuples, [(t_1, t_0), (t_2, t_1), ... , (t_n, t_(n-1))]
-        self.compressed_samples = []
+        # Look is a list of lists of tuples:
+        # [[t_1, t_0], [t_2, t_1], ... , [t_n, t_(n-1)]]
+        # where t_i is ['file_path', indexInsideTheTFRECORD]
+        self.look_up_table = []
         # Load into memory the dataset. Be careful since may it can run out of memory
         data_files = os.listdir(self.data_path)
         for data_file in data_files:
             data_file_path = os.path.join(self.data_path, data_file)
             loaded_file = tf.data.TFRecordDataset(data_file_path, compression_type='')
             previous_frame = None
-            for count, frame in enumerate(loaded_file):
+            for count, _ in enumerate(loaded_file):
                 if count == 0:
-                    previous_frame = frame
+                    previous_frame = (data_file_path, count)
                 else:
-                    self.compressed_samples.append((frame, previous_frame))
-                    previous_frame = frame
+                    current_frame = (data_file_path, count)
+                    self.look_up_table.append([current_frame, previous_frame])
+                    previous_frame = current_frame
 
     def __len__(self) -> int:
         return len(self.compressed_samples)
@@ -51,6 +54,7 @@ class WaymoDataset(Dataset):
         """
         frame = open_dataset.Frame()
         frame.ParseFromString(bytearray(compressed_frame.numpy()))
+        #print(frame.context.name)
         return frame
 
     def compute_features(self, frame, transform=None):
@@ -70,7 +74,8 @@ class WaymoDataset(Dataset):
             range_images,
             camera_projections,
             point_flows,
-            range_image_top_pose)
+            range_image_top_pose,
+            keep_polar_features=False)
 
         # 3D points in the vehicle reference frame
         points_all = np.concatenate(points, axis=0)
@@ -85,6 +90,18 @@ class WaymoDataset(Dataset):
             points_all = points_all.T
         return points_all, flows_all
 
+    def read_frame(self, data_file_path, index):
+        loaded_file = tf.data.TFRecordDataset(data_file_path, compression_type='')
+        previous_frame = None
+        for count, frame in enumerate(loaded_file):
+            if count == index:
+                return frame
+
+    def read_frames_pair(self, index):
+        current_frame = self.read_frame(self.look_up_table[index][0][0], self.look_up_table[index][0][1])
+        previous_frame = self.read_frame(self.look_up_table[index][1][0], self.look_up_table[index][1][1])
+        return current_frame, previous_frame
+
     def __getitem__(self, index):
         """
         Return two point clouds, the current point and its previous one. It also
@@ -95,14 +112,13 @@ class WaymoDataset(Dataset):
         in the current frame.
 
         """
-        current_frame = self.compressed_samples[index][0]
+        current_frame, previous_frame = self.read_frames_pair(index)
         current_frame = self.get_uncompressed_frame(current_frame)
 
         # G_T_C -> Global_TransformMatrix_Current
         G_T_C = np.reshape(np.array(current_frame.pose.transform), [4, 4])
         current_frame, flows = self.compute_features(current_frame)
 
-        previous_frame = self.compressed_samples[index][1]
         previous_frame = self.get_uncompressed_frame(previous_frame)
 
         # G_T_P -> Global_TransformMatrix_Previous
