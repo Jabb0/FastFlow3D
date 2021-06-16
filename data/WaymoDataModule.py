@@ -1,6 +1,5 @@
-import torchvision
 import pytorch_lightning as pl
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader
 from torchvision import transforms
 
 from pathlib import Path
@@ -8,28 +7,7 @@ from pathlib import Path
 from typing import Optional, Union, List, Dict
 
 from .WaymoDataset import WaymoDataset
-from utils.pillars import create_pillars_matrix  # Python relative imports are interesting
-
-
-class ApplyPillarization:
-    def __init__(self, grid_cell_size, x_min, x_max, y_min, y_max, z_min, z_max):
-        self._grid_cell_size = grid_cell_size
-        self._z_max = z_max
-        self._z_min = z_min
-        self._y_max = y_max
-        self._y_min = y_min
-        self._x_max = x_max
-        self._x_min = x_min
-
-    """ Transforms an point cloud to the augmented pointcloud depending on Pillarization """
-    def __call__(self, x):
-        point_cloud, labels = x
-        point_cloud, grid_indices, labels = create_pillars_matrix(point_cloud, labels,
-                                                                  grid_cell_size=self._grid_cell_size,
-                                                                  x_min=self._x_min, x_max=self._x_max,
-                                                                  y_min=self._y_min,  y_max=self._y_max,
-                                                                  z_min=self._z_min, z_max=self._z_max)
-        return [point_cloud, grid_indices], labels
+from .util import ApplyPillarization
 
 
 class WaymoDataModule(pl.LightningDataModule):

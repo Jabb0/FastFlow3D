@@ -1,7 +1,11 @@
 import tensorflow as tf
+import torch
 
 from waymo_open_dataset.utils import frame_utils
 from waymo_open_dataset import dataset_pb2
+
+from utils.pillars import create_pillars_matrix, remove_out_of_bounds_points
+from torch.utils.data._utils.collate import default_collate
 
 
 def convert_range_image_to_point_cloud(frame,
@@ -132,3 +136,59 @@ def parse_range_image_and_camera_projection(frame):
             cp.ParseFromString(bytearray(camera_projection_str_tensor.numpy()))
             camera_projections[laser.name].append(cp)
     return range_images, camera_projections, point_flows, range_image_top_pose
+
+
+class ApplyPillarization:
+    def __init__(self, grid_cell_size, x_min, y_min, z_min, z_max):
+        self._grid_cell_size = grid_cell_size
+        self._z_max = z_max
+        self._z_min = z_min
+        self._y_min = y_min
+        self._x_min = x_min
+
+    """ Transforms an point cloud to the augmented pointcloud depending on Pillarization """
+
+    def __call__(self, x):
+        point_cloud, grid_indices = create_pillars_matrix(x,
+                                                          grid_cell_size=self._grid_cell_size,
+                                                          x_min=self._x_min,
+                                                          y_min=self._y_min,
+                                                          z_min=self._z_min, z_max=self._z_max)
+        return point_cloud, grid_indices
+
+
+def drop_points_function(x_min, x_max, y_min, y_max, z_min, z_max):
+    def inner(x, y):
+        return remove_out_of_bounds_points(x, y,
+                                           x_min=x_min,
+                                           y_min=y_min,
+                                           z_min=z_min,
+                                           z_max=z_max,
+                                           x_max=x_max,
+                                           y_max=y_max
+                                           )
+
+    return inner
+
+
+def custom_collate(batch):
+    """
+    We need this custom collate because of the structure of our data.
+    :param batch:
+    :return:
+    """
+    # Only convert the points clouds from numpy arrays to tensors
+    batch_previous = [
+        [torch.as_tensor(e) for e in entry[0][0]] for entry in batch
+    ]
+    batch_current = [
+        [torch.as_tensor(e) for e in entry[0][1]] for entry in batch
+    ]
+
+    # For the targets we can only transform each entry to a tensor and not stack them
+    batch_targets = [
+        torch.as_tensor(entry[1]) for entry in batch
+    ]
+
+    return (batch_previous, batch_current), batch_targets
+

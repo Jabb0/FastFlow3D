@@ -2,24 +2,33 @@ import numpy as np
 import math
 
 
-def create_pillars_matrix(pc, y, grid_cell_size, x_min, x_max, y_min, y_max, z_min, z_max):
-    """
-    Experimental code to compute the pillars using matrix operations.
-    :param pc: point cloud data
-    """
+def remove_out_of_bounds_points(pc, y, x_min, x_max, y_min, y_max, z_min, z_max):
     # Calculate the cell id that this entry falls into
     # Store the X, Y indices of the grid cells for each point cloud point
     mask = (pc[:, 0] >= x_min) & (pc[:, 0] <= x_max) \
-            & (pc[:, 1] >= y_min) & (pc[:, 1] <= y_max) \
-            & (pc[:, 2] >= z_min) & (pc[:, 2] <= z_max)
+           & (pc[:, 1] >= y_min) & (pc[:, 1] <= y_max) \
+           & (pc[:, 2] >= z_min) & (pc[:, 2] <= z_max)
     pc_valid = pc[mask]
-    y_valid = y[mask]
+    y_valid = None
+    if y is not None:
+        y_valid = y[mask]
+    return pc_valid, y_valid
+
+
+def create_pillars_matrix(pc_valid, grid_cell_size, x_min, y_min, z_min, z_max):
+    """
+    Compute the pillars using matrix operations.
+    :param pc: point cloud data. (N_points, features) with the first 3 features being the x,y,z coordinates.
+    :return: augmented_pointcloud, grid_cell_indices, y_valid
+    """
+    num_laser_features = pc_valid.shape[1] - 3  # Calculate the number of laser features that are not the coordinates.
+
     grid_cell_indices = np.zeros((pc_valid.shape[0], 2), dtype=int)
     grid_cell_indices[:, 0] = ((pc_valid[:, 0] - x_min) / grid_cell_size).astype(int)
     grid_cell_indices[:, 1] = ((pc_valid[:, 1] - y_min) / grid_cell_size).astype(int)
 
     # Initialize the new pointcloud with 8 features for each point
-    augmented_pc = np.zeros((pc_valid.shape[0], 6))  # TODO has to be 8
+    augmented_pc = np.zeros((pc_valid.shape[0], 6 + num_laser_features))
     # Set every cell z-center to the same z-center
     augmented_pc[:, 2] = (z_max - z_min) * 1 / 2
     # Set the x cell center depending on the x cell id of each point
@@ -35,10 +44,10 @@ def create_pillars_matrix(pc, y, grid_cell_size, x_min, x_max, y_min, y_max, z_m
     # z
     augmented_pc[:, 5] = pc_valid[:, 2] - augmented_pc[:, 2]
 
-    # TODO: Copy the last two features for each point (laser_features 1 and 2) but they are not here right now.
-    #  Thus keep them 0.
+    # Take the two laser features
+    augmented_pc[:, 6:] = pc_valid[:, 3:]
 
-    return augmented_pc, grid_cell_indices, y_valid
+    return augmented_pc, grid_cell_indices
 
 
 def create_pillars(pc, grid_cell_size, x_min, x_max, y_min, y_max, z_min, z_max):

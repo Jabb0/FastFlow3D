@@ -4,7 +4,7 @@ import pytorch_lightning as pl
 
 from pathlib import Path
 
-from data import WaymoDataModule
+from data import WaymoDataModule, RandomDataModule
 from models import FastFlow3DModel
 
 
@@ -21,6 +21,7 @@ def cli():
     parser.add_argument('--grid_cell_size', default=0.16, type=float)
     parser.add_argument('--test_data_available', default=False, type=bool)
     parser.add_argument('--fast_dev_run', default=True, type=bool)
+    parser.add_argument('--num_workers', default=1, type=int)
 
     # NOTE: Readd this to see all parameters of the trainer
     # parser = pl.Trainer.add_argparse_args(parser)  # Add arguments for the trainer
@@ -37,16 +38,23 @@ def cli():
     n_pillars_x = int(((args.x_max - args.x_min) / args.grid_cell_size))
     n_pillars_y = int(((args.y_max - args.y_min) / args.grid_cell_size))
 
-    model = FastFlow3DModel(n_pillars_x=n_pillars_x, n_pillars_y=n_pillars_y, point_features=6,
+    model = FastFlow3DModel(n_pillars_x=n_pillars_x, n_pillars_y=n_pillars_y, point_features=8,
                             learning_rate=args.learning_rate)
-    waymo_data_module = WaymoDataModule(dataset_path, grid_cell_size=args.grid_cell_size, x_min=args.x_min,
-                                        x_max=args.x_max, y_min=args.y_min,
-                                        y_max=args.y_max, z_min=args.z_min, z_max=args.z_max,
-                                        batch_size=args.batch_size,
-                                        has_test=args.test_data_available)
+    # waymo_data_module = WaymoDataModule(dataset_path, grid_cell_size=args.grid_cell_size, x_min=args.x_min,
+    #                                     x_max=args.x_max, y_min=args.y_min,
+    #                                     y_max=args.y_max, z_min=args.z_min, z_max=args.z_max,
+    #                                     batch_size=args.batch_size,
+    #                                     has_test=args.test_data_available,
+    #                                     num_workers=args.num_workers)
+    waymo_data_module = RandomDataModule(dataset_path, grid_cell_size=args.grid_cell_size, x_min=args.x_min,
+                                         x_max=args.x_max, y_min=args.y_min,
+                                         y_max=args.y_max, z_min=args.z_min, z_max=args.z_max,
+                                         batch_size=args.batch_size,
+                                         has_test=args.test_data_available,
+                                         num_workers=args.num_workers)
 
     # Max epochs can be configured here to, early stopping is also configurable.
-    # Some things are definiable as callback from pytorch_lightning.callback
+    # Some things are definable as callback from pytorch_lightning.callback
     trainer = pl.Trainer.from_argparse_args(args,
                                             progress_bar_refresh_rate=25,  # Prevents Google Colab crashes
                                             gpus=1 if torch.cuda.is_available() else 0
@@ -61,4 +69,3 @@ def cli():
 
 if __name__ == '__main__':
     cli()
-

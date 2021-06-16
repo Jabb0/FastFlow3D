@@ -9,7 +9,8 @@ from .utils import init_weights
 
 
 class FastFlow3DModel(pl.LightningModule):
-    def __init__(self, n_pillars_x, n_pillars_y, point_features=8,
+    def __init__(self, n_pillars_x, n_pillars_y,
+                 point_features=8,
                  learning_rate=1e-6,
                  adam_beta_1=0.9,
                  adam_beta_2=0.999):
@@ -28,17 +29,34 @@ class FastFlow3DModel(pl.LightningModule):
     def forward(self, x):
         """
         The usual forward pass function of a torch module
-        :param x: (batch_size, (t-1, t0)) a batch of the two point cloud images
+        :param x:
         :return:
         """
-        # (batch_size, 2, N_points, N_features)
-        point_cloud_prev, point_cloud_cur = x
-
         # 1. Do scene encoding of each point cloud to get the grid with pillar embeddings
         # Input is a point cloud each with shape (N_points, point_features)
-        # TODO: Need to add the indices
-        pillar_embeddings_prev = self._pillar_feature_net(point_cloud_prev)
-        pillar_embeddings_cur = self._pillar_feature_net(point_cloud_cur)
+
+        # The input here is more complex as we deal with a batch of point clouds
+        # that do not have a fixed amount of points
+        # x is a tuple of two lists representing the batches
+        previous_batch, current_batch = x
+        # With each batch being a list of batch size many tensors of points clouds and their corresponding grid indices
+        # In the pillarization face each point cloud is passed to our "PointNet" create the embedding of the grid.
+        # This will then yield a single 2D grid embedding for the batch that is later used as the batch.
+        previous_batch_grid = []
+        current_batch_grid = []
+        for point_clouds, grid_indices in previous_batch:
+            pillar_embedding = self._pillar_feature_net(point_clouds.float(), grid_indices.int())
+            previous_batch_grid.append(pillar_embedding)
+
+        for point_clouds, grid_indices in current_batch:
+            pillar_embedding = self._pillar_feature_net(point_clouds.float(), grid_indices.int())
+            current_batch_grid.append(pillar_embedding)
+
+        # Now concatenate the pillar embeddings again to be batches for the next networks
+        pillar_embeddings_prev = torch.stack(previous_batch_grid)
+        pillar_embeddings_cur = torch.stack(current_batch_grid)
+
+        print("lool")
         # Output is a 512x512x64 2D embedding representing the point clouds
 
         # 2. Apply the U-net encoder step
@@ -48,10 +66,10 @@ class FastFlow3DModel(pl.LightningModule):
         cur_64_conv, cur_128_conv, cur_256_conv = self._conv_encoder_net(pillar_embeddings_cur)
 
         # 3. Apply the U-net decoder with skip connections
-        # TODO:
+        # TODO: Note there is not activation function here (layers S-Z)
 
         # 4. Apply the unpillar operation
-        # TODO:
+        # TODO: Note there is not activation function here (layers S-Z)
 
         # Return the final motion prediction of size (N_points_cur, 3)
         return x
