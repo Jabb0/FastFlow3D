@@ -61,8 +61,8 @@ class WaymoDataset(Dataset):
         """
         :param frame: Uncompressed frame
         :param transform: Optional, transformation matrix to apply
-        :return: [N, F], [N, 4], where N is the number of points, F the number of features
-        and 4 in the second results stands for [vx, vy, vz, label], which corresponds
+        :return: [N, F], [N, 4], where N is the number of points, F the number of features,
+        which is [x, y, z, intensity, elongation] and 4 in the second results stands for [vx, vy, vz, label], which corresponds
         to the flow information
         """
 
@@ -75,19 +75,22 @@ class WaymoDataset(Dataset):
             camera_projections,
             point_flows,
             range_image_top_pose,
-            keep_polar_features=False)
+            keep_polar_features=True)
 
         # 3D points in the vehicle reference frame
         points_all = np.concatenate(points, axis=0)
         flows_all = np.concatenate(flows, axis=0)
-
+        # We skip the range feature since pillars will account for it
+        points_coord, points_features = points_all[:, 0:3], points_all[:, 4:points_all.shape[1]]
 
         if transform is not None:
-            ones = np.ones((points_all.shape[0], 1))
-            points_all = np.hstack((points_all, ones))
-            points_all = transform @ points_all.T
-            points_all = points_all[0:-1, :]
-            points_all = points_all.T
+            ones = np.ones((points_coord.shape[0], 1))
+            points_coord = np.hstack((points_coord, ones))
+            points_coord = transform @ points_coord.T
+            points_coord = points_coord[0:-1, :]
+            points_coord = points_coord.T
+
+        points_all = np.hstack((points_coord, points_features))
         return points_all, flows_all
 
     def read_frame(self, data_file_path, index):
