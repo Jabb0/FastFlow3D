@@ -15,7 +15,7 @@ class PillarFeatureNet(torch.nn.Module):
        PointPillars: Fast Encoders for Object Detection from Point Clouds
        https://arxiv.org/pdf/1812.05784.pdf
     """
-    def __init__(self, n_pillars_x, n_pillars_y, in_features=6, out_features=64):
+    def __init__(self, n_pillars_x, n_pillars_y, in_features=8, out_features=64):
         super().__init__()
         self.n_pillars_x = n_pillars_x
         self.n_pillars_y = n_pillars_y
@@ -52,3 +52,44 @@ class PillarFeatureNet(torch.nn.Module):
         #         grid[grid_x, grid_y] = x[(indices[:, 0] == grid_x) & (indices[:, 1] == grid_y)].sum(axis=0)
         grid.to(orig_device)
         return grid
+
+    def forward2(self, points, indices):
+        """ Input must be the augmented point cloud of shape (batch_size, n_points, 6)
+        and indices of shape (batch_size, n_points, 2)
+        """
+
+        # linear transformation
+        embedded_points = self.linear(points)
+        # FIXME
+        # embedded_points = self.batch_norm(embedded_points)
+        embedded_points = self.relu(embedded_points)
+
+        indices = indices.long()
+
+        # TODO replace for-loop over batches by torch operations (if possible)
+        # TODO Check if this implementation is correct
+        # Snap-To-Grid
+        grid = torch.zeros(size=(embedded_points.shape[0], self.n_pillars_x, self.n_pillars_y, self.out_features))
+        for i in range(embedded_points.shape[0]):
+            batch_indices = indices[i]
+            batch_x = embedded_points[i]
+
+            n_pillars = torch.unique(batch_indices, dim=0).shape[0]  # number of different index pairs
+
+            # add up all points, which have the same index
+            batch_x = torch.zeros(n_pillars, 64, dtype=embedded_points.dtype).scatter_add_(0, batch_indices, batch_x)
+            batch_indices = torch.unique(batch_indices, dim=0)  # get the corresponding indices
+
+            # Snap-to-grid
+            batch_grid = torch.zeros(size=(self.n_pillars_x, self.n_pillars_y, self.out_features))
+            batch_grid[batch_indices[:, 0], batch_indices[:, 1], :] = batch_x
+
+            grid[i] = batch_grid
+
+        # Snap-to-grid
+        # grid = torch.zeros(size=(self.n_pillars_x, self.n_pillars_y, self.out_features))
+        # for i in range(x.shape[0]):
+        #     x_idx, y_idx = indices[i].long()
+        #     grid[x_idx, y_idx].add(x[i])
+
+        return embedded_points, grid
