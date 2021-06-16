@@ -1,4 +1,4 @@
-from utils.pillars import create_pillars
+from utils.pillars import create_pillars_matrix
 import numpy as np
 
 
@@ -7,6 +7,15 @@ def test_create_pillars():
 
     # create points in range of (0, 0) and (3, 3)
     points = np.array([
+        [0, 0, 1, 2, 2],
+        [0, 0.1, 2, 2, 2],
+        [0, 1, 1, 2, 2],
+        [2.9, 2.9, 3, 2, 2],
+        [2.9, 2.9, 3, 2, 2],
+        [1, 2, 1, 2, 2]
+    ])
+
+    y = np.array([
         [0, 0, 1],
         [0, 0.1, 2],
         [0, 1, 1],
@@ -24,8 +33,8 @@ def test_create_pillars():
     z_max = 4
     z_min = -4
 
-    points, indices = create_pillars(points, grid_cell_size=grid_cell_size, x_min=x_min, x_max=x_max,
-                                     y_min=y_min, y_max=y_max, z_min=z_min, z_max=z_max)
+    points, indices, _ = create_pillars_matrix(pc=points, y=y, grid_cell_size=grid_cell_size, x_min=x_min, x_max=x_max,
+                                               y_min=y_min, y_max=y_max, z_min=z_min, z_max=z_max)
 
     true_indices = np.array([[0, 0],
                              [0, 0],
