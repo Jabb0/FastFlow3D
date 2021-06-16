@@ -83,6 +83,7 @@ if __name__ == '__main__':
 
     import torch
     t = time.time()
+    # unsqueeze and repeat to just add a batch dim
     points = torch.tensor(points, dtype=torch.float32).unsqueeze(0).repeat(5, 1, 1)
     indices = torch.tensor(indices, dtype=torch.float32).unsqueeze(0).repeat(5, 1, 1)
 

@@ -19,7 +19,7 @@ def create_pillars_matrix(pc, y, grid_cell_size, x_min, x_max, y_min, y_max, z_m
     grid_cell_indices[:, 1] = ((pc_valid[:, 1] - y_min) / grid_cell_size).astype(int)
 
     # Initialize the new pointcloud with 8 features for each point
-    augmented_pc = np.zeros((pc_valid.shape[0], 6))  # TODO has to be 8
+    augmented_pc = np.zeros((pc_valid.shape[0], 8))
     # Set every cell z-center to the same z-center
     augmented_pc[:, 2] = (z_max - z_min) * 1 / 2
     # Set the x cell center depending on the x cell id of each point
@@ -34,8 +34,9 @@ def create_pillars_matrix(pc, y, grid_cell_size, x_min, x_max, y_min, y_max, z_m
     augmented_pc[:, 4] = pc_valid[:, 1] - augmented_pc[:, 1]
     # z
     augmented_pc[:, 5] = pc_valid[:, 2] - augmented_pc[:, 2]
-
-    # TODO: Copy the last two features for each point (laser_features 1 and 2) but they are not here right now.
-    #  Thus keep them 0.
+    # l0
+    augmented_pc[:, 6] = pc_valid[:, 3]
+    # l1
+    augmented_pc[:, 7] = pc_valid[:, 4]
 
     return augmented_pc, grid_cell_indices, y_valid

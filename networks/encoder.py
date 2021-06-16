@@ -15,7 +15,7 @@ class PillarFeatureNet(torch.nn.Module):
        PointPillars: Fast Encoders for Object Detection from Point Clouds
        https://arxiv.org/pdf/1812.05784.pdf
     """
-    def __init__(self, n_pillars_x, n_pillars_y, in_features=6, out_features=64):
+    def __init__(self, n_pillars_x, n_pillars_y, in_features=8, out_features=64):
         super().__init__()
         self.n_pillars_x = n_pillars_x
         self.n_pillars_y = n_pillars_y
