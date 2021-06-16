@@ -9,16 +9,18 @@ class ConvDecoder(torch.nn.Module):
         super(ConvDecoder, self).__init__()
         # S: Input is a 64x64x256 image. Output is a 128x128x128 image.
         self._block_1 = _UpSamplingSkip(
-            in_channels_conv_1=256, in_channels_conv_2=128, out_channels=128, alpha_shape=(64, 64, 256),
+            in_channels_conv_1=2*256, in_channels_conv_2=2*128, out_channels=128, alpha_shape=(64, 64, 256),
             beta_shape=(128, 128, 128))
 
         # T: Input is a 128x128x128 image. Output is a 256x256x128 image.
         self._block_2 = _UpSamplingSkip(
-            in_channels_conv_1=128, in_channels_conv_2=64, out_channels=128, alpha_shape=(128, 128, 128), beta_shape=(256, 256, 64))
+            in_channels_conv_1=128, in_channels_conv_2=2*64, out_channels=128, alpha_shape=(128, 128, 128),
+            beta_shape=(256, 256, 64))
 
         # U: Input is a 256x256x128 image. Output is a 512x512x64 image.
         self._block_3 = _UpSamplingSkip(
-            in_channels_conv_1=128, in_channels_conv_2=64, out_channels=64, alpha_shape=(256, 256, 128), beta_shape=(512, 512, 64))
+            in_channels_conv_1=128, in_channels_conv_2=2*64, out_channels=64, alpha_shape=(256, 256, 128),
+            beta_shape=(512, 512, 64))
 
         # V
         self._block_4 = torch.nn.Sequential(
@@ -29,13 +31,24 @@ class ConvDecoder(torch.nn.Module):
 
         # TODO Define Ungrid, Concatenate, Linear, Linear
 
-    def forward(self, B, F, L, R):
+    def forward(self, B_prev, F_prev, L_prev, R_prev, B_cur, F_cur, L_cur, R_cur):
         """
         Do the convolutional encoder pass for the input 2D grid embedding.
         :param x: (batch_size, height, width, channels) of the 2D grid embedding.
         :return: (batch_size, out_height, out_width, )
         """
-        # TODO Concat both embedded point clouds - where?
+        # Concatenate embedded point clouds
+        B = torch.cat((B_prev, B_cur), dim=1)
+        R = torch.cat((R_prev, R_cur), dim=1)
+        F = torch.cat((F_prev, F_cur), dim=1)
+        L = torch.cat((L_prev, L_cur), dim=1)
+        print("After concatenation of both embedded point clouds:\n")
+        print(f"B Output: {B.shape}")
+        print(f"R Output: {R.shape}")
+        print(f"F Output: {F.shape}")
+        print(f"L Output: {L.shape}")
+        print("-"*12)
+
         S = self._block_1(R, L)  # S inputs are R, L
         print(f"S Output: {S.shape}")
         T = self._block_2(S, F)  # T, inputs are S, F
@@ -85,7 +98,6 @@ class _UpSamplingSkip(torch.nn.Module):
         U1 = self.conv_1(alpha)
         U2 = self.bilinear_interp(U1)
         U3 = self.conv_2(beta)
-        # TODO Check if concatenation in depth is correct
         U4 = torch.cat((U2, U3), dim=1)
         U5 = self.conv_3(U4)
         U6 = self.conv_4(U5)

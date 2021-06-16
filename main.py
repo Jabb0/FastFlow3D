@@ -1,4 +1,3 @@
-import numpy as np
 import tensorflow as tf
 import time
 
@@ -93,18 +92,23 @@ if __name__ == '__main__':
     print(f"PillarFeatureNet duration: {(time.time() - t):.2f} s")
 
     # ------- UNet PART ------- #
-    # grid: Output of the PillarFeatureNet!!! (also called B in paper)
-    # batch_size x embedding_size x grid_size x grid_size
-    grid = torch.rand(1, 64, 512, 512)  # Later: This is should be the grid of the encoder output
     from networks.convEncoder import ConvEncoder
     from networks.convDecoder import ConvDecoder
     unet_encoder = ConvEncoder()
     unet_decoder = ConvDecoder()
 
+    # grid: Output of the PillarFeatureNet!!! (also called B in paper)
+    # batch_size x embedding_size x grid_size x grid_size
+    # Later: This is should be the grid of the encoder output
+    grid_prev = torch.rand(1, 64, 512, 512)  # also called B
+    grid_cur = torch.rand(1, 64, 512, 512)  # also called B
+
     print("\nEncoder Output:")
-    F, L, R = unet_encoder(grid)
+    F_prev, L_prev, R_prev = unet_encoder(grid_prev)
+    F_cur, L_cur, R_cur = unet_encoder(grid_cur)
     print("\nDecoder Output:")
-    decoder_output = unet_decoder(grid, F, L, R)
+    decoder_output = unet_decoder(B_prev=grid_prev, F_prev=F_prev, L_prev=L_prev, R_prev=R_prev,
+                                  B_cur=grid_cur, F_cur=F_cur, L_cur=L_cur, R_cur=R_cur)
 
 
 
