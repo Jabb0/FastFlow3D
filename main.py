@@ -4,7 +4,7 @@ import time
 
 from utils.plot import visualize_point_cloud, plot_pillars, plot_2d_point_cloud
 from data.util import convert_range_image_to_point_cloud, parse_range_image_and_camera_projection
-from utils.pillars import create_pillars, create_pillars_matrix
+from utils.pillars import create_pillars_matrix
 from networks.encoder import PillarFeatureNet
 from data.WaymoDataset import WaymoDataset
 import os
@@ -60,7 +60,7 @@ if __name__ == '__main__':
 
     print(points_all.shape)  # I guess they are in the AV reference frame
     points_coord = points_all[:, 0:3]
-    visualize_point_cloud(points_coord)
+    # visualize_point_cloud(points_coord)
 
     # Pillar transformation
     grid_cell_size = 0.16
@@ -81,35 +81,29 @@ if __name__ == '__main__':
     # plot_pillars(indices=indices, x_max=x_max, x_min=x_min, y_max=y_max, y_min=y_min, grid_cell_size=grid_cell_size)
     # plot_2d_point_cloud(pc=points_all)
 
-    t = time.time()
-    points_python, indices_python = create_pillars(points_coord, grid_cell_size=grid_cell_size, x_min=x_min, x_max=x_max,
-                                                   y_min=y_min, y_max=y_max, z_min=z_min, z_max=z_max)
-    print(f"Pillar-Python transformation duration: {(time.time() - t):.2f} s")
-    if not np.allclose(points, points_python):
-        print("Matrices of points are not the same")
-    else:
-        print("Points are same with np.allclose")
-    if not np.allclose(indices, indices_python):
-        print("Matrices of indices are not the same")
-    else:
-        print("Indices are same with np.allclose")
-    exit()
     import torch
+    t = time.time()
+    points = torch.tensor(points, dtype=torch.float32).unsqueeze(0).repeat(5, 1, 1)
+    indices = torch.tensor(indices, dtype=torch.float32).unsqueeze(0).repeat(5, 1, 1)
 
-    # pfn = PillarFeatureNet(x_max=x_max, x_min=x_min, y_max=y_max, y_min=y_min, grid_cell_size=grid_cell_size)
-    # output = pfn(torch.tensor(points, dtype=torch.float32), torch.tensor(indices, dtype=torch.float32))
-    # print(points.shape)
-    # print(indices.shape)
-    # print(output.shape)
+    # ------- PillarFeatureNet PART ------- #
+    pfn = PillarFeatureNet(n_pillars_x=512, n_pillars_y=512)
+    embedded_points, grid = pfn(points, indices)
+    print(f"PillarFeatureNet duration: {(time.time() - t):.2f} s")
 
-    from networks.convEncoder import ConvEncoder
-    unet = ConvEncoder()
+    # ------- UNet PART ------- #
+    # grid: Output of the PillarFeatureNet!!! (also called B in paper)
     # batch_size x embedding_size x grid_size x grid_size
-    input = torch.rand(1, 64, 512, 512)
+    grid = torch.rand(1, 64, 512, 512)  # Later: This is should be the grid of the encoder output
+    from networks.convEncoder import ConvEncoder
+    from networks.convDecoder import ConvDecoder
+    unet_encoder = ConvEncoder()
+    unet_decoder = ConvDecoder()
 
-    output = unet(input)
-
-    print(output.shape)
+    print("\nEncoder Output:")
+    F, L, R = unet_encoder(grid)
+    print("\nDecoder Output:")
+    decoder_output = unet_decoder(grid, F, L, R)
 
 
 
