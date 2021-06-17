@@ -62,7 +62,7 @@ class PillarFeatureNet(torch.nn.Module):
         grid = torch.sparse.mm(grid_lookup_matrix, x)
         # We now need to shape the 1D grid embedding into the actual 2D grid
         # TODO: is reshape correct here??
-        grid = grid.reshape((self.n_pillars_x, self.n_pillars_y, x.shape[1]))
+        grid = grid.view((self.n_pillars_x, self.n_pillars_y, x.shape[1]))
 
         return grid
 

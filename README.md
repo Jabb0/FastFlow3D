@@ -1,6 +1,17 @@
 # FastFlow3D Implementation
 Source: https://arxiv.org/pdf/2103.01306.pdf
 
+## Current
+- Implement dataloader to load from frame-wise files
+- Implement the pillarization such that it is fast enough:
+    - Every attempt run out of memory or was slow
+    - Tried: Use sparse matrices to compute the summation of points into the grid. Runs out of memory on 8GiB GPU.
+    - Tried: For loop over all points in cloud and add to cell. Too slow in python. Maybe try this again.
+    - Untried: Preprocess such that each pillar is represented by a list of tensors and passed into the encoder on its own.
+        - If we have a max number of points for each pillar we can allocate more memory and make this a single batch.
+    - Untried: DynamicVoxel Pytorch extension: https://github.com/AndyYuan96/PointCloudDynamicVoxel
+    - Untried: PyTorch 3D point package: https://github.com/nicolas-chaulet/torch-points3d/blob/master/torch_points3d/core/data_transform/grid_transform.py
+
 ## References
 - Jund et al.: Scalable Scene Flow from Point Clouds in the Real World (2021)
 - Liu et al.: FlowNet3D: Learning Scene Flow in 3D Point Clouds (2019)
