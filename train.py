@@ -11,7 +11,7 @@ from models import FastFlow3DModel
 def cli():
     parser = ArgumentParser()
     parser.add_argument('data_directory', type=str)
-    parser.add_argument('--batch_size', default=64, type=int)
+    parser.add_argument('--batch_size', default=20, type=int)
     parser.add_argument('--x_max', default=81.92, type=float)
     parser.add_argument('--x_min', default=0, type=float)
     parser.add_argument('--y_max', default=40.96, type=float)

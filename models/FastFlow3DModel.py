@@ -25,7 +25,6 @@ class FastFlow3DModel(pl.LightningModule):
         self._conv_encoder_net.apply(init_weights)
         # TODO: Remaining networks
 
-
     def forward(self, x):
         """
         The usual forward pass function of a torch module

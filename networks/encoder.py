@@ -26,31 +26,44 @@ class PillarFeatureNet(torch.nn.Module):
         self.batch_norm = torch.nn.BatchNorm1d(out_features)
         self.relu = torch.nn.ReLU()
 
+    def construct_sparse_grid_matrix(self, n_points, indices):
+        # We now convert the grid_cell_indices into a grid cell lookup matrix
+        # The matrix A has shape (N_points, grid_width * grid_height) and with Aij=1 if point i is in cell j
+        # The cells are encoded as j = x * grid_width + y and thus give an unique encoding for each cell
+        # E.g. if we have 512 cells in both directions and x=1, y=2 is encoded as 512 + 2 = 514.
+        # Each new row of the grid (x-axis) starts at j % 512 = 0.
+        # Init the matrix to only zeros
+
+        # Construct the necessary indices. This is an array with [[first_dim0,....first_dimN],[second_dim0,...,second_dimN]]
+        indices = torch.stack([
+            indices[:, 0] * self.n_pillars_x + indices[:, 1],
+            torch.arange(n_points, device=indices.device)
+        ])
+
+        grid_lookup_matrix = torch.sparse_coo_tensor(indices, torch.ones(n_points),
+                                                     size=(self.n_pillars_x * self.n_pillars_y, n_points),
+                                                     device=indices.device, requires_grad=False)
+        # requires_grad=False ?
+        return grid_lookup_matrix
+
     def forward(self, x, indices):
         """ Input must be the augmented point cloud of shape (n_points, 6) """
-
-        orig_device = x.device
 
         # linear transformation
         x = self.linear(x)
         x = self.batch_norm(x)
         x = self.relu(x)
 
-        x = x.cpu()
-        indices = indices.cpu()
-        # Snap-to-grid
-        grid = torch.zeros(size=(self.n_pillars_x, self.n_pillars_y, self.out_features),
-                           dtype=torch.float32, device="cpu")
-        # Sum up the embeddings of all points
+        # Calculate the mapping matrix from each point to its 1D encoded cell
+        grid_lookup_matrix = self.construct_sparse_grid_matrix(x.shape[0], indices)
+        # rows are points, columns are cells. 1 if the two are connected. This will sum up the points
 
-        for i in range(x.shape[0]):
-            x_idx, y_idx = indices[i]
-            grid[x_idx, y_idx].add_(x[i])  # In-place add operation
+        # We can now sum up the embeddings of all points as matrix multiplication
+        grid = torch.sparse.mm(grid_lookup_matrix, x)
+        # We now need to shape the 1D grid embedding into the actual 2D grid
+        # TODO: is reshape correct here??
+        grid = grid.reshape((self.n_pillars_x, self.n_pillars_y, x.shape[1]))
 
-        # for grid_x in range(self.n_pillars_x):
-        #     for grid_y in range(self.n_pillars_y):
-        #         grid[grid_x, grid_y] = x[(indices[:, 0] == grid_x) & (indices[:, 1] == grid_y)].sum(axis=0)
-        grid.to(orig_device)
         return grid
 
     def forward2(self, points, indices):
