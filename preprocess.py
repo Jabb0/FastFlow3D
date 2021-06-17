@@ -30,7 +30,7 @@ if __name__ == '__main__':
     # Getting points with the dataloader
     train_path = 'data/train'
     tfrecord_path = 'data/train_tfrecord'
-    preprocess = False
+    preprocess = True
     t = time.time()
     waymo_dataset = WaymoDataset(train_path, force_preprocess=preprocess, tfrecord_path=tfrecord_path)
     print(f"Preprocessing duration: {(time.time() - t):.2f} s")
