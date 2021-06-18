@@ -15,16 +15,12 @@ class PillarFeatureNet(torch.nn.Module):
        PointPillars: Fast Encoders for Object Detection from Point Clouds
        https://arxiv.org/pdf/1812.05784.pdf
     """
-    def __init__(self, n_pillars_x, n_pillars_y, in_features=8, out_features=64):
+    def __init__(self, n_pillars_x, n_pillars_y, out_features=64):
         super().__init__()
         self.n_pillars_x = n_pillars_x
         self.n_pillars_y = n_pillars_y
 
         self.out_features = out_features
-
-        self.linear = torch.nn.Linear(in_features=in_features, out_features=out_features)
-        self.batch_norm = torch.nn.BatchNorm1d(out_features)
-        self.relu = torch.nn.ReLU()
 
     def construct_sparse_grid_matrix(self, n_points, indices):
         # We now convert the grid_cell_indices into a grid cell lookup matrix
@@ -48,12 +44,6 @@ class PillarFeatureNet(torch.nn.Module):
 
     def forward(self, x, indices):
         """ Input must be the augmented point cloud of shape (n_points, 6) """
-
-        # linear transformation
-        x = self.linear(x)
-        x = self.batch_norm(x)
-        x = self.relu(x)
-
         # Calculate the mapping matrix from each point to its 1D encoded cell
         grid_lookup_matrix = self.construct_sparse_grid_matrix(x.shape[0], indices)
         # rows are points, columns are cells. 1 if the two are connected. This will sum up the points
@@ -62,7 +52,9 @@ class PillarFeatureNet(torch.nn.Module):
         grid = torch.sparse.mm(grid_lookup_matrix, x)
         # We now need to shape the 1D grid embedding into the actual 2D grid
         # TODO: is reshape correct here??
-        grid = grid.view((self.n_pillars_x, self.n_pillars_y, x.shape[1]))
+        # TODO: This is most likely incorrect. Need to shape it such that the first value is the channel
+        #  because of conv2d input but the dimensions need to match according the the encoding we used
+        grid = grid.view((x.shape[1], self.n_pillars_x, self.n_pillars_y))
 
         return grid
 

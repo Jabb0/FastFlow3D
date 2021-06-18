@@ -1,6 +1,6 @@
 dvc
 pytorch-lightning
-torch
+torch>=1.9.0
 torchvision
 tensorboard
 numpy

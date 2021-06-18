@@ -45,8 +45,6 @@ class ConvDecoder(torch.nn.Module):
             torch.nn.ReLU(),
         )
 
-        # TODO Define Ungrid, Concatenate, Linear, Linear
-
     def forward(self, B_prev, F_prev, L_prev, R_prev, B_cur, F_cur, L_cur, R_cur):
         """
         Do the convolutional encoder pass for the input 2D grid embedding.
@@ -67,24 +65,22 @@ class ConvDecoder(torch.nn.Module):
         R = torch.cat((R_prev, R_cur), dim=1)
         F = torch.cat((F_prev, F_cur), dim=1)
         L = torch.cat((L_prev, L_cur), dim=1)
-        print("After concatenation of both embedded point clouds:")
-        print(f"B Output: {B.shape}")
-        print(f"R Output: {R.shape}")
-        print(f"F Output: {F.shape}")
-        print(f"L Output: {L.shape}")
-        print("-"*12)
+        # print("After concatenation of both embedded point clouds:")
+        # print(f"B Output: {B.shape}")
+        # print(f"R Output: {R.shape}")
+        # print(f"F Output: {F.shape}")
+        # print(f"L Output: {L.shape}")
+        # print("-"*12)
 
         S = self._block_1(R, L)  # S inputs are R, L
-        print(f"S Output: {S.shape}")
+        # print(f"S Output: {S.shape}")
         T = self._block_2(S, F)  # T, inputs are S, F
-        print(f"T Output: {T.shape}")
-        print(f"B Output: {B.shape}")
+        # print(f"T Output: {T.shape}")
+        # print(f"B Output: {B.shape}")
         U = self._block_3(T, B)  # U+V, inputs are T, B
-        print(f"U Output: {U.shape}")
+        # print(f"U Output: {U.shape}")
         V = self._block_4(U)
-        print(f"V Output: {V.shape}")
-
-        # TODO Ungrid, Concatenate, Linear, Linear
+        # print(f"V Output: {V.shape}")
 
         return V
 

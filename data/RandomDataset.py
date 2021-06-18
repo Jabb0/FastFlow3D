@@ -52,7 +52,7 @@ class RandomDataset(Dataset):
         current_frame = self.draw_random_frame()
         previous_frame = self.draw_random_frame()
 
-        current_flows = self._random_state.uniform(-20, 20, size=current_frame.shape[0])
+        current_flows = self._random_state.uniform(-20, 20, size=(current_frame.shape[0], 3))
 
         # Drop invalid points according to the method supplied
         current_frame, current_flows = self._drop_invalid_point_function(current_frame, current_flows)
@@ -63,4 +63,4 @@ class RandomDataset(Dataset):
         previous = self._point_cloud_transform(previous_frame)
         # This returns a tuple of augmented pointcloud and grid indices
 
-        return (current, previous), current_flows
+        return (previous, current), current_flows

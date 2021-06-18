@@ -4,7 +4,7 @@ from torch.nn import functional as F
 from pytorch_lightning.metrics import functional as FM
 from argparse import ArgumentParser
 
-from networks import PillarFeatureNet, ConvEncoder
+from networks import PillarFeatureNet, ConvEncoder, ConvDecoder, UnpillarNetwork, PointFeatureNet
 from .utils import init_weights
 
 
@@ -17,13 +17,20 @@ class FastFlow3DModel(pl.LightningModule):
         super(FastFlow3DModel, self).__init__()
         self.save_hyperparameters()  # Store the constructor parameters into self.hparams
 
+        self._point_feature_net = PointFeatureNet(in_features=point_features, out_features=64)
+
         self._pillar_feature_net = PillarFeatureNet(n_pillars_x=n_pillars_x, n_pillars_y=n_pillars_y,
-                                                    in_features=point_features, out_features=64)
+                                                    out_features=64)
         self._pillar_feature_net.apply(init_weights)
 
         self._conv_encoder_net = ConvEncoder(in_channels=64, out_channels=256)
         self._conv_encoder_net.apply(init_weights)
-        # TODO: Remaining networks
+
+        self._conv_decoder_net = ConvDecoder()
+        self._conv_decoder_net.apply(init_weights)
+
+        self._unpillar_network = UnpillarNetwork(n_pillars_x=n_pillars_x, n_pillars_y=n_pillars_y)
+        self._unpillar_network.apply(init_weights)
 
     def forward(self, x):
         """
@@ -43,20 +50,26 @@ class FastFlow3DModel(pl.LightningModule):
         # This will then yield a single 2D grid embedding for the batch that is later used as the batch.
         previous_batch_grid = []
         current_batch_grid = []
+        current_point_embeddings = []
+
         for point_clouds, grid_indices in previous_batch:
-            pillar_embedding = self._pillar_feature_net(point_clouds.float(), grid_indices.int())
+            embedded_point_cloud = self._point_feature_net(point_clouds.float())
+            pillar_embedding = self._pillar_feature_net(embedded_point_cloud, grid_indices.int())
             previous_batch_grid.append(pillar_embedding)
 
         for point_clouds, grid_indices in current_batch:
-            pillar_embedding = self._pillar_feature_net(point_clouds.float(), grid_indices.int())
+            print(f"Point clouds in {point_clouds.shape}")
+            embedded_point_cloud = self._point_feature_net(point_clouds.float())
+            print(f"Point clouds out {embedded_point_cloud.shape}")
+            current_point_embeddings.append(embedded_point_cloud)
+            pillar_embedding = self._pillar_feature_net(embedded_point_cloud, grid_indices.int())
             current_batch_grid.append(pillar_embedding)
 
         # Now concatenate the pillar embeddings again to be batches for the next networks
         pillar_embeddings_prev = torch.stack(previous_batch_grid)
         pillar_embeddings_cur = torch.stack(current_batch_grid)
 
-        print("lool")
-        # Output is a 512x512x64 2D embedding representing the point clouds
+        # Output is a batch_sizex512x512x64 2D embedding representing the point clouds
 
         # 2. Apply the U-net encoder step
         # Note that weight sharing is used here. The same U-net is used for both point clouds.
@@ -65,13 +78,25 @@ class FastFlow3DModel(pl.LightningModule):
         cur_64_conv, cur_128_conv, cur_256_conv = self._conv_encoder_net(pillar_embeddings_cur)
 
         # 3. Apply the U-net decoder with skip connections
-        # TODO: Note there is not activation function here (layers S-Z)
+        grid_flow_embeddings = self._conv_decoder_net(pillar_embeddings_prev, prev_64_conv,
+                                                      prev_128_conv, prev_256_conv,
+                                                      pillar_embeddings_cur, cur_64_conv,
+                                                      cur_128_conv, cur_256_conv)
+        # Output is a batch_sizex512x512x64 grid of flow embeddings
 
-        # 4. Apply the unpillar operation
-        # TODO: Note there is not activation function here (layers S-Z)
-
-        # Return the final motion prediction of size (N_points_cur, 3)
-        return x
+        # 4. Apply the unpillar and flow prediction operation
+        # List of batch size many output with each being a (N_points, 3) flow prediction.
+        output = []
+        # Again as the number of points in each cloud is not the same we need to do this per batch
+        for i, (_, grid_indices) in enumerate(current_batch):
+            # Use the grid_indices to reconstruct the correct grid cell embedding
+            point_flow_predictions = self._unpillar_network(grid_flow_embeddings[i].float(),
+                                                            current_point_embeddings[i],
+                                                            grid_indices)
+            output.append(point_flow_predictions)
+        print(f"Output length {len(output)}")
+        # Return the final motion prediction is batch_size long list of elements shaped (N_points_cur, 3)
+        return output
 
     def general_step(self, batch, batch_idx, mode):
         """
@@ -82,9 +107,18 @@ class FastFlow3DModel(pl.LightningModule):
         :return:
         """
         x, y = batch
-        y_hat = self(x)
-        loss = F.mse_loss(y_hat, y)
-        return loss
+        batch_y_hat = self(x)
+        # y_hat is a list of point clouds because they do not have the same shape
+        # We need to compute the loss for each point cloud and return the mean over them
+        total_loss = torch.zeros(1, device=self.device)
+        for i, y_hat in enumerate(batch_y_hat):
+            # print(f"y shape {y[i].shape}")
+            # print(f"y_hat shape {y_hat.shape}")
+            # TODO: This does not take a weighting of classes into account as described into the paper
+            loss = F.mse_loss(y_hat, y[i].float().to(y_hat.device))
+            total_loss += loss
+        # TODO: This weighting does not take the different amount of points into account
+        return total_loss / len(x)
 
     def training_step(self, batch, batch_idx):
         """
