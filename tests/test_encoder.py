@@ -19,6 +19,11 @@ def test_encoder():
             manual_3d[:, i, j] = grid[i * n_pillars + j, :]
     assert torch.equal(manual_3d, grid3d)
 
+    # And now the ungrid operation
+    grid2d = grid3d.reshape((n_features, n_pillars * n_pillars))
+    grid2d = grid2d.permute((1, 0))
+    assert torch.equal(grid, grid2d)
+
 
 if __name__ == '__main__':
     test_encoder()

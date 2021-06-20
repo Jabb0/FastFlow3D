@@ -46,11 +46,13 @@ class UnpillarNetwork(torch.nn.Module):
         # This is the ungrid operation
         # Output is a (N_points, 64) matrix where each point is assigned its cell embedding
         # But the input needs to be again in the 1D cell encoding of the grid_lookup matrix
-        # TODO: This is likely a flatten but maybe view? same issue as with snap-to-grid
-        #   I think this should be a flatten instead.
-        #   Note that the input is of (channels, width, height) because this is how the conv layers work
-        grid_flow_embeddings = grid_flow_embeddings.view((self.n_pillars_x * self.n_pillars_y,
-                                                          grid_flow_embeddings.shape[0]))
+
+        # grid_flow_embeddings -> [64, 512, 512]
+        # Please refer to tests/test_encoder.py to check a test which check that this reformatting work
+        grid_flow_embeddings = grid_flow_embeddings.reshape((grid_flow_embeddings.shape[0],
+                                                             self.n_pillars_x * self.n_pillars_y))
+        grid_flow_embeddings = grid_flow_embeddings.permute((1, 0))
+
         # print(f"grid_lookup_matrix {grid_lookup_matrix.size()}")
         point_embeddings = torch.sparse.mm(grid_lookup_matrix, grid_flow_embeddings)
         # print(f"point_embeddings {point_embeddings.size()}")
