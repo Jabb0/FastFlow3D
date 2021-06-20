@@ -43,20 +43,26 @@ class PillarFeatureNet(torch.nn.Module):
         return grid_lookup_matrix
 
     def forward(self, x, indices):
+        # x -> [N, 64]
+        # indices -> [N, 2], indicates which pillar belongs to each point
         """ Input must be the augmented point cloud of shape (n_points, 6) """
         # Calculate the mapping matrix from each point to its 1D encoded cell
         grid_lookup_matrix = self.construct_sparse_grid_matrix(x.shape[0], indices)
+        # grid_lookup_matrix -> [512*512, N]
+        #print(grid_lookup_matrix.shape)
         # rows are points, columns are cells. 1 if the two are connected. This will sum up the points
 
         # We can now sum up the embeddings of all points as matrix multiplication
+        # grid = [512*512, N] @ [N,64] -> [512*512, 64]
         grid = torch.sparse.mm(grid_lookup_matrix, x)
         # We now need to shape the 1D grid embedding into the actual 2D grid
-        # TODO: is reshape correct here??
-        # TODO: This is most likely incorrect. Need to shape it such that the first value is the channel
-        #  because of conv2d input but the dimensions need to match according the the encoding we used
-        grid = grid.view((x.shape[1], self.n_pillars_x, self.n_pillars_y))
 
-        return grid
+        # Please refer to tests/test_encoder.py to check a test which check that this reformatting works
+        grid3d = grid.view((self.n_pillars_x, self.n_pillars_y, x.shape[1]))
+        grid3d = grid3d.permute((2, 0, 1))
+
+        return grid3d
+
 
     def forward2(self, points, indices):
         """ Input must be the augmented point cloud of shape (batch_size, n_points, 6)

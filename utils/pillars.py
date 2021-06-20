@@ -46,5 +46,5 @@ def create_pillars_matrix(pc_valid, grid_cell_size, x_min, y_min, z_min, z_max):
 
     # Take the two laser features
     augmented_pc[:, 6:] = pc_valid[:, 3:]
-
+    # augmented_pc = [cx, cy, cz,  Δx, Δy, Δz, l0, l1]
     return augmented_pc, grid_cell_indices

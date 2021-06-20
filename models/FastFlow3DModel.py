@@ -53,14 +53,19 @@ class FastFlow3DModel(pl.LightningModule):
         current_point_embeddings = []
 
         for point_clouds, grid_indices in previous_batch:
+            # point_clouds: [N, 8], where N is the number of points in the point cloud
+            # per each point, there are 8 features: [cx, cy, cz,  Δx, Δy, Δz, l0, l1], as stated in the paper
             embedded_point_cloud = self._point_feature_net(point_clouds.float())
+            # embedded_point_cloud: [N, 64], where N is the number of points in the point cloud
             pillar_embedding = self._pillar_feature_net(embedded_point_cloud, grid_indices.int())
+            # pillar_embedding = [64, 512, 512]
             previous_batch_grid.append(pillar_embedding)
 
         for point_clouds, grid_indices in current_batch:
-            print(f"Point clouds in {point_clouds.shape}")
+            # point_clouds: [N, 8], where N is the number of points in the point cloud
+            # per each point, there are 8 features: [cx, cy, cz,  Δx, Δy, Δz, l0, l1], as stated in the paper
             embedded_point_cloud = self._point_feature_net(point_clouds.float())
-            print(f"Point clouds out {embedded_point_cloud.shape}")
+            # embedded_point_cloud: [N, 64], where N is the number of points in the point cloud
             current_point_embeddings.append(embedded_point_cloud)
             pillar_embedding = self._pillar_feature_net(embedded_point_cloud, grid_indices.int())
             current_batch_grid.append(pillar_embedding)
@@ -68,8 +73,8 @@ class FastFlow3DModel(pl.LightningModule):
         # Now concatenate the pillar embeddings again to be batches for the next networks
         pillar_embeddings_prev = torch.stack(previous_batch_grid)
         pillar_embeddings_cur = torch.stack(current_batch_grid)
+        # pillar_embeddings -> [batch_size, 64, 512, 512]
 
-        # Output is a batch_sizex512x512x64 2D embedding representing the point clouds
 
         # 2. Apply the U-net encoder step
         # Note that weight sharing is used here. The same U-net is used for both point clouds.
@@ -82,7 +87,8 @@ class FastFlow3DModel(pl.LightningModule):
                                                       prev_128_conv, prev_256_conv,
                                                       pillar_embeddings_cur, cur_64_conv,
                                                       cur_128_conv, cur_256_conv)
-        # Output is a batch_sizex512x512x64 grid of flow embeddings
+
+        # grid_flow_embeddings -> [batch_size, 64, 512, 512]
 
         # 4. Apply the unpillar and flow prediction operation
         # List of batch size many output with each being a (N_points, 3) flow prediction.

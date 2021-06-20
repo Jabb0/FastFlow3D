@@ -92,10 +92,13 @@ class ConvEncoder(torch.nn.Module):
         :return: (batch_size, out_height, out_width, )
         """
         # print(f"Input shape {grid.shape}")
+        # Block 1 -> from C to F
         F = self._block_1(grid)  # Output: F
         # print(f"F Output: {F.shape}")
+        # Block 2 -> from G to L
         L = self._block_2(F)  # Output: L
         # print(f"L Output: {L.shape}")
+        # Block 3 -> from M to R
         R = self._block_3(L)  # Output: R
         # print(f"R: {R.shape}")
 
