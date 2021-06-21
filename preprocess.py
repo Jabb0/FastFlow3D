@@ -32,7 +32,7 @@ if __name__ == '__main__':
     t = time.time()
     waymo_dataset = WaymoDataset(args.output_directory, force_preprocess=preprocess, tfrecord_path=args.input_directory,
                                  drop_invalid_point_function=None, point_cloud_transform=None,
-                                 limit=1000)  # Take 1000 frames
+                                 limit=100)  # Take 1000 frames
     print(f"Preprocessing duration: {(time.time() - t):.2f} s")
 
     # Not doable without correct transform function
