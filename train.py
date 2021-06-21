@@ -22,7 +22,7 @@ def cli():
     parser.add_argument('--y_min', default=-85, type=float)
     parser.add_argument('--z_max', default=3, type=float)
     parser.add_argument('--z_min', default=-3, type=float)
-    parser.add_argument('--grid_cell_size', default=0.332, type=float)
+    parser.add_argument('--grid_size', default=512, type=float)
     parser.add_argument('--test_data_available', default=False, type=bool)
     parser.add_argument('--fast_dev_run', default=False, type=bool)
     parser.add_argument('--num_workers', default=1, type=int)
@@ -42,12 +42,21 @@ def cli():
         print(f"Dataset directory not found: {dataset_path}")
         exit(1)
 
-    n_pillars_x = int(((args.x_max - args.x_min) / args.grid_cell_size))
-    n_pillars_y = int(((args.y_max - args.y_min) / args.grid_cell_size))
+    # We assume, that the length of the grid is the same in x and y direction.
+    # Otherwise, we have to implement different grid_cell_sizes for x and y direction
+    if args.x_max + abs(args.x_min) != args.y_max + abs(args.y_min):
+        raise ValueError("Grid must have same length in x and y direction but has a length of {0} in "
+                         "x direction and {1} in y direction".format(args.x_max + abs(args.x_min),
+                                                                     args.y_max + abs(args.y_min)))
+
+    grid_cell_size = (args.x_max + abs(args.x_min)) / args.grid_size
+
+    n_pillars_x = int(((args.x_max - args.x_min) / grid_cell_size))
+    n_pillars_y = int(((args.y_max - args.y_min) / grid_cell_size))
 
     model = FastFlow3DModel(n_pillars_x=n_pillars_x, n_pillars_y=n_pillars_y, point_features=8,
                             learning_rate=args.learning_rate)
-    waymo_data_module = WaymoDataModule(dataset_path, grid_cell_size=args.grid_cell_size, x_min=args.x_min,
+    waymo_data_module = WaymoDataModule(dataset_path, grid_cell_size=grid_cell_size, x_min=args.x_min,
                                         x_max=args.x_max, y_min=args.y_min,
                                         y_max=args.y_max, z_min=args.z_min, z_max=args.z_max,
                                         batch_size=args.batch_size,
