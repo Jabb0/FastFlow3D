@@ -1,8 +1,11 @@
 import torch
 from argparse import ArgumentParser
 import pytorch_lightning as pl
+import wandb
 
 from pathlib import Path
+
+from pytorch_lightning.loggers import WandbLogger
 
 from data import WaymoDataModule
 from models import FastFlow3DModel
@@ -11,6 +14,7 @@ from models import FastFlow3DModel
 def cli():
     parser = ArgumentParser()
     parser.add_argument('data_directory', type=str)
+    parser.add_argument('experiment_name', type=str)
     parser.add_argument('--batch_size', default=2, type=int)
     parser.add_argument('--x_max', default=81.92, type=float)
     parser.add_argument('--x_min', default=0, type=float)
@@ -22,6 +26,9 @@ def cli():
     parser.add_argument('--test_data_available', default=False, type=bool)
     parser.add_argument('--fast_dev_run', default=False, type=bool)
     parser.add_argument('--num_workers', default=1, type=int)
+    parser.add_argument('--wandb_api_key', default=None, type=str)
+    parser.add_argument('--wandb_project', default="fastflow3d", type=str)
+    parser.add_argument('--wandb_entity', default='dllab21fastflow3d', type=str)
 
     # NOTE: Readd this to see all parameters of the trainer
     # parser = pl.Trainer.add_argparse_args(parser)  # Add arguments for the trainer
@@ -40,12 +47,6 @@ def cli():
 
     model = FastFlow3DModel(n_pillars_x=n_pillars_x, n_pillars_y=n_pillars_y, point_features=8,
                             learning_rate=args.learning_rate)
-    # waymo_data_module = WaymoDataModule(dataset_path, grid_cell_size=args.grid_cell_size, x_min=args.x_min,
-    #                                     x_max=args.x_max, y_min=args.y_min,
-    #                                     y_max=args.y_max, z_min=args.z_min, z_max=args.z_max,
-    #                                     batch_size=args.batch_size,
-    #                                     has_test=args.test_data_available,
-    #                                     num_workers=args.num_workers)
     waymo_data_module = WaymoDataModule(dataset_path, grid_cell_size=args.grid_cell_size, x_min=args.x_min,
                                         x_max=args.x_max, y_min=args.y_min,
                                         y_max=args.y_max, z_min=args.z_min, z_max=args.z_max,
@@ -53,11 +54,23 @@ def cli():
                                         has_test=args.test_data_available,
                                         num_workers=args.num_workers)
 
+    # Initialize the weights and biases logger.
+    # Name is the name of this run
+    # Project is the name of the project
+    # Entity is the name of the team
+    logger = True  # Not set a logger defaulting to tensorboard
+    if args.wandb_api_key is not None:
+        wandb.login(key=args.wandb_api_key)
+        logger = WandbLogger(name=args.experiment_name, project=args.wandb_project, entity=args.wandb_entity)
+    else:
+        print("No weights and biases API key set. Using tensorboard instead!")
+
     # Max epochs can be configured here to, early stopping is also configurable.
     # Some things are definable as callback from pytorch_lightning.callback
     trainer = pl.Trainer.from_argparse_args(args,
                                             progress_bar_refresh_rate=25,  # Prevents Google Colab crashes
-                                            gpus=1 if torch.cuda.is_available() else 0
+                                            gpus=1 if torch.cuda.is_available() else 0,
+                                            logger=logger
                                             )  # Add Trainer hparams if desired
     # The actual train loop
     trainer.fit(model, waymo_data_module)
