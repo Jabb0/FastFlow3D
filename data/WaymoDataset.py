@@ -18,8 +18,8 @@ class WaymoDataset(Dataset):
 
 
     def __init__(self, data_path,
-                 drop_invalid_point_function,
-                 point_cloud_transform,
+                 drop_invalid_point_function=None,
+                 point_cloud_transform=None,
                  force_preprocess=False, tfrecord_path=None,
                  limit=None):
         """
@@ -84,15 +84,17 @@ class WaymoDataset(Dataset):
         current_frame = self.get_coordinates_and_features(current_frame, transform=None)
 
         # Drop invalid points according to the method supplied
-        current_frame, flows = self._drop_invalid_point_function(current_frame, flows)
-        previous_frame, _ = self._drop_invalid_point_function(previous_frame, None)
+        if self._drop_invalid_point_function is not None:
+            current_frame, flows = self._drop_invalid_point_function(current_frame, flows)
+            previous_frame, _ = self._drop_invalid_point_function(previous_frame, None)
 
         # Perform the pillarization of the point_cloud
-        current = self._point_cloud_transform(current_frame)
-        previous = self._point_cloud_transform(previous_frame)
+        if self._point_cloud_transform is not None:
+            current_frame = self._point_cloud_transform(current_frame)
+            previous_frame = self._point_cloud_transform(previous_frame)
         # This returns a tuple of augmented pointcloud and grid indices
 
-        return (previous, current), flows
+        return (previous_frame, current_frame), flows
 
     def save_point_cloud(self, compressed_frame, file_path):
         """
@@ -176,7 +178,8 @@ class WaymoDataset(Dataset):
         points_all = np.concatenate(points, axis=0)
         flows_all = np.concatenate(flows, axis=0)
         # We skip the range feature since pillars will account for it
-        points_coord, points_features = points_all[:, 0:3], points_all[:, 4:points_all.shape[1]]
+        # Note that first are features and then point coordinates
+        points_features, points_coord = points_all[:, 1:3], points_all[:, 3:points_all.shape[1]]
         points_all = np.hstack((points_coord, points_features))
         return points_all, flows_all
 
