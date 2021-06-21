@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Optional, Union, List, Dict
 
 from .WaymoDataset import WaymoDataset
-from .util import ApplyPillarization
+from .util import ApplyPillarization, drop_points_function, custom_collate
 
 
 class WaymoDataModule(pl.LightningDataModule):
@@ -27,9 +27,15 @@ class WaymoDataModule(pl.LightningDataModule):
         self._train_ = None
         self._val_ = None
         self._test_ = None
+        # This is a transformation class that applies to pillarization
         self._pillarization_transform = ApplyPillarization(grid_cell_size=grid_cell_size, x_min=x_min,
-                                                           x_max=x_max, y_min=y_min, y_max=y_max,
-                                                           z_min=z_min, z_max=z_max)
+                                                           y_min=y_min, z_min=z_min, z_max=z_max)
+
+        # This returns a function that removes points that should not be included in the pillarization.
+        # It also removes the labels if given.
+        self._drop_points_function = drop_points_function(x_min=x_min,
+                                                          x_max=x_max, y_min=y_min, y_max=y_max,
+                                                          z_min=z_min, z_max=z_max)
         self._has_test = has_test
         self._num_workers = num_workers
 
@@ -52,31 +58,32 @@ class WaymoDataModule(pl.LightningDataModule):
         :param stage: either 'fit', 'validate', 'test' or 'predict'
         :return: None
         """
-        # The Dataset will apply a transformation to each pointcloud
-        # This transformation consists of a pillarization and the toTensor operation.
-        transformations = transforms.Compose([
-            self._pillarization_transform,
-            transforms.ToTensor()
-        ])
-
-        self._train_ = WaymoDataset(self._dataset_directory.joinpath("train"), transform=transformations)
-        self._val_ = WaymoDataset(self._dataset_directory.joinpath("valid"), transform=transformations)
+        self._train_ = WaymoDataset(self._dataset_directory.joinpath("train"),
+                                    point_cloud_transform=self._pillarization_transform,
+                                    drop_invalid_point_function=self._drop_points_function)
+        self._val_ = WaymoDataset(self._dataset_directory.joinpath("valid"),
+                                  point_cloud_transform=self._pillarization_transform,
+                                  drop_invalid_point_function=self._drop_points_function)
         if self._has_test:
-            self._test_ = WaymoDataset(self._dataset_directory.joinpath("test"), transform=transformations)
+            self._test_ = WaymoDataset(self._dataset_directory.joinpath("test"),
+                                       point_cloud_transform=self._pillarization_transform,
+                                       drop_invalid_point_function=self._drop_points_function)
 
     def train_dataloader(self) -> Union[DataLoader, List[DataLoader], Dict[str, DataLoader]]:
         """
         Return a data loader for training
         :return: the dataloader to use
         """
-        return DataLoader(self._train_, self._batch_size, num_workers=self._num_workers)
+        return DataLoader(self._train_, self._batch_size, num_workers=self._num_workers,
+                          collate_fn=custom_collate)
 
     def val_dataloader(self) -> Union[DataLoader, List[DataLoader], Dict[str, DataLoader]]:
         """
         Return a data loader for validation
         :return: the dataloader to use
         """
-        return DataLoader(self._val_, self._batch_size, shuffle=False, num_workers=self._num_workers)
+        return DataLoader(self._val_, self._batch_size, shuffle=False, num_workers=self._num_workers,
+                          collate_fn=custom_collate)
 
     def test_dataloader(self) -> Union[DataLoader, List[DataLoader], Dict[str, DataLoader]]:
         """
@@ -85,4 +92,5 @@ class WaymoDataModule(pl.LightningDataModule):
         """
         if not self._has_test:
             raise RuntimeError("No test dataset specified. Maybe set has_test=True in DataModule init.")
-        return DataLoader(self._test_, self._batch_size, shuffle=False, num_workers=self._num_workers)
+        return DataLoader(self._test_, self._batch_size, shuffle=False, num_workers=self._num_workers,
+                          collate_fn=custom_collate)

@@ -17,7 +17,11 @@ class WaymoDataset(Dataset):
     """
 
 
-    def __init__(self, data_path, transform=None, force_preprocess=False, tfrecord_path=None):
+    def __init__(self, data_path,
+                 drop_invalid_point_function,
+                 point_cloud_transform,
+                 force_preprocess=False, tfrecord_path=None,
+                 limit=None):
         """
         Args:
             data_path (string): Folder with the compressed data.
@@ -30,7 +34,15 @@ class WaymoDataset(Dataset):
         """
         super().__init__()
         # Config parameters
-        look_up_table_path = os.path.join(data_path,'look_up_table')  # It has information regarding the files and transformations
+        look_up_table_path = os.path.join(data_path, 'look_up_table')
+        # It has information regarding the files and transformations
+
+        self.data_path = data_path
+
+        self._drop_invalid_point_function = drop_invalid_point_function
+        self._point_cloud_transform = point_cloud_transform
+
+        self._limit = limit
 
         if force_preprocess:
             if tfrecord_path is None:
@@ -46,8 +58,6 @@ class WaymoDataset(Dataset):
                 self.look_up_table = pickle.load(look_up_table_file)
         except FileNotFoundError:
             raise FileNotFoundError("Look-up table not found, please create it by running the file with force_preprocess=True")
-
-        self.data_path = data_path
 
     def __len__(self) -> int:
         return len(self.look_up_table)
@@ -73,7 +83,16 @@ class WaymoDataset(Dataset):
         previous_frame = self.get_coordinates_and_features(previous_frame, transform=C_T_P)
         current_frame = self.get_coordinates_and_features(current_frame, transform=None)
 
-        return [current_frame, previous_frame], flows
+        # Drop invalid points according to the method supplied
+        current_frame, flows = self._drop_invalid_point_function(current_frame, flows)
+        previous_frame, _ = self._drop_invalid_point_function(previous_frame, None)
+
+        # Perform the pillarization of the point_cloud
+        current = self._point_cloud_transform(current_frame)
+        previous = self._point_cloud_transform(previous_frame)
+        # This returns a tuple of augmented pointcloud and grid indices
+
+        return (previous, current), flows
 
     def save_point_cloud(self, compressed_frame, file_path):
         """
@@ -122,7 +141,7 @@ class WaymoDataset(Dataset):
                     current_frame = (point_cloud_path, pose_transform)
                     look_up_table.append([current_frame, previous_frame])
                     previous_frame = current_frame
-                if j==5:  # TODO remove this in the final version
+                if self._limit is not None and j == self._limit:  # TODO remove this in the final version
                     break
         return look_up_table
 
@@ -133,7 +152,6 @@ class WaymoDataset(Dataset):
         """
         frame = open_dataset.Frame()
         frame.ParseFromString(bytearray(compressed_frame.numpy()))
-        #print(frame.context.name)
         return frame
 
     def compute_features(self, frame):

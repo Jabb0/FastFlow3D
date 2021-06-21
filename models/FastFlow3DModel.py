@@ -100,7 +100,6 @@ class FastFlow3DModel(pl.LightningModule):
                                                             current_point_embeddings[i],
                                                             grid_indices)
             output.append(point_flow_predictions)
-        print(f"Output length {len(output)}")
         # Return the final motion prediction is batch_size long list of elements shaped (N_points_cur, 3)
         return output
 
@@ -117,14 +116,20 @@ class FastFlow3DModel(pl.LightningModule):
         # y_hat is a list of point clouds because they do not have the same shape
         # We need to compute the loss for each point cloud and return the mean over them
         total_loss = torch.zeros(1, device=self.device)
+        total_points = 0
         for i, y_hat in enumerate(batch_y_hat):
+            # Get the x,y,z flow targets and the label
+            flow_target = y[i][:, :3]
+            # label = y[i][:, 3]
+
             # print(f"y shape {y[i].shape}")
             # print(f"y_hat shape {y_hat.shape}")
             # TODO: This does not take a weighting of classes into account as described into the paper
-            loss = F.mse_loss(y_hat, y[i].float().to(y_hat.device))
-            total_loss += loss
-        # TODO: This weighting does not take the different amount of points into account
-        return total_loss / len(x)
+            loss = F.mse_loss(y_hat, flow_target.float().to(y_hat.device))
+            points = y_hat.shape[0]
+            total_loss += points * loss
+            total_points += points
+        return total_loss / total_points
 
     def training_step(self, batch, batch_idx):
         """

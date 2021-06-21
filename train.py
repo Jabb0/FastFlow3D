@@ -4,14 +4,14 @@ import pytorch_lightning as pl
 
 from pathlib import Path
 
-from data import WaymoDataModule, RandomDataModule
+from data import WaymoDataModule
 from models import FastFlow3DModel
 
 
 def cli():
     parser = ArgumentParser()
     parser.add_argument('data_directory', type=str)
-    parser.add_argument('--batch_size', default=1, type=int)
+    parser.add_argument('--batch_size', default=2, type=int)
     parser.add_argument('--x_max', default=81.92, type=float)
     parser.add_argument('--x_min', default=0, type=float)
     parser.add_argument('--y_max', default=40.96, type=float)
@@ -20,7 +20,7 @@ def cli():
     parser.add_argument('--z_min', default=-3, type=float)
     parser.add_argument('--grid_cell_size', default=0.16, type=float)
     parser.add_argument('--test_data_available', default=False, type=bool)
-    parser.add_argument('--fast_dev_run', default=True, type=bool)
+    parser.add_argument('--fast_dev_run', default=False, type=bool)
     parser.add_argument('--num_workers', default=1, type=int)
 
     # NOTE: Readd this to see all parameters of the trainer
@@ -46,12 +46,12 @@ def cli():
     #                                     batch_size=args.batch_size,
     #                                     has_test=args.test_data_available,
     #                                     num_workers=args.num_workers)
-    waymo_data_module = RandomDataModule(dataset_path, grid_cell_size=args.grid_cell_size, x_min=args.x_min,
-                                         x_max=args.x_max, y_min=args.y_min,
-                                         y_max=args.y_max, z_min=args.z_min, z_max=args.z_max,
-                                         batch_size=args.batch_size,
-                                         has_test=args.test_data_available,
-                                         num_workers=args.num_workers)
+    waymo_data_module = WaymoDataModule(dataset_path, grid_cell_size=args.grid_cell_size, x_min=args.x_min,
+                                        x_max=args.x_max, y_min=args.y_min,
+                                        y_max=args.y_max, z_min=args.z_min, z_max=args.z_max,
+                                        batch_size=args.batch_size,
+                                        has_test=args.test_data_available,
+                                        num_workers=args.num_workers)
 
     # Max epochs can be configured here to, early stopping is also configurable.
     # Some things are definable as callback from pytorch_lightning.callback
