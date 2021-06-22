@@ -12,7 +12,7 @@ from waymo_open_dataset.utils import  frame_utils
 from waymo_open_dataset import dataset_pb2 as open_dataset
 from waymo_open_dataset import dataset_pb2
 
-FILENAME = '../data/train/train_segment-10072140764565668044_4060_000_4080_000_with_camera_labels.tfrecord'
+FILENAME = '../data/train_tfrecord/train_segment-10072140764565668044_4060_000_4080_000_with_camera_labels.tfrecord'
 
 dataset = tf.data.TFRecordDataset(FILENAME, compression_type='')
 counter = 0
@@ -193,6 +193,7 @@ cp_points_all_ri2 = np.concatenate(cp_points_ri2, axis=0)
 
 
 print(points_all.shape) # I guess they are in the AV reference frame
+print(points_all[0, :])
 visualize_point_cloud(points_all)
 print(cp_points_all.shape)
 print(points_all[0:2])
