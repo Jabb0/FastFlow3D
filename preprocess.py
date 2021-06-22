@@ -33,7 +33,7 @@ if __name__ == '__main__':
     output_directory = Path(args.output_directory)
     if not output_directory.exists():
         output_directory.mkdir(parents=True)
-    if output_directory.iterdir():
+    if list(output_directory.iterdir()):
         print("Output directory not empty! Please remove existing files as there is no merge.")
         exit(1)
 
