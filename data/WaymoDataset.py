@@ -21,7 +21,7 @@ class WaymoDataset(Dataset):
                  drop_invalid_point_function=None,
                  point_cloud_transform=None,
                  force_preprocess=False, tfrecord_path=None,
-                 limit=None):
+                 frames_per_segment=None):
         """
         Args:
             data_path (string): Folder with the compressed data.
@@ -42,7 +42,7 @@ class WaymoDataset(Dataset):
         self._drop_invalid_point_function = drop_invalid_point_function
         self._point_cloud_transform = point_cloud_transform
 
-        self._limit = limit
+        self._frames_per_segment = frames_per_segment
 
         if force_preprocess:
             if tfrecord_path is None:
@@ -143,7 +143,7 @@ class WaymoDataset(Dataset):
                     current_frame = (point_cloud_path, pose_transform)
                     look_up_table.append([current_frame, previous_frame])
                     previous_frame = current_frame
-                if self._limit is not None and j == self._limit:  # TODO remove this in the final version
+                if self._frames_per_segment is not None and j == self._frames_per_segment:  # TODO remove this in the final version
                     break
         return look_up_table
 

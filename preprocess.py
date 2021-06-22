@@ -1,5 +1,6 @@
 import tensorflow as tf
 import time
+from pathlib import Path
 from argparse import ArgumentParser
 
 from data.WaymoDataset import WaymoDataset
@@ -25,6 +26,17 @@ if __name__ == '__main__':
 
     print(f"Extracting frames from {args.input_directory} to {args.output_directory}")
 
+    input_directory = Path(args.input_directory)
+    if not input_directory.exists() or not input_directory.is_dir():
+        print("Input directory does not exist")
+        exit(1)
+    output_directory = Path(args.output_directory)
+    if not output_directory.exists():
+        output_directory.mkdir(parents=True)
+    if output_directory.iterdir():
+        print("Output directory not empty! Please remove existing files as there is no merge.")
+        exit(1)
+
     # disable_gpu()  # FIXME cannot execute the code without disabling GPU
 
     # Getting points with the dataloader
@@ -32,10 +44,9 @@ if __name__ == '__main__':
     t = time.time()
     waymo_dataset = WaymoDataset(args.output_directory, force_preprocess=preprocess, tfrecord_path=args.input_directory,
                                  drop_invalid_point_function=None, point_cloud_transform=None,
-                                 limit=100)  # Take 1000 frames
+                                 frames_per_segment=100)  # Take 100 Frames from each segment
     print(f"Preprocessing duration: {(time.time() - t):.2f} s")
 
-    # Not doable without correct transform function
     exit(0)
     accum = 0
     t = time.time()
