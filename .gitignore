@@ -2,3 +2,4 @@ lightning_logs
 .idea
 venv
 wandb
+checkpoints

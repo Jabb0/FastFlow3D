@@ -30,6 +30,9 @@ def cli():
     parser.add_argument('--wandb_project', default="fastflow3d", type=str)
     parser.add_argument('--wandb_entity', default='dllab21fastflow3d', type=str)
 
+    # Set default dtype to float and not double
+    # torch.set_default_dtype(torch.float32)
+
     # NOTE: Readd this to see all parameters of the trainer
     # parser = pl.Trainer.add_argparse_args(parser)  # Add arguments for the trainer
     # Add model specific arguments here
