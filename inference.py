@@ -1,8 +1,16 @@
 from argparse import ArgumentParser
+
+import open3d.visualization
+
 from models import FastFlow3DModel
 from data.WaymoDataset import WaymoDataset
 import open3d as o3d
 import ffmpeg
+import time
+
+# Open3D info
+# http://open3d.org/html/tutorial/Basic/visualization.html
+# http://www.open3d.org/docs/0.9.0/tutorial/Advanced/customized_visualization.html
 
 if __name__ == '__main__':
     parser = ArgumentParser()
@@ -44,6 +52,15 @@ if __name__ == '__main__':
     vis = o3d.visualization.Visualizer()
     vis.create_window(width=1280, height=720)
     point_cloud = o3d.geometry.PointCloud()
+    #rederer = open3d.visualization.RenderOption().load_from_json("utils/viewer_config.json")
+    #vis.get_view_control().set_zoom(10)
+    #vis.run()
+    #view_ctl = vis.get_view_control()
+    #view_ctl.change_field_of_view(0.1)
+    #view_ctl.set_zoom(0.7)
+    #ctr = vis.get_view_control()
+    #param = ctr.convert_to_pinhole_camera_parameters()
+    #point_cloud = point_cloud.voxel_down_sample(voxel_size=10)
     for i in range(args.start_frame, args.end_frame):
         print(f"Rendering frame {i} of {args.end_frame}")
 
@@ -53,6 +70,14 @@ if __name__ == '__main__':
             flows = model((previous_frame, current_frame)).data.cpu().numpy()
 
         vis.add_geometry(point_cloud)
+
+        ctr = vis.get_view_control()
+        ctr.set_zoom(0.72)
+        ctr.change_field_of_view(60.0)
+        ctr.set_front([ 0.42149238953069712, -0.81138370875554688, 0.40496992818454702 ])
+        ctr.set_lookat([ 13.056647215758161, 2.4109030723596945, 2.263514128894637 ])
+        ctr.set_up([ -0.25052622313468664, 0.32500897579092991, 0.91192421679501412 ])
+
         vis.update_geometry(point_cloud)
         vis.poll_events()
         vis.update_renderer()
