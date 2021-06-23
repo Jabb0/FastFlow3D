@@ -48,3 +48,24 @@ def visualize_point_cloud(points):
     point_cloud = o3d.geometry.PointCloud()
     point_cloud.points = o3d.utility.Vector3dVector(points)
     o3d.visualization.draw_geometries([point_cloud])
+
+
+def visualize_flows(vis, points, flows):
+    """
+    Visualize a 3D point cloud where is point is flow-color-coded
+    :param vis: visualizer created with open3D, for example:
+
+    vis = o3d.visualization.Visualizer()
+    vis.create_window(width=1280, height=720)
+
+    :param points: (n_points, 3)
+    :param flows: (n_points, 3)
+    """
+    point_cloud = o3d.geometry.PointCloud()
+    point_cloud.points = o3d.utility.Vector3dVector(points)
+    point_cloud.colors = o3d.utility.Vector3dVector(flows)
+    #vis.destroy_window()
+
+
+
+

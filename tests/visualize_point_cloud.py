@@ -4,6 +4,7 @@ from utils.plot import visualize_point_cloud
 import open3d as o3d
 import time
 import ffmpeg
+import numpy as np
 
 
 # https://github.com/intel-isl/Open3D/issues/1110
@@ -13,6 +14,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
     screenshots_folder = "screenshots/temp_%04d.jpg"
     video_name = "point_cloud.mp4"
+
+    draw_flows = True
 
     print(f"Reading frames from {args.data_directory}")
 
@@ -37,8 +40,13 @@ if __name__ == '__main__':
         current = item[0][1]
         flows = item[1]
         raw_point_cloud = current[:, 0:3]
-
-        point_cloud.points = o3d.utility.Vector3dVector(raw_point_cloud)
+        if draw_flows:
+            point_cloud.points = o3d.utility.Vector3dVector(raw_point_cloud)
+            rgb_flow = flows[:, :-1]
+            #rgb_flow /= np.sum(rgb_flow)
+            point_cloud.colors = o3d.utility.Vector3dVector(rgb_flow)
+        else:
+            point_cloud.points = o3d.utility.Vector3dVector(raw_point_cloud)
         #vis.destroy_window()
 
     (
