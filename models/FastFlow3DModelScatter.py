@@ -4,8 +4,8 @@ from torch.nn import functional as F
 from pytorch_lightning.metrics import functional as FM
 from argparse import ArgumentParser
 
-from networks import PillarFeatureNetScatter, ConvEncoder, ConvDecoder, UnpillarNetwork, PointFeatureNet
-from .utils import init_weights
+from networks import PillarFeatureNetScatter, ConvEncoder, ConvDecoder, UnpillarNetworkScatter, PointFeatureNet
+from .utils import init_weights, augment_index
 
 
 class FastFlow3DModelScatter(pl.LightningModule):
@@ -29,8 +29,10 @@ class FastFlow3DModelScatter(pl.LightningModule):
         self._conv_decoder_net = ConvDecoder()
         self._conv_decoder_net.apply(init_weights)
 
-        self._unpillar_network = UnpillarNetwork(n_pillars_x=n_pillars_x, n_pillars_y=n_pillars_y)
+        self._unpillar_network = UnpillarNetworkScatter(n_pillars_x=n_pillars_x, n_pillars_y=n_pillars_y)
         self._unpillar_network.apply(init_weights)
+
+        self._n_pillars_x = n_pillars_x
 
     def _transform_point_cloud_to_embeddings(self, pc, mask):
         # Flatten the first two dimensions to get the points as batch dimension
@@ -68,9 +70,18 @@ class FastFlow3DModelScatter(pl.LightningModule):
         # Pass the whole batch of point clouds to get the embedding for each point in the cloud
         # Input pc is (batch_size, max_n_points, features_in)
         # per each point, there are 8 features: [cx, cy, cz,  Δx, Δy, Δz, l0, l1], as stated in the paper
-        previous_batch_pc_embedding = self._transform_point_cloud_to_embeddings(previous_batch_pc, previous_batch_mask)
+        previous_batch_pc_embedding = self._transform_point_cloud_to_embeddings(previous_batch_pc.float(),
+                                                                                previous_batch_mask)
         # Output pc is (batch_size, max_n_points, embedding_features)
-        current_batch_pc_embedding = self._transform_point_cloud_to_embeddings(current_batch_pc, current_batch_mask)
+        current_batch_pc_embedding = self._transform_point_cloud_to_embeddings(current_batch_pc.float(),
+                                                                               current_batch_mask)
+
+        # To make things easier we transform the 2D indices into 1D indices
+        # The cells are encoded as j = x * grid_width + y and thus give an unique encoding for each cell
+        # E.g. if we have 512 cells in both directions and x=1, y=2 is encoded as 512 + 2 = 514.
+        # Each new row of the grid (x-axis) starts at j % 512 = 0.
+        previous_batch_grid = augment_index(previous_batch_grid, previous_batch_pc_embedding.size(2), self._n_pillars_x)
+        current_batch_grid = augment_index(current_batch_grid, current_batch_pc_embedding.size(2), self._n_pillars_x)
 
         # Now we need to scatter the points into their 2D matrix
         previous_pillar_embeddings = self._pillar_feature_net(previous_batch_pc_embedding, previous_batch_grid)
@@ -91,11 +102,13 @@ class FastFlow3DModelScatter(pl.LightningModule):
         # grid_flow_embeddings -> [batch_size, 64, 512, 512]
 
         # 4. Apply the unpillar and flow prediction operation
-
+        predictions = self._unpillar_network(grid_flow_embeddings, current_batch_pc_embedding, current_batch_grid)
 
         # List of batch size many output with each being a (N_points, 3) flow prediction.
-        output = []
-        return output
+        return predictions
+
+    def masked_mse_loss(self, input, target, mask):
+        return (mask * (input - target) ** 2).mean()
 
     def general_step(self, batch, batch_idx, mode):
         """
@@ -106,24 +119,20 @@ class FastFlow3DModelScatter(pl.LightningModule):
         :return:
         """
         x, y = batch
-        batch_y_hat = self(x)
-        # y_hat is a list of point clouds because they do not have the same shape
-        # We need to compute the loss for each point cloud and return the mean over them
-        total_loss = torch.zeros(1, device=self.device)
-        total_points = 0
-        for i, y_hat in enumerate(batch_y_hat):
-            # Get the x,y,z flow targets and the label
-            flow_target = y[i][:, :3]
-            # label = y[i][:, 3]
+        y_hat = self(x)
+        # x is a list of input batches with the necessary data
+        # For loss calculation we need to know which elements are actually present and not padding
+        # Therefore we need the mast of the current frame as batch tensor
+        # It is True for all points that just are padded and of size (batch_size, max_points)
+        # Invert the matrix for our purpose
+        current_frame_mask = ~x[1][2].unsqueeze(-1)
 
-            # print(f"y shape {y[i].shape}")
-            # print(f"y_hat shape {y_hat.shape}")
-            # TODO: This does not take a weighting of classes into account as described into the paper
-            loss = F.mse_loss(y_hat, flow_target.float().to(y_hat.device))
-            points = y_hat.shape[0]
-            total_loss += points * loss
-            total_points += points
-        return total_loss / total_points
+        # The first 3 dimensions are the actual flow. The last dimension is the class id.
+        y_flow = y[:, :, :3]
+        # TODO: Is the masking properly implemented?!
+        # TODO: Add weights for the background class
+        loss = self.masked_mse_loss(y_hat, y_flow, current_frame_mask)
+        return loss
 
     def training_step(self, batch, batch_idx):
         """

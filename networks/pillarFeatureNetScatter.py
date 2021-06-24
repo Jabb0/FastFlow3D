@@ -26,22 +26,9 @@ class PillarFeatureNetScatter(torch.nn.Module):
         # in indices we have (batch_size, N_points, 2) with the 2D coordinates in the grid
         # We want to scatter into a n_pillars_x and n_pillars_y grid
         # Thus we should allocate a tensor of the desired shape (batch_size, n_pillars_x, n_pillars_y, 64)
-        # To make things easier we transform the 2D indices into 1D indices
-        # The cells are encoded as j = x * grid_width + y and thus give an unique encoding for each cell
-        # E.g. if we have 512 cells in both directions and x=1, y=2 is encoded as 512 + 2 = 514.
-        # Each new row of the grid (x-axis) starts at j % 512 = 0.
+
         # Init the matrix to only zeros
-        indices = indices[:, :, 0] * self.n_pillars_x + indices[:, :, 1]
-        # The indices also need to have a 3D dimension. That dimension is the feature dimension of the inputs.
-        # We need to repeat the grid cell index such that all feature dimensions are summed up.
-        # Note: we use .expand here. Expand does not actually create new memory.
-        #   It just views the same entry multiple times.
-        #   But as the index does not need a grad nor is changed in place this is fine.
-        # First unsqueeze the (batch, points) vector to (batch, points, 1)
-        # Then expand the 1 dimension such that the index is defined for all the features desired
-        # -1 means do not change this dim. (batch, points,
-        indices = indices.unsqueeze(-1).expand(-1, -1, x.size(2))
-        # Now indices is (batch_size, N_points) now
+        # Now indices is (batch_size, N_points, features)
         # Construct the desired tensor
         grid = torch.zeros((x.size(0), self.n_pillars_x * self.n_pillars_y, x.size(2)), device=x.device)
         # And now perform the infamous scatter_add_ that changes the grid in place

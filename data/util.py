@@ -202,7 +202,7 @@ def _pad_batch(batch):
     indices_features = batch[0][1].shape[1]
 
     # We need a mask of all the points that actually exist
-    zeros = np.zeros((len(batch), max_points_prev), dtype=int)
+    zeros = np.zeros((len(batch), max_points_prev), dtype=bool)
     # Mark all first real number of points that are padded
     for i, n in enumerate(true_number_of_points):
         zeros[i, n:] = 1
@@ -267,7 +267,7 @@ def custom_collate_batch(batch):
     batch_current = default_collate(batch_current)
     batch_targets = default_collate(batch_targets)
 
-    # Return a tensor that consists of ??? HELP PLZ
+    # Return a tensor that consists of
     # the data batches consist of batches of tensors
     #   1. (batch_size, max_n_points, features) the point cloud batch
     #   2. (batch_size, max_n_points, 2) the 2D grid_indices to map to

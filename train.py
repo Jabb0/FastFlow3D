@@ -29,9 +29,10 @@ def cli():
     parser.add_argument('--wandb_api_key', default=None, type=str)
     parser.add_argument('--wandb_project', default="fastflow3d", type=str)
     parser.add_argument('--wandb_entity', default='dllab21fastflow3d', type=str)
+    parser.add_argument('--use_sparse_lookup', default=False, type=bool)
 
     # Set default dtype to float and not double
-    torch.set_default_dtype(torch.double)
+    torch.set_default_dtype(torch.float)
 
     # NOTE: Readd this to see all parameters of the trainer
     # parser = pl.Trainer.add_argparse_args(parser)  # Add arguments for the trainer
@@ -57,14 +58,21 @@ def cli():
     n_pillars_x = int(((args.x_max - args.x_min) / grid_cell_size))
     n_pillars_y = int(((args.y_max - args.y_min) / grid_cell_size))
 
-    model = FastFlow3DModelScatter(n_pillars_x=n_pillars_x, n_pillars_y=n_pillars_y, point_features=8,
-                                   learning_rate=args.learning_rate)
+    if args.use_sparse_lookup:
+        # Tested GPU memory increase from batch size 1 to 2 is 2350MiB
+        model = FastFlow3DModel(n_pillars_x=n_pillars_x, n_pillars_y=n_pillars_y, point_features=8,
+                                learning_rate=args.learning_rate)
+    else:
+        # Tested GPU memory increase from batch size 1 to 2 is 1824MiB
+        model = FastFlow3DModelScatter(n_pillars_x=n_pillars_x, n_pillars_y=n_pillars_y, point_features=8,
+                                       learning_rate=args.learning_rate)
     waymo_data_module = WaymoDataModule(dataset_path, grid_cell_size=grid_cell_size, x_min=args.x_min,
                                         x_max=args.x_max, y_min=args.y_min,
                                         y_max=args.y_max, z_min=args.z_min, z_max=args.z_max,
                                         batch_size=args.batch_size,
                                         has_test=args.test_data_available,
-                                        num_workers=args.num_workers)
+                                        num_workers=args.num_workers,
+                                        scatter_collate=not args.use_sparse_lookup)
 
     # Initialize the weights and biases logger.
     # Name is the name of this run

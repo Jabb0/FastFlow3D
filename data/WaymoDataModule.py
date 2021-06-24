@@ -20,7 +20,8 @@ class WaymoDataModule(pl.LightningDataModule):
                  grid_cell_size, x_min, x_max, y_min, y_max, z_min, z_max,
                  batch_size: int = 32,
                  has_test=False,
-                 num_workers=1):
+                 num_workers=1,
+                 scatter_collate=True):
         super(WaymoDataModule, self).__init__()
         self._dataset_directory = Path(dataset_directory)
         self._batch_size = batch_size
@@ -39,7 +40,7 @@ class WaymoDataModule(pl.LightningDataModule):
         self._has_test = has_test
         self._num_workers = num_workers
 
-        self._collate_fn = custom_collate_batch
+        self._collate_fn = custom_collate_batch if scatter_collate else custom_collate
 
     def prepare_data(self) -> None:
         """
