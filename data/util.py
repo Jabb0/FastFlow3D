@@ -1,5 +1,6 @@
 import tensorflow as tf
 import torch
+import numpy as np
 
 from waymo_open_dataset.utils import frame_utils
 from waymo_open_dataset import dataset_pb2
@@ -192,3 +193,89 @@ def custom_collate(batch):
 
     return (batch_previous, batch_current), batch_targets
 
+
+def _pad_batch(batch):
+    # Get the number of points in the largest point cloud
+    true_number_of_points = [e[1].shape[0] for e in batch]
+    max_points_prev = np.max(true_number_of_points)
+    point_features = batch[0][0].shape[1]
+    indices_features = batch[0][1].shape[1]
+
+    # We need a mask of all the points that actually exist
+    zeros = np.zeros((len(batch), max_points_prev), dtype=int)
+    # Mark all first real number of points that are padded
+    for i, n in enumerate(true_number_of_points):
+        zeros[i, n:] = 1
+
+    # resize all tensors to the max points size
+    return [
+        [
+            np.resize(entry[0], (max_points_prev, point_features)),
+            np.resize(entry[1], (max_points_prev, indices_features)),
+            zeros[i]
+        ] for i, entry in enumerate(batch)
+    ]
+
+
+def _pad_targets(batch):
+    true_number_of_points = [e.shape[0] for e in batch]
+    max_points = np.max(true_number_of_points)
+    target_features = batch[0].shape[1]
+    return [
+        np.resize(entry, (max_points, target_features))
+        for entry in batch
+    ]
+
+
+def custom_collate_batch(batch):
+    """
+    This version of the collate function create the batch necessary for the input to the network.
+
+    Take the list of entries and batch them together.
+        This means a batch of the previous images and a batch of the current images and a batch of flows.
+    Because point clouds have different number of points the batching needs the points clouds with less points
+        being zero padded.
+    Note that this requires to filter out the zero padded points later on.
+
+    :param batch: batch_size long list of ((prev, cur), flows) pointcloud tuples with flows.
+        prev and cur are tuples of (point_cloud, grid_indices)
+         point clouds are (N_points, features) with different N_points each
+    :return: ((batch_prev, batch_cur), batch_flows)
+    """
+    # Build numpy array with data
+
+    # Only convert the points clouds from numpy arrays to tensors
+    # entry[0, 0] is the previous (point_cloud, grid_index) entry
+    batch_previous = [
+        entry[0][0] for entry in batch
+    ]
+    batch_previous = _pad_batch(batch_previous)
+
+    batch_current = [
+        entry[0][1] for entry in batch
+    ]
+    batch_current = _pad_batch(batch_current)
+
+    # For the targets we can only transform each entry to a tensor and not stack them
+    batch_targets = [
+        entry[1] for entry in batch
+    ]
+    batch_targets = _pad_targets(batch_targets)
+
+    # Call the default collate to stack everything
+    batch_previous = default_collate(batch_previous)
+    batch_current = default_collate(batch_current)
+    batch_targets = default_collate(batch_targets)
+
+    # Return a tensor that consists of ??? HELP PLZ
+    # the data batches consist of batches of tensors
+    #   1. (batch_size, max_n_points, features) the point cloud batch
+    #   2. (batch_size, max_n_points, 2) the 2D grid_indices to map to
+    #   3. (batch_size, max_n_points) the 0-1 encoding if the element is padded
+    # Batch previous for the previous frame
+    # Batch current for the current frame
+
+    # The targets consist of
+    #   (batch_size, max_n_points, target_features). should by 4D x,y,z flow and class id
+
+    return (batch_previous, batch_current), batch_targets

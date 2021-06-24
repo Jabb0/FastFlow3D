@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Optional, Union, List, Dict
 
 from .WaymoDataset import WaymoDataset
-from .util import ApplyPillarization, drop_points_function, custom_collate
+from .util import ApplyPillarization, drop_points_function, custom_collate, custom_collate_batch
 
 
 class WaymoDataModule(pl.LightningDataModule):
@@ -38,6 +38,8 @@ class WaymoDataModule(pl.LightningDataModule):
                                                           z_min=z_min, z_max=z_max)
         self._has_test = has_test
         self._num_workers = num_workers
+
+        self._collate_fn = custom_collate_batch
 
     def prepare_data(self) -> None:
         """
@@ -75,7 +77,7 @@ class WaymoDataModule(pl.LightningDataModule):
         :return: the dataloader to use
         """
         return DataLoader(self._train_, self._batch_size, num_workers=self._num_workers,
-                          collate_fn=custom_collate)
+                          collate_fn=self._collate_fn)
 
     def val_dataloader(self) -> Union[DataLoader, List[DataLoader], Dict[str, DataLoader]]:
         """
@@ -83,7 +85,7 @@ class WaymoDataModule(pl.LightningDataModule):
         :return: the dataloader to use
         """
         return DataLoader(self._val_, self._batch_size, shuffle=False, num_workers=self._num_workers,
-                          collate_fn=custom_collate)
+                          collate_fn=self._collate_fn)
 
     def test_dataloader(self) -> Union[DataLoader, List[DataLoader], Dict[str, DataLoader]]:
         """
@@ -93,4 +95,4 @@ class WaymoDataModule(pl.LightningDataModule):
         if not self._has_test:
             raise RuntimeError("No test dataset specified. Maybe set has_test=True in DataModule init.")
         return DataLoader(self._test_, self._batch_size, shuffle=False, num_workers=self._num_workers,
-                          collate_fn=custom_collate)
+                          collate_fn=self._collate_fn)

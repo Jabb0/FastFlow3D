@@ -11,8 +11,8 @@ class PointFeatureNet(torch.nn.Module):
     def forward(self, x):
         """
         Encode all points into their embeddings
-        :param x: (n_points, in_features)
-        :return: (n_points, out_features)
+        :param x: (batch_size, n_points, in_features)
+        :return: (batch_size, n_points, out_features)
         """
         # linear transformation
         x = self.linear(x)

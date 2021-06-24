@@ -1,1 +1,2 @@
 from .FastFlow3DModel import FastFlow3DModel
+from .FastFlow3DModelScatter import FastFlow3DModelScatter

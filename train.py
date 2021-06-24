@@ -8,7 +8,7 @@ from pathlib import Path
 from pytorch_lightning.loggers import WandbLogger
 
 from data import WaymoDataModule
-from models import FastFlow3DModel
+from models import FastFlow3DModel, FastFlow3DModelScatter
 
 
 def cli():
@@ -31,7 +31,7 @@ def cli():
     parser.add_argument('--wandb_entity', default='dllab21fastflow3d', type=str)
 
     # Set default dtype to float and not double
-    # torch.set_default_dtype(torch.float32)
+    torch.set_default_dtype(torch.double)
 
     # NOTE: Readd this to see all parameters of the trainer
     # parser = pl.Trainer.add_argparse_args(parser)  # Add arguments for the trainer
@@ -57,8 +57,8 @@ def cli():
     n_pillars_x = int(((args.x_max - args.x_min) / grid_cell_size))
     n_pillars_y = int(((args.y_max - args.y_min) / grid_cell_size))
 
-    model = FastFlow3DModel(n_pillars_x=n_pillars_x, n_pillars_y=n_pillars_y, point_features=8,
-                            learning_rate=args.learning_rate)
+    model = FastFlow3DModelScatter(n_pillars_x=n_pillars_x, n_pillars_y=n_pillars_y, point_features=8,
+                                   learning_rate=args.learning_rate)
     waymo_data_module = WaymoDataModule(dataset_path, grid_cell_size=grid_cell_size, x_min=args.x_min,
                                         x_max=args.x_max, y_min=args.y_min,
                                         y_max=args.y_max, z_min=args.z_min, z_max=args.z_max,

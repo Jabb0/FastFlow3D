@@ -66,7 +66,6 @@ class ConvDecoder(torch.nn.Module):
         F = torch.cat((F_prev, F_cur), dim=1)
         L = torch.cat((L_prev, L_cur), dim=1)
         # print("After concatenation of both embedded point clouds:")
-        # print(f"B Output: {B.shape}")
         # print(f"R Output: {R.shape}")
         # print(f"F Output: {F.shape}")
         # print(f"L Output: {L.shape}")
