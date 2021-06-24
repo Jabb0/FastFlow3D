@@ -8,13 +8,17 @@ from data.WaymoDataset import WaymoDataset
 from data.util import preprocess, merge_look_up_tables
 import os, glob
 import multiprocessing as mp
+from tqdm import tqdm
 
+
+def preprocess_wrap(tfrecord_files, output_path=os.path.abspath("data/train2")):
+    preprocess(tfrecord_files, output_path, frames_per_segment=2)
 
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('input_directory', type=str)
     parser.add_argument('output_directory', type=str)
-    parser.add_argument('--n_cores', defaul=None, type=int)
+    parser.add_argument('--n_cores', default=None, type=int)
     args = parser.parse_args()
 
     print(f"Extracting frames from {args.input_directory} to {args.output_directory}")
@@ -53,15 +57,16 @@ if __name__ == '__main__':
         tfrecord_filenames.append(file_name)
 
     t = time.time()
-    for tfrecord_filename in tfrecord_filenames:
-        pool.apply_async(preprocess, args=([tfrecord_filename], output_directory, 2))
 
+    for _ in tqdm(pool.imap_unordered(preprocess_wrap, tfrecord_filenames), total=len(tfrecord_filenames)):
+        pass
 
     # Close Pool and let all the processes complete
     pool.close()
     pool.join()  # postpones the execution of next line of code until all processes in the queue are done.
 
     # Merge look up tables
+    print("Merging individual look-up-tables...")
     merge_look_up_tables(os.path.abspath(output_directory))
 
     print(f"Preprocessing duration: {(time.time() - t):.2f} s")

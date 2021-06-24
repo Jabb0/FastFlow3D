@@ -236,9 +236,8 @@ def preprocess(tfrecord_files, output_path, frames_per_segment = None):
                           They can be downloaded from https://console.cloud.google.com/storage/browser/waymo_open_dataset_scene_flow
     :param output_path: path where the processed point clouds will be saved.
     """
-
+    tfrecord_files = [tfrecord_files]
     for data_file in tfrecord_files:
-        print(data_file)
         tfrecord_filename = os.path.basename(data_file)
         tfrecord_filename = os.path.splitext(tfrecord_filename)[0]
 
@@ -247,7 +246,6 @@ def preprocess(tfrecord_files, output_path, frames_per_segment = None):
         loaded_file = tf.data.TFRecordDataset(data_file, compression_type='')
         previous_frame = None
         for j, frame in enumerate(loaded_file):
-            print(f"Processing {j}")
             point_cloud_path = os.path.join(output_path, "pointCloud_file_" + tfrecord_filename + "_frame_" + str(j) + ".npy")
             # Process frame and store point clouds into disk
             _, _, pose_transform = save_point_cloud(frame, point_cloud_path)
