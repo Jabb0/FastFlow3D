@@ -130,6 +130,7 @@ class WaymoDataset(Dataset):
         look_up_table = []
         data_files = os.listdir(tfrecord_path)
         for i, data_file in enumerate(data_files):
+            print(f"Processing file {i + 1} out of {len(data_files)} ({(i + 1)/len(data_files):.2f}%)")
             data_file_path = os.path.join(tfrecord_path, data_file)
             loaded_file = tf.data.TFRecordDataset(data_file_path, compression_type='')
             previous_frame = None

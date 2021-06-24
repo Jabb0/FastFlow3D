@@ -18,9 +18,14 @@ Source: https://arxiv.org/pdf/2103.01306.pdf
 - Dewan et al.: Rigid Scene Flow of 3D Lidar Scans
 - Waymo dataset: https://waymo.com/open/
 
+Not necessary because not used:
+- PointNet encoder https://openaccess.thecvf.com/content_cvpr_2017/papers/Qi_PointNet_Deep_Learning_CVPR_2017_paper.pdf
+- Dynamic voxelization onto a spatial grid http://proceedings.mlr.press/v100/zhou20a/zhou20a.pdf
+
 ## Problem Definition
 - 3D scene flow in a setting where the scene at time $t_i$ is represented as a point cloud $P_i$ as measured by a LiDAR sensor mounted on the AV.
 - Each point cloud point has a 3D motion vector (v_x, v_y, v_z). Each component gives the velocity in m/s.
+- Each point also has a label identifying its class. This is mostly used for loss weighting but some metrics depend on it too.
 - Predict the flow given two consecutive point clouds.
 - With high frame rate the calculation between two timesteps is a good approximation of the current flow.
 
@@ -54,40 +59,65 @@ This label creation can be applied to any point cloud dataset with 3D bounding b
 
 ## Architecture
 ### Input
-- Two subsequent point clouds.
+- Two subsequent point clouds. Each cloud is a (N_points, 5) matrix. Each point has 5 features, 3 coordinates and 2 laser features.
 
 ### Scene Encoder
 - Performed on each input point cloud
-- PointNet encoder https://openaccess.thecvf.com/content_cvpr_2017/papers/Qi_PointNet_Deep_Learning_CVPR_2017_paper.pdf
-- Dynamic voxelization onto a spatial grid http://proceedings.mlr.press/v100/zhou20a/zhou20a.pdf
-- Fixed grid of size 512x512. Each grid cell being a pillar.
-ATTENTION: Not sure if this is done this way. The dynamic voxelization paper looks like a whole network to create the grid.
+- Every point is assigned to a fixed 512x512 grid depending on its x,y positions.
+- First each point is encoded depending on its grid cell. Each cell is a pillar in z (upwards) direction.
 1. Take each input point cloud
 2. Compute the center coordinates of all 512x512 pillars
 3. Compute the pillar that each point falls into
 4. Encode each point as 8D (pillarCenter_x, pillarCenter_y, pillarCenter_z, offset_x, offset_y, offset_y, feature_0, feature_1) with offset being the offset from the point to its pillar center and the features being the laser features of the point.
+- The authors state that they use a variant of a PointNet encoder with dynamic voxelization. However, they don't really use PointNet and dynamic voxelization.
+- Actually for each point an embedding is computed using an MLP and then all points in the pillar are summed up to get the grid cell embedding.
 5. Feed each point into an MLP to compute an embedding
 6. Sum up the embeddings for all points in a pillar with depth 64 to get pillar embedding
 7. The final point cloud embedding is a 512x512 2D image with depth 64
 
-### Contextual Information Decoder
-ATTENTION: Knowledge about the U-net architecture still missing but seems required.
+This part is not straight forward as each point cloud has a different amount of points and thus all points clouds cannot be batched.
+#### Possible Implementations
+This section focuses on the possible implementations of the pillarization.
+The point clouds are of shape (N_points, 8). This includes the featurization that depends on the grid cell.
+We have B point clouds but those have different number of points therefore we cannot stack them into a (B, N_points, 8) batch directly.
+The second challenge is how to place/sum the N_points into the 2D grid of cell embeddings.
+
+**Approach A**
+- Do not drop any points. Each point can only be in one cell but a cell can have multiple points.
+- Preprocess the data into a (N_points, 8) point cloud and a (N_points, 2) grid cell lookup matrix
+- Now because N_points is different pass each point cloud individually into the point encoder.
+- For each batch entry (point cloud) this gives a (N_points, 64) embedding matrix.
+- Points are not passed in together. The point encoder MLP does only know of a single point.
+- A 1 hot point to grid cell (N_points, N_grid_cells) lookup matrix is constructed from the cell lookup matrix.
+- Matrix multiplication with this matrix create the (512x512, 64) 2D grid embedding.
+- Matrix needs to be sparse because it would be way to large otherwise.
+- Memory consumption should be 3*N_points, because there are 3 N_point long tensors (indices, values, cells).
+
+**Approach B**
+- The common approach in the literature is to set a maximum number of non empty pillars and maximum number of points per pillar.
+- This requires those maximum numbers to be defined up front and thus some pillars or points might be dropped.  If less pillars or points are available it is a 0 padded but the additional points are masked out afterwards.
+- Restructuring can be done as preprocessing.
+- Doing this construction efficiently is not straight forward. Most projects use C code to do it.
+
+### Contextual Information Encoder
 - Convolutional Autoencoder (U-net) with first half of the architecture consists of shared weights across two frames.
 - Both inputs have the same weights in the conv net
-- Both input frames are concatenated in depth
-- UNCLEAR: Are they really concatenated given to the encoder? I think they pass each one to the same encoder with shared weights but concatenation is only done when the data is fed as skip connection to the decoder.
-- ANSWER: I think the encoder only sees the information of one image. The decoder then gets a concatenation but unclear how.
+- The frames are not concatenated for the encoder pass. Each frame is passed on its own.
 - Bottleneck convolutions have been introduced.
+- The encoder consists of blocks that each reduce to a hidden size.
+- The output of each hidden size is saved.
 
 ### Decoder to obtain Pointwise Flow
 - Decoder part of the conv autoencoder
 - Deconvolutions are replaced with bilinear upsampling.
 - Skip connections from the concatenated encoder embeddings at the corresponding spatial resolution.
 - Output is a 512x512 grid-structured flow embedding
+- No activation function in this part
 
 ### Unpillar Operation
 - Select for each point the corresponding cell and the cells flow embedding
-- Concatenates the point feature (the same 8D vector as given as input?) of the point to predict (we predict the current timeframe t0 only, not t-1).
+- This lookup struggles with the different sized points clouds as well.
+- Concatenates the point feature (the 64D embedding) of the point to predict (we predict the current timeframe t0 only, not t-1).
 - MLP to regress onto point-wise motion prediction
 
 
@@ -96,9 +126,9 @@ ATTENTION: Knowledge about the U-net architecture still missing but seems requir
 - Apparently the z-axis is the height.
 - Using vertical pillarization makes sense as objects can only rotate around the z-axis in the Waymo dataset. Therefore, the a pillar is a good capture of the same points in an object.
 - Use mean L2 (MSE) loss for training
-- Is the ego motion compensation necessary on the previous frame here?
+- Ego motion is removed by a translation matrix that transforms the previous frame to the view of the current frame.
 - They trained their model for 19 epochs using the Adam optimizer.
-- They applied an artificiall downweight of background points in the L2 loss by a factor of 0.1. This value is found using hyperparameter search. Maybe redo this with a better searcher.
+- They applied an artificial downweight of background points in the L2 loss by a factor of 0.1. This value is found using hyperparameter search. Maybe redo this with a better searcher.
 
 
 ## Data

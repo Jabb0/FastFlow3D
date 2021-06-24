@@ -5,19 +5,6 @@ from argparse import ArgumentParser
 
 from data.WaymoDataset import WaymoDataset
 
-
-def disable_gpu():
-    try:
-        # Disable all GPUS
-        tf.config.set_visible_devices([], 'GPU')
-        visible_devices = tf.config.get_visible_devices()
-        for device in visible_devices:
-            assert device.device_type != 'GPU'
-    except:
-        # Invalid device or cannot modify virtual devices once initialized.
-        pass
-
-
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('input_directory', type=str)
@@ -37,8 +24,6 @@ if __name__ == '__main__':
         print("Output directory not empty! Please remove existing files as there is no merge.")
         exit(1)
 
-    # disable_gpu()  # FIXME cannot execute the code without disabling GPU
-
     # Getting points with the dataloader
     preprocess = True
     t = time.time()
@@ -50,7 +35,7 @@ if __name__ == '__main__':
     exit(0)
     accum = 0
     t = time.time()
-    for i, item in enumerate(waymo_dataset):
+    for item in waymo_dataset:
         accum += (time.time() - t)
         t = time.time()
     print(f"Mean access time: {(accum/len(waymo_dataset)):.2f} s")
