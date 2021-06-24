@@ -7,6 +7,8 @@ from data.WaymoDataset import WaymoDataset
 import open3d as o3d
 import ffmpeg
 import time
+import numpy as np
+from utils.plot import visualize_point_cloud
 
 # Open3D info
 # http://open3d.org/html/tutorial/Basic/visualization.html
@@ -26,6 +28,7 @@ if __name__ == '__main__':
     # Other paramaters
     screenshots_folder = "screenshots/temp_%04d.jpg"
     video_name = "point_cloud.mp4"
+    debug = False
 
     args = parser.parse_args()
     waymo_dataset = WaymoDataset(args.data_directory)
@@ -52,15 +55,6 @@ if __name__ == '__main__':
     vis = o3d.visualization.Visualizer()
     vis.create_window(width=1280, height=720)
     point_cloud = o3d.geometry.PointCloud()
-    #rederer = open3d.visualization.RenderOption().load_from_json("utils/viewer_config.json")
-    #vis.get_view_control().set_zoom(10)
-    #vis.run()
-    #view_ctl = vis.get_view_control()
-    #view_ctl.change_field_of_view(0.1)
-    #view_ctl.set_zoom(0.7)
-    #ctr = vis.get_view_control()
-    #param = ctr.convert_to_pinhole_camera_parameters()
-    #point_cloud = point_cloud.voxel_down_sample(voxel_size=10)
     for i in range(args.start_frame, args.end_frame):
         print(f"Rendering frame {i} of {args.end_frame}")
 
@@ -72,11 +66,17 @@ if __name__ == '__main__':
         vis.add_geometry(point_cloud)
 
         ctr = vis.get_view_control()
-        ctr.set_zoom(0.72)
+        #ctr.set_zoom(0.72)
+        #ctr.change_field_of_view(60.0)
+        #ctr.set_front([ 0.42149238953069712, -0.81138370875554688, 0.40496992818454702 ])
+        #ctr.set_lookat([ 13.056647215758161, 2.4109030723596945, 2.263514128894637 ])
+        #ctr.set_up([ -0.25052622313468664, 0.32500897579092991, 0.91192421679501412 ])
+
+        ctr.set_zoom(0.16)
         ctr.change_field_of_view(60.0)
-        ctr.set_front([ 0.42149238953069712, -0.81138370875554688, 0.40496992818454702 ])
-        ctr.set_lookat([ 13.056647215758161, 2.4109030723596945, 2.263514128894637 ])
-        ctr.set_up([ -0.25052622313468664, 0.32500897579092991, 0.91192421679501412 ])
+        ctr.set_front([0.91296513629581766, -0.12678407628885097, 0.38784076359756481])
+        ctr.set_lookat([-0.37671086910276924, 16.208793815613213, -3.1170728720176699])
+        ctr.set_up([-0.39263835854591367, -0.01430683101675858, 0.91958166248823692])
 
         vis.update_geometry(point_cloud)
         vis.poll_events()
@@ -85,7 +85,11 @@ if __name__ == '__main__':
 
         raw_point_cloud = current_frame[:, 0:3]
         point_cloud.points = o3d.utility.Vector3dVector(raw_point_cloud)
+        if debug:
+            visualize_point_cloud(raw_point_cloud)
         rgb_flow = flows[:, :-1]
+        magnitudes = np.sqrt((rgb_flow ** 2).sum(-1))[..., np.newaxis]
+        rgb_flow /= np.sqrt((rgb_flow ** 2).sum(-1))[..., np.newaxis]
         point_cloud.colors = o3d.utility.Vector3dVector(rgb_flow)
 
     (
