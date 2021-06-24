@@ -10,7 +10,7 @@ from tqdm import tqdm
 global output_directory
 
 def preprocess_wrap(tfrecord_files):
-    preprocess(tfrecord_files, output_directory, frames_per_segment=2)
+    preprocess(tfrecord_files, output_directory, frames_per_segment=None)
 
 # https://github.com/tqdm/tqdm/issues/484
 if __name__ == '__main__':
