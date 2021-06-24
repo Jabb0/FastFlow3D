@@ -88,8 +88,8 @@ class ConvEncoder(torch.nn.Module):
     def forward(self, grid):
         """
         Do the convolutional encoder pass for the input 2D grid embedding.
-        :param grid: (batch_size, height, width, channels) of the 2D grid embedding.
-        :return: (batch_size, out_height, out_width, )
+        :param grid: (batch_size, channels, height, width) of the 2D grid embedding.
+        :return: (batch_size, channels, out_height, out_width)
         """
         # print(f"Input shape {grid.shape}")
         # Block 1 -> from C to F

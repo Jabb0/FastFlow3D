@@ -5,6 +5,7 @@ import pickle
 
 from data.util import get_coordinates_and_features
 
+
 # TODO: tensor operations to make it faster?
 # TODO: check context name to ensure two consecutive frames
 class WaymoDataset(Dataset):
@@ -13,7 +14,6 @@ class WaymoDataset(Dataset):
     field please refer to:
     https://github.com/waymo-research/waymo-open-dataset/blob/master/waymo_open_dataset/dataset.proto
     """
-
 
     def __init__(self, data_path,
                  drop_invalid_point_function=None,

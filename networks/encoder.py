@@ -49,12 +49,11 @@ class PillarFeatureNet(torch.nn.Module):
         # Calculate the mapping matrix from each point to its 1D encoded cell
         grid_lookup_matrix = self.construct_sparse_grid_matrix(x.shape[0], indices)
         # grid_lookup_matrix -> [512*512, N]
-        #print(grid_lookup_matrix.shape)
         # rows are points, columns are cells. 1 if the two are connected. This will sum up the points
 
         # We can now sum up the embeddings of all points as matrix multiplication
         # grid = [512*512, N] @ [N,64] -> [512*512, 64]
-        grid = torch.sparse.mm(grid_lookup_matrix, x)
+        grid = torch.mm(grid_lookup_matrix, x)
         # We now need to shape the 1D grid embedding into the actual 2D grid
 
         # Please refer to tests/test_encoder.py to check a test which check that this reformatting works
