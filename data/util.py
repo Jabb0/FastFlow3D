@@ -1,3 +1,5 @@
+import time
+
 import tensorflow as tf
 import torch
 
@@ -6,7 +8,12 @@ from waymo_open_dataset import dataset_pb2
 
 from utils.pillars import create_pillars_matrix, remove_out_of_bounds_points
 from torch.utils.data._utils.collate import default_collate
+import numpy as np
+import os, glob
+import pickle
 
+from waymo_open_dataset import dataset_pb2 as open_dataset
+import tensorflow as tf
 
 def convert_range_image_to_point_cloud(frame,
                                        range_images,
@@ -192,3 +199,144 @@ def custom_collate(batch):
 
     return (batch_previous, batch_current), batch_targets
 
+
+
+
+# ------------- Preprocessing Functions ---------------
+
+def save_point_cloud(compressed_frame, file_path):
+    """
+    Compute the point cloud from a frame and stores it into disk.
+    :param compressed_frame: compressed frame from a TFRecord
+    :param file_path: name path that will have the stored point cloud
+    :returns:
+        - points - [N, 5] matrix which stores the [x, y, z, intensity, elongation] in the frame reference
+        - flows - [N, 4] matrix where each row is the flow for each point in the form [vx, vy, vz, label]
+                  in the reference frame
+        - transform - [,16] flattened transformation matrix
+    """
+    frame = get_uncompressed_frame(compressed_frame)
+    points, flows = compute_features(frame)
+    point_cloud = np.hstack((points, flows))
+    np.save(file_path, point_cloud)
+    transform = list(frame.pose.transform)
+    return points, flows, transform
+
+
+def preprocess(tfrecord_files, output_path, frames_per_segment = None):
+    """
+    Preprocess a list of TFRecord files to store in a suitable form for training
+    in disk. A point cloud in disk has dimensions [N, 9] where N is the number of points
+    and per each point it stores [x, y, z, intensity, elongation, vx, vy, vz, label].
+    It stores a look-up table: It has the form [[t_1, t_0], [t_2, t_1], ... , [t_n, t_(n-1)]], where t_i is
+    (file_path, transform), where file_path is the file where the point cloud is stored and transform the transformation
+    to apply to a point to change it reference frame from global to the car frame in that moment.
+
+    :param tfrecord_files: list with paths of TFRecord files. They should have the flow extension.
+                          They can be downloaded from https://console.cloud.google.com/storage/browser/waymo_open_dataset_scene_flow
+    :param output_path: path where the processed point clouds will be saved.
+    """
+
+    for data_file in tfrecord_files:
+        print(data_file)
+        tfrecord_filename = os.path.basename(data_file)
+        tfrecord_filename = os.path.splitext(tfrecord_filename)[0]
+
+        look_up_table = []
+        look_up_table_path = os.path.join(output_path, f"look_up_table_{tfrecord_filename}")
+        loaded_file = tf.data.TFRecordDataset(data_file, compression_type='')
+        previous_frame = None
+        for j, frame in enumerate(loaded_file):
+            print(f"Processing {j}")
+            point_cloud_path = os.path.join(output_path, "pointCloud_file_" + tfrecord_filename + "_frame_" + str(j) + ".npy")
+            # Process frame and store point clouds into disk
+            _, _, pose_transform = save_point_cloud(frame, point_cloud_path)
+            if j == 0:
+                previous_frame = (point_cloud_path, pose_transform)
+            else:
+                current_frame = (point_cloud_path, pose_transform)
+                look_up_table.append([current_frame, previous_frame])
+                previous_frame = current_frame
+            if frames_per_segment is not None and j == frames_per_segment:
+                break
+
+        # Save look-up-table into disk
+        with open(look_up_table_path, 'wb') as look_up_table_file:
+            pickle.dump(look_up_table, look_up_table_file)
+
+def get_uncompressed_frame(compressed_frame):
+    """
+    :param compressed_frame: Compressed frame
+    :return: Uncompressed frame
+    """
+    frame = open_dataset.Frame()
+    frame.ParseFromString(bytearray(compressed_frame.numpy()))
+    return frame
+
+
+def compute_features(frame):
+    """
+    :param frame: Uncompressed frame
+    :return: [N, F], [N, 4], where N is the number of points, F the number of features,
+    which is [x, y, z, intensity, elongation] and 4 in the second results stands for [vx, vy, vz, label], which corresponds
+    to the flow information
+    """
+    range_images, camera_projections, point_flows, range_image_top_pose = parse_range_image_and_camera_projection(
+        frame)
+
+    points, cp_points, flows = convert_range_image_to_point_cloud(
+        frame,
+        range_images,
+        camera_projections,
+        point_flows,
+        range_image_top_pose,
+        keep_polar_features=True)
+
+    # 3D points in the vehicle reference frame
+    points_all = np.concatenate(points, axis=0)
+    flows_all = np.concatenate(flows, axis=0)
+    # We skip the range feature since pillars will account for it
+    # Note that first are features and then point coordinates
+    points_features, points_coord = points_all[:, 1:3], points_all[:, 3:points_all.shape[1]]
+    points_all = np.hstack((points_coord, points_features))
+    return points_all, flows_all
+
+
+def get_coordinates_and_features(point_cloud, transform=None):
+    """
+    Parse a point clound into coordinates and features.
+    :param point_cloud: Full [N, 9] point cloud
+    :param transform: Optional parameter. Transformation matrix to apply
+    to the coordinates of the point cloud
+    :return: [N, 5] where N is the number of points and 5 is [x, y, z, intensity, elongation]
+    """
+    points_coord, features, flows = point_cloud[:, 0:3], point_cloud[:, 3:5], point_cloud[:, 5:]
+    if transform is not None:
+        ones = np.ones((points_coord.shape[0], 1))
+        points_coord = np.hstack((points_coord, ones))
+        points_coord = transform @ points_coord.T
+        points_coord = points_coord[0:-1, :]
+        points_coord = points_coord.T
+    point_cloud = np.hstack((points_coord, features))
+    return point_cloud
+
+def merge_look_up_tables(input_path):
+    """
+    Merge individual look-up table and store it in the input_path with the name look_up_table
+    :param input_path: Path with the local look-up tables in the form look_up_table_[tfRecordName]
+    """
+    look_up_table = []
+    os.chdir(input_path)
+    for file in glob.glob("look_up_table_*"):
+        file_name = os.path.abspath(file)
+        try:
+            with open(file_name, 'rb') as look_up_table_file:
+                look_up_table_local = pickle.load(look_up_table_file)
+                look_up_table.extend(look_up_table_local)
+        except FileNotFoundError:
+            raise FileNotFoundError(
+                "Look-up table not found when merging individual look-up tables")
+
+    # Save look-up-table into disk
+    with open(os.path.join(input_path, "look_up_table"), 'wb') as look_up_table_file:
+        pickle.dump(look_up_table, look_up_table_file)
