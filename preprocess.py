@@ -1,19 +1,18 @@
-import tensorflow as tf
 import time
 from pathlib import Path
 from argparse import ArgumentParser
-
-from data.WaymoDataset import WaymoDataset
 
 from data.util import preprocess, merge_look_up_tables
 import os, glob
 import multiprocessing as mp
 from tqdm import tqdm
 
+global output_directory
 
-def preprocess_wrap(tfrecord_files, output_path=os.path.abspath("data/train2")):
-    preprocess(tfrecord_files, output_path, frames_per_segment=2)
+def preprocess_wrap(tfrecord_files):
+    preprocess(tfrecord_files, output_directory, frames_per_segment=2)
 
+# https://github.com/tqdm/tqdm/issues/484
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('input_directory', type=str)
@@ -27,6 +26,7 @@ if __name__ == '__main__':
     if not input_directory.exists() or not input_directory.is_dir():
         print("Input directory does not exist")
         exit(1)
+
     output_directory = Path(args.output_directory)
     if not output_directory.exists():
         output_directory.mkdir(parents=True)
