@@ -25,7 +25,7 @@ def cli():
     parser.add_argument('--grid_size', default=512, type=float)
     parser.add_argument('--test_data_available', default=False, type=bool)
     parser.add_argument('--fast_dev_run', default=False, type=bool)
-    parser.add_argument('--num_workers', default=1, type=int)
+    parser.add_argument('--num_workers', default=4, type=int)
     parser.add_argument('--wandb_api_key', default=None, type=str)
     parser.add_argument('--wandb_project', default="fastflow3d", type=str)
     parser.add_argument('--wandb_entity', default='dllab21fastflow3d', type=str)
