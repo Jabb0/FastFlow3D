@@ -6,6 +6,7 @@ from argparse import ArgumentParser
 from networks.flownet3d.pointFeatureNet import PointFeatureNet
 from networks.flownet3d.pointMixture import PointMixtureNet
 from networks.flownet3d.flowRefinement import FlowRefinementNet
+from networks.flownet3d.util import transform_data
 
 
 class Flow3DModel(pl.LightningModule):
@@ -16,7 +17,7 @@ class Flow3DModel(pl.LightningModule):
         super(Flow3DModel, self).__init__()
         self.save_hyperparameters()  # Store the constructor parameters into self.hparams
 
-        self._point_feature_net = PointFeatureNet(in_channels=8)  # TODO Change to 5
+        self._point_feature_net = PointFeatureNet(in_channels=5)
         self._point_mixture = PointMixtureNet()
         self._flow_refinement = FlowRefinementNet()
         self._final_linear = torch.nn.Linear(in_features=128, out_features=3)
@@ -31,13 +32,15 @@ class Flow3DModel(pl.LightningModule):
         previous_batch_pc, _, previous_batch_mask = previous_batch
         current_batch_pc, _, current_batch_mask = current_batch
 
-        #previous_batch_pc = torch.randint(low=0, high=100, size=(2, 10000, 8)).float()
-        print(previous_batch_pc.shape)
+        # transform each point from (cx, cy, cz,  Δx, Δy, Δz, l0, l1) to (x, y, z, l0, l1)
+        previous_batch_pc = transform_data(previous_batch_pc)
+        current_batch_pc = transform_data(current_batch_pc)
 
-        # TODO We need raw point cloud, i.e. x is of shape (n_points, 5), where the first 3 dims corresponds to x, y, z and the last two are the laser features
-        # TODO Pass both point clouds through PointMixtureNet, FlowRefinementNet, LinearLayer
+        # TODO Pass output through FlowRefinementNet, LinearLayer
         previous_batch_pc = self._point_feature_net(previous_batch_pc.float())
         current_batch_pc = self._point_feature_net(current_batch_pc.float())
+
+        # x = self._point_mixture(x1=previous_batch_pc, x2=current_batch_pc)
 
         return x
 

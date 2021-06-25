@@ -1,5 +1,6 @@
 from torch.nn import Sequential, Linear, ReLU, BatchNorm1d
 from typing import List
+import torch
 
 
 def make_mlp(in_channels: int, mlp_channels: List[int], batch_norm: bool = True):
@@ -19,3 +20,16 @@ def make_mlp(in_channels: int, mlp_channels: List[int], batch_norm: bool = True)
         in_channels = c
 
     return Sequential(*layers)
+
+
+def transform_data(pc):
+    """
+    Transforms each point in the given point cloud of shape (batch_size, n_points, 8)
+    from (cx, cy, cz,  Δx, Δy, Δz, l0, l1) to (x, y, z, l0, l1)
+    """
+    x = pc[:, :, 3] + pc[:, :, 0]
+    y = pc[:, :, 4] + pc[:, :, 1]
+    z = pc[:, :, 5] + pc[:, :, 2]
+    l1 = pc[:, :, 6]
+    l2 = pc[:, :, 7]
+    return torch.stack([x, y, z, l1, l2], dim=2)
