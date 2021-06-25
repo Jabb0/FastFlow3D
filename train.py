@@ -82,6 +82,18 @@ def cli():
     if args.wandb_api_key is not None:
         wandb.login(key=args.wandb_api_key)
         logger = WandbLogger(name=args.experiment_name, project=args.wandb_project, entity=args.wandb_entity)
+        additional_hyperparameters = {'grid_cell_size': grid_cell_size,
+                                      'x_min': args.x_min,
+                                      'x_max': args.x_max,
+                                      'y_max': args.y_max,
+                                      'y_min': args.y_min,
+                                      'z_min': args.z_min,
+                                      'z_max': args.z_max,
+                                      'batch_size': args.batch_size,
+                                      'has_test': args.test_data_available,
+                                      'num_workers': args.num_workers,
+                                      'scatter_collate': args.use_sparse_lookup}
+        logger.log_hyperparams(additional_hyperparameters)
     else:
         print("No weights and biases API key set. Using tensorboard instead!")
 

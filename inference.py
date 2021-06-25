@@ -9,16 +9,19 @@ import ffmpeg
 import time
 import numpy as np
 from utils.plot import visualize_point_cloud
+import yaml
+from data.util import ApplyPillarization, drop_points_function
+import torch
 
 # Open3D info
 # http://open3d.org/html/tutorial/Basic/visualization.html
 # http://www.open3d.org/docs/0.9.0/tutorial/Advanced/customized_visualization.html
-
 if __name__ == '__main__':
     parser = ArgumentParser()
 
     # NOTE: IF MODEL IS NONE IT WILL VISUALIZE GROUND TRUTH DATA
     parser.add_argument('--model_path', default=None, type=str)
+    parser.add_argument('--config_file', default=None, type=str)
     parser.add_argument('--data_directory', type=str)
 
     # start_frame and end_frame allow us just visualize a set of frames
@@ -52,6 +55,29 @@ if __name__ == '__main__':
         print("DISPLAYING GROUND TRUTH DATA - NO MODEL HAS BEEN LOADED")
 
 
+    # Load config file (must be downloaded from Weights and Biases), it has the name of config.yaml
+    with open(args.config_file, 'r') as stream:
+        try:
+            config_info = yaml.safe_load(stream)
+            grid_cell_size = config_info['grid_cell_size']['value']
+            x_min = config_info['x_min']['value']
+            y_min = config_info['y_min']['value']
+            z_min = config_info['z_min']['value']
+            z_max = config_info['z_max']['value']
+            x_max = config_info['x_max']['value']
+            y_max = config_info['y_max']['value']
+            point_cloud_transform = ApplyPillarization(grid_cell_size=grid_cell_size, x_min=x_min,
+                                                       y_min=y_min, z_min=z_min, z_max=z_max)
+            waymo_dataset.set_point_cloud_transform(point_cloud_transform)
+            drop_points_function = drop_points_function(x_min=x_min,
+                                                        x_max=x_max, y_min=y_min, y_max=y_max,
+                                                        z_min=z_min, z_max=z_max)
+            waymo_dataset.set_drop_invalid_point_function(drop_points_function)
+
+        except yaml.YAMLError as exc:
+            print(exc)
+            exit(1)
+
     vis = o3d.visualization.Visualizer()
     vis.create_window(width=1280, height=720)
     point_cloud = o3d.geometry.PointCloud()
@@ -61,7 +87,12 @@ if __name__ == '__main__':
         (previous_frame, current_frame), flows = waymo_dataset[i]
 
         if args.model_path is not None:
-            flows = model((previous_frame, current_frame)).data.cpu().numpy()
+            # We set batchsize of 1 for predictions
+            previous_frame_tensor = [(torch.tensor(previous_frame[0]), torch.tensor(previous_frame[1]))]
+            current_frame_tensor = [(torch.tensor(current_frame[0]), torch.tensor(current_frame[1]))]
+            with torch.no_grad():
+                output = model((previous_frame_tensor, current_frame_tensor))
+            flows = output[0].data.cpu().numpy()
 
         vis.add_geometry(point_cloud)
 
@@ -83,11 +114,20 @@ if __name__ == '__main__':
         vis.update_renderer()
         vis.capture_screen_image(screenshots_folder % i, True)
 
-        raw_point_cloud = current_frame[:, 0:3]
+        # We distinguish because when loading the model the transformations in waymo return a tuple with indices additionally
+        # Flows from dataset also have the semantic information in last column
+        if args.model_path is not None:
+            raw_point_cloud = current_frame[0][:, 0:3]
+            rgb_flow = flows
+        else:
+            raw_point_cloud = current_frame[0][:, 0:3]
+            rgb_flow = flows[:, :-1]
+
         point_cloud.points = o3d.utility.Vector3dVector(raw_point_cloud)
         if debug:
             visualize_point_cloud(raw_point_cloud)
-        rgb_flow = flows[:, :-1]
+
+
         magnitudes = np.sqrt((rgb_flow ** 2).sum(-1))[..., np.newaxis]
         rgb_flow /= np.sqrt((rgb_flow ** 2).sum(-1))[..., np.newaxis]
         point_cloud.colors = o3d.utility.Vector3dVector(rgb_flow)

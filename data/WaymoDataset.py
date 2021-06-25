@@ -77,6 +77,12 @@ class WaymoDataset(Dataset):
 
         return (previous_frame, current_frame), flows
 
+    def set_drop_invalid_point_function(self, drop_invalid_point_function):
+        self._drop_invalid_point_function = drop_invalid_point_function
+
+    def set_point_cloud_transform(self, point_cloud_transform):
+        self._point_cloud_transform = point_cloud_transform
+
     def read_point_cloud_pair(self, index):
         """
         Read from disk the current and prvious point cloud given an index
