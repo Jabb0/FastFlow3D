@@ -14,7 +14,7 @@ class PointMixtureNet(torch.nn.Module):
         super(PointMixtureNet, self).__init__()
         # TODO Set FlowEmbeddingLayer
 
-    def forward(self, x):
+    def forward(self, x: torch.tensor) -> torch.tensor:
         """
         """
         return x

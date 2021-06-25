@@ -16,7 +16,7 @@ class Flow3DModel(pl.LightningModule):
         super(Flow3DModel, self).__init__()
         self.save_hyperparameters()  # Store the constructor parameters into self.hparams
 
-        self._point_feature_net = PointFeatureNet()
+        self._point_feature_net = PointFeatureNet(in_channels=8)  # TODO Change to 5
         self._point_mixture = PointMixtureNet()
         self._flow_refinement = FlowRefinementNet()
         self._final_linear = torch.nn.Linear(in_features=128, out_features=3)
@@ -28,10 +28,17 @@ class Flow3DModel(pl.LightningModule):
         :return:
         """
         previous_batch, current_batch = x
-        # TODO We need raw point cloud, i.e. x is of shape (n_points, 3), where last dim corresponds to x, y, z
-        # TODO Pass both point clouds through PointFeatureNet, Concat, PointMixtureNet, FlowRefinementNet, LinearLayer
-        for point_clouds, grid_indices in current_batch:
-            pass
+        previous_batch_pc, _, previous_batch_mask = previous_batch
+        current_batch_pc, _, current_batch_mask = current_batch
+
+        #previous_batch_pc = torch.randint(low=0, high=100, size=(2, 10000, 8)).float()
+        print(previous_batch_pc.shape)
+
+        # TODO We need raw point cloud, i.e. x is of shape (n_points, 5), where the first 3 dims corresponds to x, y, z and the last two are the laser features
+        # TODO Pass both point clouds through PointMixtureNet, FlowRefinementNet, LinearLayer
+        previous_batch_pc = self._point_feature_net(previous_batch_pc.float())
+        current_batch_pc = self._point_feature_net(current_batch_pc.float())
+
         return x
 
     def general_step(self, batch, batch_idx, mode):

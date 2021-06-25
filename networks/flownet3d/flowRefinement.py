@@ -14,7 +14,7 @@ class FlowRefinementNet(torch.nn.Module):
         super(FlowRefinementNet, self).__init__()
         # TODO: Set 4 SetUpConvLayers
 
-    def forward(self, x):
+    def forward(self, x: torch.tensor) -> torch.tensor:
         """
         """
         return x
