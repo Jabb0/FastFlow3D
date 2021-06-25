@@ -3,7 +3,8 @@ from pathlib import Path
 from argparse import ArgumentParser
 
 from data.util import preprocess, merge_look_up_tables
-import os, glob
+import os
+import glob
 import multiprocessing as mp
 from tqdm import tqdm
 
