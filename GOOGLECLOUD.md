@@ -57,7 +57,9 @@ Add those two lines to your `~/.bashrc`:
 ```bash
 export LC_ALL=en_US.utf8
 export GIT_SSH_COMMAND='ssh -i /opt/fastflow3d/secrets/deploykey-rsa'
+export WANDB_USERNAME="google_cloud_<username>"
 ```
+**NOTE:** Replace the username part in the `WANDB_USERNAME` with your name. So we know who started the service user job.
 
 ## Prepare the data
 TODO:
