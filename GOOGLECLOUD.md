@@ -4,7 +4,7 @@
 - Click on `vm-lidar-sceneflow` and start it
 
 ## Initial Setup
-### One time: Add your ssh pub key
+### Each user: Add your ssh pub key
 - Adding the key to ~/.ssh/authorized_keys does not work as google removes them periodically
 - Log into the instance by clicking on ssh -> in browser window
 - You will now be logged into the instance with your own user that is derived from your google account. Note this!
