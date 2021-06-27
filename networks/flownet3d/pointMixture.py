@@ -15,7 +15,8 @@ class PointMixtureNet(torch.nn.Module):
     """
     def __init__(self):
         super(PointMixtureNet, self).__init__()
-        fe_mlp_1 = make_mlp(128+3, [128, 128, 128])
+        # 2*128+3, because we have f_i, g_j, p_i - p_j
+        fe_mlp_1 = make_mlp(2*128+3, [128, 128, 128])
         self.fe_1 = FlowEmbeddingLayer(r=5.0, sample_rate=1.0, mlp=fe_mlp_1)
 
         set_conv_mlp_1 = make_mlp(128+3, [128, 128, 256])
@@ -31,12 +32,5 @@ class PointMixtureNet(torch.nn.Module):
         fe = self.fe_1(x1, x2)
         x = self.set_conv_1(fe)
         x = self.set_conv_2(x)
-
-        print("-"*100)
-        features, pos, batch = x
-        print("Output after PointMixture")
-        print(features.shape)
-        print(pos.shape)
-        print(batch.shape)
 
         return fe, x

@@ -1,7 +1,10 @@
 import torch
 import torch_geometric.nn
 
-from typing import Tuple
+from typing import Tuple, Union
+from torch_geometric.nn.inits import reset
+from torch_geometric.typing import OptTensor, PairOptTensor, PairTensor, Adj
+from torch_geometric.nn.conv import MessagePassing
 
 
 class SetConvLayer(torch.nn.Module):
@@ -43,18 +46,47 @@ class FlowEmbeddingLayer(torch.nn.Module):
         super().__init__()
         self.sample_rate = sample_rate
         self.radius = r
-        self.point_conv = torch_geometric.nn.PointConv(mlp)
-        self.n_knns = 1
+        self.point_conv = _FlowEmbeddingPointConv(mlp)
 
     def forward(self, x1: Tuple[torch.Tensor, torch.Tensor, torch.Tensor],
                 x2: Tuple[torch.Tensor, torch.Tensor, torch.Tensor]) -> torch.tensor:
         x1_features, x1_pos, x1_batch = x1
         x2_features, x2_pos, x2_batch = x2
 
-        row, col = torch_geometric.nn.knn(x1_pos, x2_pos, self.n_knns, x1_batch, x2_batch)
-        edge_index = torch.stack([col, row], dim=0)
+        # For each points in x2, find all points in x, within distance of r
+        row, col = torch_geometric.nn.radius(x1_pos, x2_pos, self.radius, x1_batch, x2_batch)
+        edge_index = torch.stack([col, row], dim=0)  # build COO format matrix
 
         x = self.point_conv((x1_features, x2_features), (x1_pos, x2_pos), edge_index)
         pos, batch = x2_pos, x2_batch
 
         return x, pos, batch
+
+
+class _FlowEmbeddingPointConv(MessagePassing):
+    def __init__(self, mlp: torch.nn.Sequential, aggr: str = 'max'):
+        super(_FlowEmbeddingPointConv, self).__init__(aggr=aggr)
+        self.nn = mlp
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        reset(self.nn)
+
+    def forward(self, x: Union[OptTensor, PairOptTensor],
+                pos: Union[torch.Tensor, PairTensor], edge_index: Adj) -> torch.Tensor:
+        """"""
+        if not isinstance(x, tuple):
+            x: PairOptTensor = (x, None)
+
+        if isinstance(pos, torch.Tensor):
+            pos: PairTensor = (pos, pos)
+
+        # propagate_type: (x: PairOptTensor, pos: PairTensor)
+        out = self.propagate(edge_index, x=x, pos=pos, size=None)
+
+        return out
+
+    def message(self, x_i: torch.Tensor, x_j: torch.Tensor, pos_i: torch.Tensor, pos_j: torch.Tensor) -> torch.Tensor:
+        msg = torch.cat([x_i, x_j, pos_j - pos_i], dim=1)
+        msg = self.nn(msg)
+        return msg

@@ -36,11 +36,15 @@ class Flow3DModel(pl.LightningModule):
         previous_batch_pc = transform_data(previous_batch_pc)
         current_batch_pc = transform_data(current_batch_pc)
 
+        previous_batch_pc = torch.randint(low=0, high=100, size=(2, 10000, 5)).float()
+        current_batch_pc = torch.randint(low=0, high=50, size=(2, 6000, 5)).float()
+
         # TODO Pass output through FlowRefinementNet, LinearLayer
         previous_batch_pc = self._point_feature_net(previous_batch_pc.float())
         current_batch_pc = self._point_feature_net(current_batch_pc.float())
 
-        # x = self._point_mixture(x1=previous_batch_pc, x2=current_batch_pc)
+        # NOTE: x2 must be prev point cloud
+        x = self._point_mixture(x1=current_batch_pc, x2=previous_batch_pc)
 
         return x
 
