@@ -66,12 +66,14 @@ class FastFlow3DModelScatter(pl.LightningModule):
         previous_batch, current_batch = x
         previous_batch_pc, previous_batch_grid, previous_batch_mask = previous_batch
         current_batch_pc, current_batch_grid, current_batch_mask = current_batch
+        # batch_pc = (batch_size, N, 8) | batch_grid = (n_batch, N, 2) | batch_mask = (n_batch, N)
 
         # Pass the whole batch of point clouds to get the embedding for each point in the cloud
         # Input pc is (batch_size, max_n_points, features_in)
         # per each point, there are 8 features: [cx, cy, cz,  Δx, Δy, Δz, l0, l1], as stated in the paper
         previous_batch_pc_embedding = self._transform_point_cloud_to_embeddings(previous_batch_pc.float(),
                                                                                 previous_batch_mask)
+        # previous_batch_pc_embedding = [n_batch, N, 64]
         # Output pc is (batch_size, max_n_points, embedding_features)
         current_batch_pc_embedding = self._transform_point_cloud_to_embeddings(current_batch_pc.float(),
                                                                                current_batch_mask)
@@ -84,8 +86,11 @@ class FastFlow3DModelScatter(pl.LightningModule):
         current_batch_grid = augment_index(current_batch_grid, current_batch_pc_embedding.size(2), self._n_pillars_x)
 
         # Now we need to scatter the points into their 2D matrix
+        # batch_pc_embeddings -> (batch_size, N, 64)
+        # batch_grid -> (batch_size, N, 64)
         previous_pillar_embeddings = self._pillar_feature_net(previous_batch_pc_embedding, previous_batch_grid)
         current_pillar_embeddings = self._pillar_feature_net(current_batch_pc_embedding, current_batch_grid)
+        # pillar_embeddings = (batch_size, 64, 512, 512)
 
         # 2. Apply the U-net encoder step
         # Note that weight sharing is used here. The same U-net is used for both point clouds.

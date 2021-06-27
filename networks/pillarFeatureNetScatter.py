@@ -28,7 +28,7 @@ class PillarFeatureNetScatter(torch.nn.Module):
         # Thus we should allocate a tensor of the desired shape (batch_size, n_pillars_x, n_pillars_y, 64)
 
         # Init the matrix to only zeros
-        # Now indices is (batch_size, N_points, features)
+        # Now indices are (batch_size, N_points, features)
         # Construct the desired tensor
         grid = torch.zeros((x.size(0), self.n_pillars_x * self.n_pillars_y, x.size(2)), device=x.device)
         # And now perform the infamous scatter_add_ that changes the grid in place
