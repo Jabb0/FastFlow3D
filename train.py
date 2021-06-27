@@ -23,6 +23,7 @@ def cli():
     parser.add_argument('--z_max', default=3, type=float)
     parser.add_argument('--z_min', default=-3, type=float)
     parser.add_argument('--grid_size', default=512, type=float)
+    parser.add_argument('--background_weight', default=0.1, type=float)
     parser.add_argument('--test_data_available', default=False, type=bool)
     parser.add_argument('--fast_dev_run', default=False, type=bool)
     parser.add_argument('--num_workers', default=4, type=int)
@@ -64,7 +65,8 @@ def cli():
                                 learning_rate=args.learning_rate)
     else:
         # Tested GPU memory increase from batch size 1 to 2 is 1824MiB
-        model = FastFlow3DModelScatter(n_pillars_x=n_pillars_x, n_pillars_y=n_pillars_y, point_features=8,
+        model = FastFlow3DModelScatter(n_pillars_x=n_pillars_x, n_pillars_y=n_pillars_y,
+                                       background_weight=args.background_weight, point_features=8,
                                        learning_rate=args.learning_rate)
     waymo_data_module = WaymoDataModule(dataset_path, grid_cell_size=grid_cell_size, x_min=args.x_min,
                                         x_max=args.x_max, y_min=args.y_min,

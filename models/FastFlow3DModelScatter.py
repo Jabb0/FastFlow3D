@@ -10,6 +10,7 @@ from .utils import init_weights, augment_index
 
 class FastFlow3DModelScatter(pl.LightningModule):
     def __init__(self, n_pillars_x, n_pillars_y,
+                 background_weight=0.1,
                  point_features=8,
                  learning_rate=1e-6,
                  adam_beta_1=0.9,
@@ -33,6 +34,7 @@ class FastFlow3DModelScatter(pl.LightningModule):
         self._unpillar_network.apply(init_weights)
 
         self._n_pillars_x = n_pillars_x
+        self._background_weight = background_weight
 
     def _transform_point_cloud_to_embeddings(self, pc, mask):
         # Flatten the first two dimensions to get the points as batch dimension
@@ -112,8 +114,8 @@ class FastFlow3DModelScatter(pl.LightningModule):
         # List of batch size many output with each being a (N_points, 3) flow prediction.
         return predictions
 
-    def masked_mse_loss(self, input, target, mask):
-        return (mask * (input - target) ** 2).mean()
+    def masked_mse_loss(self, input, target, mask, background_mask):
+        return (background_mask * (mask * (input - target) ** 2)).mean()
 
     def general_step(self, batch, batch_idx, mode):
         """
@@ -135,8 +137,15 @@ class FastFlow3DModelScatter(pl.LightningModule):
         # The first 3 dimensions are the actual flow. The last dimension is the class id.
         y_flow = y[:, :, :3]
         # TODO: Is the masking properly implemented?!
-        # TODO: Add weights for the background class
-        loss = self.masked_mse_loss(y_hat, y_flow, current_frame_mask)
+        # Loss computation
+        label = y[:, :, -1]
+        label[label != 0] = 1
+        label[label == 0] = self._background_weight
+        # background_mask is a mask which background_weight value for backgrounds and 1 for no backgrounds, in order to
+        # downweight the background points
+        label = label.unsqueeze(-1)
+        loss = self.masked_mse_loss(y_hat, y_flow, current_frame_mask, label)
+
         return loss
 
     def training_step(self, batch, batch_idx):
