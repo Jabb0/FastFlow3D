@@ -19,7 +19,7 @@ class Flow3DModel(pl.LightningModule):
 
         self._point_feature_net = PointFeatureNet(in_channels=5)
         self._point_mixture = PointMixtureNet()
-        self._flow_refinement = FlowRefinementNet()
+        self._flow_refinement = FlowRefinementNet(in_channels=158) # FIXME
         self._final_linear = torch.nn.Linear(in_features=128, out_features=3)
 
     def forward(self, x):
@@ -39,12 +39,14 @@ class Flow3DModel(pl.LightningModule):
         previous_batch_pc = torch.randint(low=0, high=100, size=(2, 10000, 5)).float()
         current_batch_pc = torch.randint(low=0, high=50, size=(2, 6000, 5)).float()
 
-        # TODO Pass output through FlowRefinementNet, LinearLayer
-        previous_batch_pc = self._point_feature_net(previous_batch_pc.float())
-        current_batch_pc = self._point_feature_net(current_batch_pc.float())
+        # TODO Pass output through LinearLayer
+        pf_prev = self._point_feature_net(previous_batch_pc.float())
+        pf_curr = self._point_feature_net(current_batch_pc.float())
 
         # NOTE: x2 must be prev point cloud
-        x = self._point_mixture(x1=current_batch_pc, x2=previous_batch_pc)
+        fe, x = self._point_mixture(x1=pf_curr, x2=pf_prev)
+
+        x = self._flow_refinement(src=fe, target=x)
 
         return x
 
