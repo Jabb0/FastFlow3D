@@ -5,7 +5,7 @@ from networks.flownet3d.layers import SetConvLayer
 
 class PointFeatureNet(torch.nn.Module):
     """
-    PointFeatureNet which is the first part of FlowNet3D and consists of four SetConvLayers
+    PointFeatureNet which is the first part of FlowNet3D and consists of four SetConvLayers.
 
     References
     ----------
@@ -23,8 +23,10 @@ class PointFeatureNet(torch.nn.Module):
 
     def forward(self, x: torch.tensor) -> torch.tensor:
         """
+        Input is a point cloud of shape (batch_size, n_points, n_features),
+        where the first three features are the x,y,z coordinate of the point.
         """
-        batch_size, n_points, _ = x.shape  # (batch_size, n_points, 3)
+        batch_size, n_points, _ = x.shape  # (batch_size, n_points, n_features)
 
         # get features
         features = x[:, :, 3:]

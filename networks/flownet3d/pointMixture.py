@@ -6,7 +6,8 @@ from typing import Tuple
 
 class PointMixtureNet(torch.nn.Module):
     """
-    PointFeatureNet which is the first part of FlowNet3D and consists of one FlowEmbeddingLayer
+    PointMixtureNet which is the second part of FlowNet3D and consists
+    of one FlowEmbeddingLayer and two SetConvLayers.
 
     References
     ----------
@@ -28,6 +29,9 @@ class PointMixtureNet(torch.nn.Module):
     def forward(self, x1: Tuple[torch.Tensor, torch.Tensor, torch.Tensor],
                 x2: Tuple[torch.Tensor, torch.Tensor, torch.Tensor]) -> torch.tensor:
         """
+        Inputs are two point clouds, each point cloud is a tuple (features, pos, batch).
+        Both point clouds are combined by using the FlowEmbeddingLayer and afterwards the combined representation is
+        down-sampled by two SetConvLayers.
         """
         fe_1 = self.fe_1(x1, x2)
         fe_2 = self.set_conv_1(fe_1)

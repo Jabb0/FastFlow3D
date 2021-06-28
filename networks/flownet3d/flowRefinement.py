@@ -5,7 +5,7 @@ from networks.flownet3d.layers import SetUpConvLayer
 
 class FlowRefinementNet(torch.nn.Module):
     """
-    PointFeatureNet which is the first part of FlowNet3D and consists of four SetUpConvLayers
+    FlowRefinementNet which is the last part of FlowNet3D and consists of four SetUpConvLayers
 
     References
     ----------
@@ -29,8 +29,15 @@ class FlowRefinementNet(torch.nn.Module):
     def forward(self, pf_prev_1: torch.tensor, pf_prev_2: torch.tensor,
                 pf_prev_3: torch.tensor, fe_2: torch.tensor, fe_3: torch.tensor) -> torch.tensor:
         """
+        Propagate features to the original point cloud points
+         Propagate:
+            1. from fe_3 to fe_2
+            2. from output of 1. to pf_prev_3
+            3. from output of 2. to pf_prev_2
+            4. from output of 3. to pf_prev_1
         """
-        # target: has higher number of points than source
+        # target: Are locations we want to propagate the source point features to
+        # target must have higher number of points than source
         x = self.setup_conv_1(src=fe_3, target=fe_2)
         x = self.setup_conv_2(src=x, target=pf_prev_3)
         x = self.setup_conv_3(src=x, target=pf_prev_2)
