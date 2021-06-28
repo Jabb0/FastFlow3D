@@ -114,8 +114,56 @@ class FastFlow3DModelScatter(pl.LightningModule):
         # List of batch size many output with each being a (N_points, 3) flow prediction.
         return predictions
 
+    # https://discuss.pytorch.org/t/how-to-do-masked-mean-while-reserving-the-first-dimension/35496/3
     def masked_mse_loss(self, input, target, mask, background_mask):
-        return (background_mask * (mask * (input - target) ** 2)).mean()
+        #return (background_mask * (input - target) ** 2).mean()
+        input = torch.randn(2, 100, 3)
+        target = torch.randn(2, 100, 3)
+        mask = (input > 0).float()
+        background_mask = torch.randn(2, 100, 1)
+        value = background_mask * (input - target) ** 2
+        mask_sum = torch.sum(mask, dim=1)
+        mask_sum_modified = torch.clamp(mask_sum, min=1.0)
+        loss = torch.sum(value * mask) / mask_sum_modified
+        return loss
+
+    # TODO -> do not take into account -1 flow information (or filter them in WaymoDataset?)
+    def compute_metrics(self, y, y_hat, mask, labels, background_weight):
+        # y, y_hat = (batch_size, N, 3)
+        # mask = (batch_size, N)
+        # weights = (batch_size, N, 1)
+        # labels = (batch_size, N)
+        # background_weight = float
+
+        # First we flatten the batch dimension since it will make computations easier
+        # For computing the metrics it is not needed to distinguish between batches
+        y = y.flatten(0, 1)
+        y_hat = y_hat.flatten(0, 1)
+        mask = mask.flatten(0, 2)
+        labels = labels.flatten(0, 1)
+        # Flattened versions -> Second dimension is batch_size * N
+
+        squared_root_difference = torch.sqrt((y - y_hat)**2)
+        # We mask the padding points
+        squared_root_difference = squared_root_difference[mask, :]
+        # We compute the weighting vector for background_points
+        # weights is a mask which background_weight value for backgrounds and 1 for no backgrounds, in order to
+        # downweight the background points
+        weights = labels[mask]
+        weights[weights != 0] = -1
+        weights[weights == 0] = background_weight  # Background is labeled as 0
+        weights[weights == -1] = 1
+        weights = weights.repeat((3, 1)).permute(1, 0)
+        # weights -> (batch_size * N, 3)
+        loss = (weights * squared_root_difference).mean()
+
+        return loss
+
+    #def compute_metrics(self, y, y_hat, mask, label):
+    #    # L2 with threshold 1 m/s
+    #    (mask * (y - y_hat) ** 2))
+    # https://stackoverflow.com/questions/53906380/average-calculation-in-python
+    # https://www.geeksforgeeks.org/numpy-maskedarray-mean-function-python/
 
     def general_step(self, batch, batch_idx, mode):
         """
@@ -136,17 +184,19 @@ class FastFlow3DModelScatter(pl.LightningModule):
 
         # The first 3 dimensions are the actual flow. The last dimension is the class id.
         y_flow = y[:, :, :3]
-        # TODO: Is the masking properly implemented?!
         # Loss computation
-        label = y[:, :, -1]
-        label[label != 0] = 1
-        label[label == 0] = self._background_weight
-        # background_mask is a mask which background_weight value for backgrounds and 1 for no backgrounds, in order to
-        # downweight the background points
-        label = label.unsqueeze(-1)
-        loss = self.masked_mse_loss(y_hat, y_flow, current_frame_mask, label)
+        labels = y[:, :, -1]
+        loss = self.compute_metrics(y_flow, y_hat, current_frame_mask, labels, self._background_weight)
 
         return loss
+
+    # TODO: follow implementing this
+    def log_metrics(self, phase, loss, metrics):
+        # phase should be training, validation or test
+        metrics_dict = {}
+        metrics_dict[f'{phase}/loss'] = loss
+        L2_threshold_1  = metrics[0]
+        L2_threshold_01 = metrics[1]
 
     def training_step(self, batch, batch_idx):
         """

@@ -385,7 +385,7 @@ def custom_collate_batch(batch):
     Note that this requires to filter out the zero padded points later on.
 
     :param batch: batch_size long list of ((prev, cur), flows) pointcloud tuples with flows.
-        prev and cur are tuples of (point_cloud, grid_indices)
+        prev and cur are tuples of (point_cloud, grid_indices, mask)
          point clouds are (N_points, features) with different N_points each
     :return: ((batch_prev, batch_cur), batch_flows)
     """
