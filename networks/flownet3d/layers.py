@@ -68,31 +68,23 @@ class SetUpConvLayer(torch.nn.Module):
     """
     TODO
     """
-    def __init__(self, r: float, sample_rate: int, mlp: torch.nn.Sequential):
+    def __init__(self, r: float, mlp: torch.nn.Sequential):
         super().__init__()
-        self.sample_rate = sample_rate
         self.radius = r
-        self.point_conv = torch_geometric.nn.PointConv(mlp)
-        self.up_sample = torch.nn.Upsample(scale_factor=sample_rate, mode='nearest', align_corners=None)
+        self.point_conv = _SetUpPointConv(mlp)
 
     def forward(self, src: torch.Tensor, target: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         src_features, src_pos, src_batch = src  # embeddings
-        _, target_pos, target_batch = target
-        print(src_features.shape)
-        print(src_pos.shape)
-        print(target_pos.shape)
-        # TODO Choose correct up-sampling
-
-        # sample points (regions) by using iterative farthest point sampling (FPS)
-        #col, row = torch_geometric.nn.knn(target_pos, src_pos, k=self.sample_rate)
+        target_features, target_pos, target_batch = target
 
         # For each region, get all points which are within in the region (defined by radius r)
-        row, col = torch_geometric.nn.radius(target_pos, src_pos, self.radius, target_batch, src_batch)
-
+        # row, col = torch_geometric.nn.radius(target_pos, src_pos, self.radius, target_batch, src_batch)
+        row, col = torch_geometric.nn.radius(src_pos, target_pos, self.radius, src_batch, target_batch)
         edge_index = torch.stack([col, row], dim=0)
 
         # Apply point net
-        features = self.point_conv(src_features, (src_pos, target_pos), edge_index)
+        # features = self.point_conv(target_features, (target_pos, src_pos), edge_index)
+        features = self.point_conv((src_features, target_features), (src_pos, target_pos), edge_index)
         pos, batch = target_pos, target_batch
 
         return features, pos, batch
@@ -123,5 +115,35 @@ class _FlowEmbeddingPointConv(MessagePassing):
 
     def message(self, x_i: torch.Tensor, x_j: torch.Tensor, pos_i: torch.Tensor, pos_j: torch.Tensor) -> torch.Tensor:
         msg = torch.cat([x_i, x_j, pos_j - pos_i], dim=1)
+        msg = self.nn(msg)
+        return msg
+
+
+class _SetUpPointConv(MessagePassing):
+    def __init__(self, mlp: torch.nn.Sequential, aggr: str = 'max'):
+        super(_SetUpPointConv, self).__init__(aggr=aggr)
+        self.nn = mlp
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        reset(self.nn)
+
+    def forward(self, x: Union[OptTensor, PairOptTensor],
+                pos: Union[torch.Tensor, PairTensor], edge_index: Adj) -> torch.Tensor:
+        """"""
+        if not isinstance(x, tuple):
+            x: PairOptTensor = (x, None)
+
+        if isinstance(pos, torch.Tensor):
+            pos: PairTensor = (pos, pos)
+
+        # propagate_type: (x: PairOptTensor, pos: PairTensor)
+        out = self.propagate(edge_index, x=x, pos=pos, size=None)
+
+        return out
+
+    def message(self, x_i: torch.Tensor, x_j: torch.Tensor, pos_i: torch.Tensor, pos_j: torch.Tensor) -> torch.Tensor:
+        # x_j are the src feature
+        msg = torch.cat([x_j, pos_j - pos_i], dim=1)
         msg = self.nn(msg)
         return msg

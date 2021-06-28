@@ -15,22 +15,25 @@ class FlowRefinementNet(torch.nn.Module):
     def __init__(self, in_channels: int):
         super(FlowRefinementNet, self).__init__()
         setup_conv_mlp_1 = make_mlp(in_channels, [128, 128, 256])
-        self.setup_conv_1 = SetUpConvLayer(r=4.0, sample_rate=4, mlp=setup_conv_mlp_1)
+        self.setup_conv_1 = SetUpConvLayer(r=4.0, mlp=setup_conv_mlp_1)
 
-        setup_conv_mlp_2 = make_mlp(in_channels, [128, 128, 256])
-        self.setup_conv_2 = SetUpConvLayer(r=2.0, sample_rate=4, mlp=setup_conv_mlp_2)
+        setup_conv_mlp_2 = make_mlp(256 + 3, [128, 128, 256])
+        self.setup_conv_2 = SetUpConvLayer(r=2.0, mlp=setup_conv_mlp_2)
 
-        setup_conv_mlp_3 = make_mlp(in_channels, [128, 128, 128])
-        self.setup_conv_3 = SetUpConvLayer(r=1.0, sample_rate=4, mlp=setup_conv_mlp_3)
+        setup_conv_mlp_3 = make_mlp(256 + 3, [128, 128, 128])
+        self.setup_conv_3 = SetUpConvLayer(r=1.0, mlp=setup_conv_mlp_3)
 
-        setup_conv_mlp_4 = make_mlp(in_channels, [128, 128, 128])
-        self.setup_conv_4 = SetUpConvLayer(r=0.5, sample_rate=2, mlp=setup_conv_mlp_4)
+        setup_conv_mlp_4 = make_mlp(128 + 3, [128, 128, 128])
+        self.setup_conv_4 = SetUpConvLayer(r=0.5, mlp=setup_conv_mlp_4)
 
-    def forward(self, src: torch.tensor, target: torch.tensor) -> torch.tensor:
+    def forward(self, pf_prev_1: torch.tensor, pf_prev_2: torch.tensor,
+                pf_prev_3: torch.tensor, fe_2: torch.tensor, fe_3: torch.tensor) -> torch.tensor:
         """
         """
-        x = self.setup_conv_1(src=src, target=target)
-        print(src[0].shape)
-        print(x[0].shape)
+        # target: has higher number of points than source
+        x = self.setup_conv_1(src=fe_3, target=fe_2)
+        x = self.setup_conv_2(src=x, target=pf_prev_3)
+        x = self.setup_conv_3(src=x, target=pf_prev_2)
+        x = self.setup_conv_4(src=x, target=pf_prev_1)
 
-        return src
+        return x

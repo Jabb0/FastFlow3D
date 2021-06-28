@@ -39,8 +39,8 @@ class PointFeatureNet(torch.nn.Module):
             batch[i] = i
         batch = batch.view(-1)
 
-        x = (features, pos, batch)
-        x = self.set_conv_1(x)
-        x = self.set_conv_2(x)
+        x1 = (features, pos, batch)
+        x2 = self.set_conv_1(x1)
+        x3 = self.set_conv_2(x2)
 
-        return x
+        return x1, x2, x3

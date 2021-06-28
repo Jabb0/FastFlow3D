@@ -19,8 +19,8 @@ class Flow3DModel(pl.LightningModule):
 
         self._point_feature_net = PointFeatureNet(in_channels=5)
         self._point_mixture = PointMixtureNet()
-        self._flow_refinement = FlowRefinementNet(in_channels=158) # FIXME
-        self._final_linear = torch.nn.Linear(in_features=128, out_features=3)
+        self._flow_refinement = FlowRefinementNet(in_channels=512 + 3) # FIXME
+        self._fc = torch.nn.Linear(in_features=128, out_features=3)
 
     def forward(self, x):
         """
@@ -36,18 +36,24 @@ class Flow3DModel(pl.LightningModule):
         previous_batch_pc = transform_data(previous_batch_pc)
         current_batch_pc = transform_data(current_batch_pc)
 
-        previous_batch_pc = torch.randint(low=0, high=100, size=(2, 10000, 5)).float()
-        current_batch_pc = torch.randint(low=0, high=50, size=(2, 6000, 5)).float()
+        batch_size, n_points_prev, _ = previous_batch_pc.shape
 
-        # TODO Pass output through LinearLayer
-        pf_prev = self._point_feature_net(previous_batch_pc.float())
-        pf_curr = self._point_feature_net(current_batch_pc.float())
+        # --- Point Feature Part ---
+        pf_prev_1, pf_prev_2, pf_prev_3 = self._point_feature_net(previous_batch_pc.float())
+        _, _, pf_curr_3 = self._point_feature_net(current_batch_pc.float())
 
-        # NOTE: x2 must be prev point cloud
-        fe, x = self._point_mixture(x1=pf_curr, x2=pf_prev)
+        # --- Flow Embedding / Point Mixture Part ---
+        fe_1, fe_2, fe_3 = self._point_mixture(x1=pf_curr_3, x2=pf_prev_3) # NOTE: x2 must be prev point cloud
 
-        x = self._flow_refinement(src=fe, target=x)
+        # --- Flow Refinement Part ---
+        x = self._flow_refinement(pf_prev_1=pf_prev_1, pf_prev_2=pf_prev_2, pf_prev_3=pf_prev_3, fe_2=fe_2, fe_3=fe_3)
 
+        # --- Final fully connected layer ---
+        features, pos, batch = x
+        x = self._fc(features)
+
+        # TODO Check if this is correct
+        x = x.view(batch_size, n_points_prev, 3)
         return x
 
     def general_step(self, batch, batch_idx, mode):

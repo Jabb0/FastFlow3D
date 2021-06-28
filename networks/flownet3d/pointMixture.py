@@ -29,8 +29,8 @@ class PointMixtureNet(torch.nn.Module):
                 x2: Tuple[torch.Tensor, torch.Tensor, torch.Tensor]) -> torch.tensor:
         """
         """
-        fe = self.fe_1(x1, x2)
-        x = self.set_conv_1(fe)
-        x = self.set_conv_2(x)
+        fe_1 = self.fe_1(x1, x2)
+        fe_2 = self.set_conv_1(fe_1)
+        fe_3 = self.set_conv_2(fe_2)
 
-        return fe, x
+        return fe_1, fe_2, fe_3
