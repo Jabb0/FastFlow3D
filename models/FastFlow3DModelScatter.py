@@ -143,9 +143,9 @@ class FastFlow3DModelScatter(pl.LightningModule):
         labels = labels.flatten(0, 1)
         # Flattened versions -> Second dimension is batch_size * N
 
-        squared_root_difference = torch.sqrt((y - y_hat)**2)
+        squared_root_difference = torch.sqrt(torch.sum((y - y_hat)**2, dim=1))
         # We mask the padding points
-        squared_root_difference = squared_root_difference[mask, :]
+        squared_root_difference = squared_root_difference[mask]
         # We compute the weighting vector for background_points
         # weights is a mask which background_weight value for backgrounds and 1 for no backgrounds, in order to
         # downweight the background points
@@ -153,9 +153,8 @@ class FastFlow3DModelScatter(pl.LightningModule):
         weights[weights != 0] = -1
         weights[weights == 0] = background_weight  # Background is labeled as 0
         weights[weights == -1] = 1
-        weights = weights.repeat((3, 1)).permute(1, 0)
-        # weights -> (batch_size * N, 3)
-        loss = (weights * squared_root_difference).mean()
+
+        loss = torch.sum(weights * squared_root_difference) / torch.sum(weights)
 
         return loss
 
