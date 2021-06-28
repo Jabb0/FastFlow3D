@@ -70,17 +70,17 @@ class Flow3DModel(pl.LightningModule):
         previous_batch_pc = transform_data(previous_batch_pc)
         current_batch_pc = transform_data(current_batch_pc)
 
-        batch_size, n_points_prev, _ = previous_batch_pc.shape
+        batch_size, n_points_prev, _ = current_batch_pc.shape
 
         # --- Point Feature Part ---
-        pf_prev_1, pf_prev_2, pf_prev_3 = self._point_feature_net(previous_batch_pc.float())
-        _, _, pf_curr_3 = self._point_feature_net(current_batch_pc.float())
+        _, _, pf_prev_3 = self._point_feature_net(previous_batch_pc.float())
+        pf_curr_1, pf_curr_2, pf_curr_3 = self._point_feature_net(current_batch_pc.float())
 
         # --- Flow Embedding / Point Mixture Part ---
-        fe_1, fe_2, fe_3 = self._point_mixture(x1=pf_curr_3, x2=pf_prev_3)  # NOTE: x2 must be prev point cloud
+        fe_1, fe_2, fe_3 = self._point_mixture(x1=pf_prev_3, x2=pf_curr_3)  # NOTE: x2 must be prev point cloud
 
         # --- Flow Refinement Part ---
-        x = self._flow_refinement(pf_prev_1=pf_prev_1, pf_prev_2=pf_prev_2, pf_prev_3=pf_prev_3, fe_2=fe_2, fe_3=fe_3)
+        x = self._flow_refinement(pf_prev_1=pf_curr_1, pf_prev_2=pf_curr_2, pf_prev_3=pf_curr_3, fe_2=fe_2, fe_3=fe_3)
 
         # --- Final fully connected layer ---
         features, pos, batch = x

@@ -26,21 +26,21 @@ class FlowRefinementNet(torch.nn.Module):
         setup_conv_mlp_4 = make_mlp(128 + 3, [128, 128, 128])
         self.setup_conv_4 = SetUpConvLayer(r=0.5, mlp=setup_conv_mlp_4)
 
-    def forward(self, pf_prev_1: torch.tensor, pf_prev_2: torch.tensor,
-                pf_prev_3: torch.tensor, fe_2: torch.tensor, fe_3: torch.tensor) -> torch.tensor:
+    def forward(self, pf_curr_1: torch.tensor, pf_curr_2: torch.tensor,
+                pf_curr_3: torch.tensor, fe_2: torch.tensor, fe_3: torch.tensor) -> torch.tensor:
         """
         Propagate features to the original point cloud points
          Propagate:
             1. from fe_3 to fe_2
-            2. from output of 1. to pf_prev_3
-            3. from output of 2. to pf_prev_2
-            4. from output of 3. to pf_prev_1
+            2. from output of 1. to pf_curr_3
+            3. from output of 2. to pf_curr_2
+            4. from output of 3. to pf_curr_1
         """
         # target: Are locations we want to propagate the source point features to
         # target must have higher number of points than source
         x = self.setup_conv_1(src=fe_3, target=fe_2)
-        x = self.setup_conv_2(src=x, target=pf_prev_3)
-        x = self.setup_conv_3(src=x, target=pf_prev_2)
-        x = self.setup_conv_4(src=x, target=pf_prev_1)
+        x = self.setup_conv_2(src=x, target=pf_curr_3)
+        x = self.setup_conv_3(src=x, target=pf_curr_2)
+        x = self.setup_conv_4(src=x, target=pf_curr_1)
 
         return x
