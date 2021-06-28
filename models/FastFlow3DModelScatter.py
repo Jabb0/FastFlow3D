@@ -36,6 +36,11 @@ class FastFlow3DModelScatter(pl.LightningModule):
         self._n_pillars_x = n_pillars_x
         self._background_weight = background_weight
 
+        # ----- Metrics information -----
+        # TODO delete no flow class
+        self._classes = [(0, 'background'), (1, 'vehicle'), (2, 'pedestrian'), (3, 'sign'), (4, 'cyclist')]
+        self._thresholds = [(1, '1_1'), (0.1, '1_10')]  # 1/1 = 1, 1/10 = 0.1
+
     def _transform_point_cloud_to_embeddings(self, pc, mask):
         # Flatten the first two dimensions to get the points as batch dimension
         previous_batch_pc_embedding = self._point_feature_net(pc.flatten(0, 1))
@@ -114,19 +119,6 @@ class FastFlow3DModelScatter(pl.LightningModule):
         # List of batch size many output with each being a (N_points, 3) flow prediction.
         return predictions
 
-    # https://discuss.pytorch.org/t/how-to-do-masked-mean-while-reserving-the-first-dimension/35496/3
-    def masked_mse_loss(self, input, target, mask, background_mask):
-        #return (background_mask * (input - target) ** 2).mean()
-        input = torch.randn(2, 100, 3)
-        target = torch.randn(2, 100, 3)
-        mask = (input > 0).float()
-        background_mask = torch.randn(2, 100, 1)
-        value = background_mask * (input - target) ** 2
-        mask_sum = torch.sum(mask, dim=1)
-        mask_sum_modified = torch.clamp(mask_sum, min=1.0)
-        loss = torch.sum(value * mask) / mask_sum_modified
-        return loss
-
     # TODO -> do not take into account -1 flow information (or filter them in WaymoDataset?)
     def compute_metrics(self, y, y_hat, mask, labels, background_weight):
         # y, y_hat = (batch_size, N, 3)
@@ -155,8 +147,17 @@ class FastFlow3DModelScatter(pl.LightningModule):
         weights[weights == -1] = 1
 
         loss = torch.sum(weights * squared_root_difference) / torch.sum(weights)
-
-        return loss
+        # ---------------- Computing rest of metrics -----------------
+        metrics = {}
+        # --- Computing L2 with threshold ---
+        for threshold, name in self._thresholds:
+            L2_list = {}
+            for label, class_name in self._classes:
+                correct_prediction = (squared_root_difference < threshold).sum()
+                metric = correct_prediction / squared_root_difference.shape[0]
+                L2_list[class_name] = metric
+            metrics[name] = L2_list
+        return loss, metrics
 
     #def compute_metrics(self, y, y_hat, mask, label):
     #    # L2 with threshold 1 m/s
@@ -185,17 +186,19 @@ class FastFlow3DModelScatter(pl.LightningModule):
         y_flow = y[:, :, :3]
         # Loss computation
         labels = y[:, :, -1]
-        loss = self.compute_metrics(y_flow, y_hat, current_frame_mask, labels, self._background_weight)
+        loss, metrics = self.compute_metrics(y_flow, y_hat, current_frame_mask, labels, self._background_weight)
 
-        return loss
+        return loss, metrics
 
-    # TODO: follow implementing this
-    def log_metrics(self, phase, loss, metrics):
+    def log_metrics(self, loss, metrics, phase):
         # phase should be training, validation or test
         metrics_dict = {}
         metrics_dict[f'{phase}/loss'] = loss
-        L2_threshold_1  = metrics[0]
-        L2_threshold_01 = metrics[1]
+        for metric in metrics:
+            for label in metrics[metric]:
+                metrics_dict[f'{phase}/{metric}/{label}'] = metrics[metric][label]
+
+        self.log_dict(metrics_dict, on_step=True, on_epoch=True, prog_bar=True, logger=True)
 
     def training_step(self, batch, batch_idx):
         """
@@ -208,10 +211,12 @@ class FastFlow3DModelScatter(pl.LightningModule):
         :param batch_idx: the id of this batch e.g. for discounting?
         :return:
         """
-        loss = self.general_step(batch, batch_idx, "train")
+        phase = "train"
+        loss, metrics = self.general_step(batch, batch_idx, phase)
         # Automatically reduces this metric after each epoch
         # Note: There is also a log_dict function that can log multiple metrics at a time.
-        self.log('train/loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        #self.log('train/loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log_metrics(loss, metrics, phase)
         # Return loss for backpropagation
         return loss
 
@@ -223,7 +228,7 @@ class FastFlow3DModelScatter(pl.LightningModule):
         :param batch_idx:
         :return:
         """
-        loss = self.general_step(batch, batch_idx, "val")
+        loss, metrics = self.general_step(batch, batch_idx, "val")
         # Automatically reduces this metric after each epoch
         self.log('val/loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
 
@@ -235,7 +240,7 @@ class FastFlow3DModelScatter(pl.LightningModule):
         :param batch_idx:
         :return:
         """
-        loss = self.general_step(batch, batch_idx, "test")
+        loss, metrics = self.general_step(batch, batch_idx, "test")
         # Automatically reduces this metric after each epoch
         self.log('test/loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
 
