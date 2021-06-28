@@ -19,7 +19,8 @@ class SetConvLayer(torch.nn.Module):
         # see  https://pytorch-geometric.readthedocs.io/en/latest/modules/nn.html?highlight=point%20conv#torch_geometric.nn.conv.PointConv
         self.point_conv = torch_geometric.nn.PointConv(mlp)
 
-    def forward(self, x: Tuple[torch.Tensor, torch.Tensor, torch.Tensor]) -> torch.tensor:
+    def forward(self,
+                x: Tuple[torch.Tensor, torch.Tensor, torch.Tensor]) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """ Input must be point cloud tensor of shape (n_points, n_features)  """
         features, pos, batch = x
 
@@ -49,7 +50,7 @@ class FlowEmbeddingLayer(torch.nn.Module):
         self.point_conv = _FlowEmbeddingPointConv(mlp)
 
     def forward(self, x1: Tuple[torch.Tensor, torch.Tensor, torch.Tensor],
-                x2: Tuple[torch.Tensor, torch.Tensor, torch.Tensor]) -> torch.tensor:
+                x2: Tuple[torch.Tensor, torch.Tensor, torch.Tensor]) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         x1_features, x1_pos, x1_batch = x1
         x2_features, x2_pos, x2_batch = x2
 
@@ -61,6 +62,40 @@ class FlowEmbeddingLayer(torch.nn.Module):
         pos, batch = x2_pos, x2_batch
 
         return x, pos, batch
+
+
+class SetUpConvLayer(torch.nn.Module):
+    """
+    TODO
+    """
+    def __init__(self, r: float, sample_rate: int, mlp: torch.nn.Sequential):
+        super().__init__()
+        self.sample_rate = sample_rate
+        self.radius = r
+        self.point_conv = torch_geometric.nn.PointConv(mlp)
+        self.up_sample = torch.nn.Upsample(scale_factor=sample_rate, mode='nearest', align_corners=None)
+
+    def forward(self, src: torch.Tensor, target: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        src_features, src_pos, src_batch = src  # embeddings
+        _, target_pos, target_batch = target
+        print(src_features.shape)
+        print(src_pos.shape)
+        print(target_pos.shape)
+        # TODO Choose correct up-sampling
+
+        # sample points (regions) by using iterative farthest point sampling (FPS)
+        #col, row = torch_geometric.nn.knn(target_pos, src_pos, k=self.sample_rate)
+
+        # For each region, get all points which are within in the region (defined by radius r)
+        row, col = torch_geometric.nn.radius(target_pos, src_pos, self.radius, target_batch, src_batch)
+
+        edge_index = torch.stack([col, row], dim=0)
+
+        # Apply point net
+        features = self.point_conv(src_features, (src_pos, target_pos), edge_index)
+        pos, batch = target_pos, target_batch
+
+        return features, pos, batch
 
 
 class _FlowEmbeddingPointConv(MessagePassing):
