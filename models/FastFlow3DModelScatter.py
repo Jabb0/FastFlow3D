@@ -117,24 +117,11 @@ class FastFlow3DModelScatter(pl.LightningModule):
     def compute_metrics(self, y, y_hat, labels):
         """
 
-        :param y: predicted data (batch_size, max_points, 3)
-        :param y_hat: ground truth (batch_size, max_points, 3)
-        :param labels:
+        :param y: predicted data (points, 3)
+        :param y_hat: ground truth (points, 3)
+        :param labels: class labels for each point (points, 3)
         :return:
         """
-        # y, y_hat = (batch_size, N, 3)
-        # mask = (batch_size, N)
-        # weights = (batch_size, N, 1)
-        # labels = (batch_size, N)
-        # background_weight = float
-
-        # First we flatten the batch dimension since it will make computations easier
-        # For computing the metrics it is not needed to distinguish between batches
-        # y = y.flatten(0, 1)
-        # y_hat = y_hat.flatten(0, 1)
-        # labels = labels.flatten(0, 1)
-        # Flattened versions -> Second dimension is batch_size * N
-
         squared_root_difference = torch.sqrt(torch.sum((y - y_hat) ** 2, dim=1))
         # We compute the weighting vector for background_points
         # weights is a mask which background_weight value for backgrounds and 1 for no backgrounds, in order to
@@ -157,12 +144,6 @@ class FastFlow3DModelScatter(pl.LightningModule):
                 L2_list[class_name] = metric
             metrics[name] = L2_list
         return loss, metrics
-
-    # def compute_metrics(self, y, y_hat, mask, label):
-    #    # L2 with threshold 1 m/s
-    #    (mask * (y - y_hat) ** 2))
-    # https://stackoverflow.com/questions/53906380/average-calculation-in-python
-    # https://www.geeksforgeeks.org/numpy-maskedarray-mean-function-python/
 
     def general_step(self, batch, batch_idx, mode):
         """
