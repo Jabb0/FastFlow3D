@@ -213,8 +213,6 @@ class FastFlow3DModelScatter(pl.LightningModule):
         phase = "train"
         loss, metrics = self.general_step(batch, batch_idx, phase)
         # Automatically reduces this metric after each epoch
-        # Note: There is also a log_dict function that can log multiple metrics at a time.
-        # self.log('train/loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log_metrics(loss, metrics, phase)
         # Return loss for backpropagation
         return loss
@@ -227,9 +225,10 @@ class FastFlow3DModelScatter(pl.LightningModule):
         :param batch_idx:
         :return:
         """
-        loss, metrics = self.general_step(batch, batch_idx, "val")
+        phase = "val"
+        loss, metrics = self.general_step(batch, batch_idx, phase)
         # Automatically reduces this metric after each epoch
-        self.log('val/loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log_metrics(loss, metrics, phase)
 
     def test_step(self, batch, batch_idx):
         """
@@ -239,9 +238,10 @@ class FastFlow3DModelScatter(pl.LightningModule):
         :param batch_idx:
         :return:
         """
-        loss, metrics = self.general_step(batch, batch_idx, "test")
+        phase = "test"
+        loss, metrics = self.general_step(batch, batch_idx, phase)
         # Automatically reduces this metric after each epoch
-        self.log('test/loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log_metrics(loss, metrics, phase)
 
     def configure_optimizers(self):
         """
