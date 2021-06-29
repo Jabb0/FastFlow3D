@@ -33,13 +33,17 @@ def cli():
     parser.add_argument('--use_sparse_lookup', default=False, type=bool)
 
     # Set default dtype to float and not double
-    torch.set_default_dtype(torch.float)
+    # torch.set_default_dtype(torch.float)
 
     # NOTE: Readd this to see all parameters of the trainer
     # parser = pl.Trainer.add_argparse_args(parser)  # Add arguments for the trainer
     # Add model specific arguments here
     parser = FastFlow3DModel.add_model_specific_args(parser)
     args = parser.parse_args()
+
+    if args.use_sparse_lookup and not args.fast_dev_run:
+        print(f"ERROR: Sparse model is not implemented completely. No full run allowed")
+        exit(1)
 
     dataset_path = Path(args.data_directory)
     # Check if the dataset exists
@@ -74,7 +78,8 @@ def cli():
                                         batch_size=args.batch_size,
                                         has_test=args.test_data_available,
                                         num_workers=args.num_workers,
-                                        scatter_collate=not args.use_sparse_lookup)
+                                        scatter_collate=not args.use_sparse_lookup,
+                                        n_pillars_x=n_pillars_x)
 
     # Initialize the weights and biases logger.
     # Name is the name of this run
@@ -102,6 +107,7 @@ def cli():
     # Max epochs can be configured here to, early stopping is also configurable.
     # Some things are definable as callback from pytorch_lightning.callback
     trainer = pl.Trainer.from_argparse_args(args,
+                                            precision=32,  # Precision 16 does not seem to work with batchNorm1D
                                             progress_bar_refresh_rate=25,  # Prevents Google Colab crashes
                                             gpus=1 if torch.cuda.is_available() else 0,
                                             logger=logger

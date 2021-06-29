@@ -15,7 +15,7 @@ def remove_out_of_bounds_points(pc, y, x_min, x_max, y_min, y_max, z_min, z_max)
     return pc_valid, y_valid
 
 
-def create_pillars_matrix(pc_valid, grid_cell_size, x_min, y_min, z_min, z_max):
+def create_pillars_matrix(pc_valid, grid_cell_size, x_min, y_min, z_min, z_max, n_pillars_x):
     """
     Compute the pillars using matrix operations.
     :param pc: point cloud data. (N_points, features) with the first 3 features being the x,y,z coordinates.
@@ -47,4 +47,13 @@ def create_pillars_matrix(pc_valid, grid_cell_size, x_min, y_min, z_min, z_max):
     # Take the two laser features
     augmented_pc[:, 6:] = pc_valid[:, 3:]
     # augmented_pc = [cx, cy, cz,  Δx, Δy, Δz, l0, l1]
+
+    # Convert the 2D grid indices into a 1D encoding
+    # This 1D encoding is used by the models instead of the more complex 2D x,y encoding
+    # To make things easier we transform the 2D indices into 1D indices
+    # The cells are encoded as j = x * grid_width + y and thus give an unique encoding for each cell
+    # E.g. if we have 512 cells in both directions and x=1, y=2 is encoded as 512 + 2 = 514.
+    # Each new row of the grid (x-axis) starts at j % 512 = 0.
+    grid_cell_indices = grid_cell_indices[:, 0] * n_pillars_x + grid_cell_indices[:, 1]
+
     return augmented_pc, grid_cell_indices

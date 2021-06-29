@@ -16,6 +16,7 @@ import pickle
 from waymo_open_dataset import dataset_pb2 as open_dataset
 import tensorflow as tf
 
+
 def convert_range_image_to_point_cloud(frame,
                                        range_images,
                                        camera_projections,
@@ -80,7 +81,8 @@ def convert_range_image_to_point_cloud(frame,
 
 
 def parse_range_image_and_camera_projection(frame):
-    """Parse range images and camera projections given a frame.
+    """
+    Parse range images and camera projections given a frame.
 
   Args:
      frame: open dataset frame proto
@@ -147,12 +149,13 @@ def parse_range_image_and_camera_projection(frame):
 
 
 class ApplyPillarization:
-    def __init__(self, grid_cell_size, x_min, y_min, z_min, z_max):
+    def __init__(self, grid_cell_size, x_min, y_min, z_min, z_max, n_pillars_x):
         self._grid_cell_size = grid_cell_size
         self._z_max = z_max
         self._z_min = z_min
         self._y_min = y_min
         self._x_min = x_min
+        self._n_pillars_x = n_pillars_x
 
     """ Transforms an point cloud to the augmented pointcloud depending on Pillarization """
 
@@ -161,7 +164,8 @@ class ApplyPillarization:
                                                           grid_cell_size=self._grid_cell_size,
                                                           x_min=self._x_min,
                                                           y_min=self._y_min,
-                                                          z_min=self._z_min, z_max=self._z_max)
+                                                          z_min=self._z_min, z_max=self._z_max,
+                                                          n_pillars_x=self._n_pillars_x)
         return point_cloud, grid_indices
 
 
@@ -199,8 +203,6 @@ def custom_collate(batch):
     ]
 
     return (batch_previous, batch_current), batch_targets
-
-
 
 
 # ------------- Preprocessing Functions ---------------
@@ -247,7 +249,7 @@ def preprocess(tfrecord_files, output_path, frames_per_segment = None):
         loaded_file = tf.data.TFRecordDataset(data_file, compression_type='')
         previous_frame = None
         for j, frame in enumerate(loaded_file):
-            point_cloud_path = os.path.join(output_path, "pointCloud_file_" + tfrecord_filename + "_frame_" + str(j) + ".npy")
+            point_cloud_path = os.path.join(output_path, f"pointCloud_file_{tfrecord_filename}_frame_{j}.npy")
             # Process frame and store point clouds into disk
             _, _, pose_transform = save_point_cloud(frame, point_cloud_path)
             if j == 0:
@@ -263,6 +265,7 @@ def preprocess(tfrecord_files, output_path, frames_per_segment = None):
         with open(look_up_table_path, 'wb') as look_up_table_file:
             pickle.dump(look_up_table, look_up_table_file)
 
+
 def get_uncompressed_frame(compressed_frame):
     """
     :param compressed_frame: Compressed frame
@@ -277,8 +280,8 @@ def compute_features(frame):
     """
     :param frame: Uncompressed frame
     :return: [N, F], [N, 4], where N is the number of points, F the number of features,
-    which is [x, y, z, intensity, elongation] and 4 in the second results stands for [vx, vy, vz, label], which corresponds
-    to the flow information
+    which is [x, y, z, intensity, elongation] and 4 in the second results stands for [vx, vy, vz, label],
+    which corresponds to the flow information
     """
     range_images, camera_projections, point_flows, range_image_top_pose = parse_range_image_and_camera_projection(
         frame)
@@ -319,6 +322,7 @@ def get_coordinates_and_features(point_cloud, transform=None):
     point_cloud = np.hstack((points_coord, features))
     return point_cloud
 
+
 def merge_look_up_tables(input_path):
     """
     Merge individual look-up table and store it in the input_path with the name look_up_table
@@ -346,11 +350,10 @@ def _pad_batch(batch):
     true_number_of_points = [e[1].shape[0] for e in batch]
     max_points_prev = np.max(true_number_of_points)
     point_features = batch[0][0].shape[1]
-    indices_features = batch[0][1].shape[1]
 
     # We need a mask of all the points that actually exist
     zeros = np.zeros((len(batch), max_points_prev), dtype=bool)
-    # Mark all first real number of points that are padded
+    # Mark all points that ARE padded
     for i, n in enumerate(true_number_of_points):
         zeros[i, n:] = 1
 
@@ -358,7 +361,7 @@ def _pad_batch(batch):
     return [
         [
             np.resize(entry[0], (max_points_prev, point_features)),
-            np.resize(entry[1], (max_points_prev, indices_features)),
+            np.resize(entry[1], max_points_prev),
             zeros[i]
         ] for i, entry in enumerate(batch)
     ]

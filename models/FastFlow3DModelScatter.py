@@ -5,7 +5,7 @@ from pytorch_lightning.metrics import functional as FM
 from argparse import ArgumentParser
 
 from networks import PillarFeatureNetScatter, ConvEncoder, ConvDecoder, UnpillarNetworkScatter, PointFeatureNet
-from .utils import init_weights, augment_index
+from .utils import init_weights
 
 
 class FastFlow3DModelScatter(pl.LightningModule):
@@ -19,6 +19,7 @@ class FastFlow3DModelScatter(pl.LightningModule):
         self.save_hyperparameters()  # Store the constructor parameters into self.hparams
 
         self._point_feature_net = PointFeatureNet(in_features=point_features, out_features=64)
+        self._point_feature_net.apply(init_weights)
 
         self._pillar_feature_net = PillarFeatureNetScatter(n_pillars_x=n_pillars_x, n_pillars_y=n_pillars_y,
                                                            out_features=64)
@@ -46,11 +47,6 @@ class FastFlow3DModelScatter(pl.LightningModule):
         previous_batch_pc_embedding = self._point_feature_net(pc.flatten(0, 1))
         # Output is (batch_size * points, embedding_features)
         # Set the points to 0 that are just there for padding
-        # TODO: One could ignore the mask and only give indices for the actually defined entries.
-        #  However it is unclear if then backprop is implemented
-        #  as the documentation states it is only defined for src.shape == index.shape
-        #  for scatter_add_ that is used in the pillarization part
-        #  however, then batching of the indices does not work anymore. Therefore this is no real possibility.
         previous_batch_pc_embedding[mask.flatten(0, 1), :] = 0
         # Retransform into batch dimension (batch_size, max_points, embedding_features)
         previous_batch_pc_embedding = previous_batch_pc_embedding.unflatten(0,
@@ -73,7 +69,13 @@ class FastFlow3DModelScatter(pl.LightningModule):
         previous_batch, current_batch = x
         previous_batch_pc, previous_batch_grid, previous_batch_mask = previous_batch
         current_batch_pc, current_batch_grid, current_batch_mask = current_batch
+
         # batch_pc = (batch_size, N, 8) | batch_grid = (n_batch, N, 2) | batch_mask = (n_batch, N)
+        # The grid indices are (batch_size, max_points) long. But we need them as
+        # (batch_size, max_points, feature_dims) to work. Features are in all necessary cases 64.
+        # Expand does only create multiple views on the same datapoint and not allocate extra memory
+        current_batch_grid = current_batch_grid.unsqueeze(-1).expand(-1, -1, 64)
+        previous_batch_grid = previous_batch_grid .unsqueeze(-1).expand(-1, -1, 64)
 
         # Pass the whole batch of point clouds to get the embedding for each point in the cloud
         # Input pc is (batch_size, max_n_points, features_in)
@@ -84,13 +86,6 @@ class FastFlow3DModelScatter(pl.LightningModule):
         # Output pc is (batch_size, max_n_points, embedding_features)
         current_batch_pc_embedding = self._transform_point_cloud_to_embeddings(current_batch_pc.float(),
                                                                                current_batch_mask)
-
-        # To make things easier we transform the 2D indices into 1D indices
-        # The cells are encoded as j = x * grid_width + y and thus give an unique encoding for each cell
-        # E.g. if we have 512 cells in both directions and x=1, y=2 is encoded as 512 + 2 = 514.
-        # Each new row of the grid (x-axis) starts at j % 512 = 0.
-        previous_batch_grid = augment_index(previous_batch_grid, previous_batch_pc_embedding.size(2), self._n_pillars_x)
-        current_batch_grid = augment_index(current_batch_grid, current_batch_pc_embedding.size(2), self._n_pillars_x)
 
         # Now we need to scatter the points into their 2D matrix
         # batch_pc_embeddings -> (batch_size, N, 64)
@@ -119,7 +114,14 @@ class FastFlow3DModelScatter(pl.LightningModule):
         # List of batch size many output with each being a (N_points, 3) flow prediction.
         return predictions
 
-    def compute_metrics(self, y, y_hat, mask, labels, background_weight):
+    def compute_metrics(self, y, y_hat, labels):
+        """
+
+        :param y: predicted data (batch_size, max_points, 3)
+        :param y_hat: ground truth (batch_size, max_points, 3)
+        :param labels:
+        :return:
+        """
         # y, y_hat = (batch_size, N, 3)
         # mask = (batch_size, N)
         # weights = (batch_size, N, 1)
@@ -128,22 +130,20 @@ class FastFlow3DModelScatter(pl.LightningModule):
 
         # First we flatten the batch dimension since it will make computations easier
         # For computing the metrics it is not needed to distinguish between batches
-        y = y.flatten(0, 1)
-        y_hat = y_hat.flatten(0, 1)
-        mask = mask.flatten(0, 2)
-        labels = labels.flatten(0, 1)
+        # y = y.flatten(0, 1)
+        # y_hat = y_hat.flatten(0, 1)
+        # labels = labels.flatten(0, 1)
         # Flattened versions -> Second dimension is batch_size * N
 
         squared_root_difference = torch.sqrt(torch.sum((y - y_hat) ** 2, dim=1))
-        # We mask the padding points
-        squared_root_difference = squared_root_difference[mask]
         # We compute the weighting vector for background_points
         # weights is a mask which background_weight value for backgrounds and 1 for no backgrounds, in order to
         # downweight the background points
-        weights = torch.ones((mask.shape[0]))  # weights -> (batch_size * N)
-        weights[mask == False] = 0
+        weights = torch.ones((squared_root_difference.shape[0]),
+                             device=squared_root_difference.device,
+                             dtype=squared_root_difference.dtype)  # weights -> (batch_size * N)
         weights[labels == -1] = 0
-        weights[labels == 0] = background_weight
+        weights[labels == 0] = self._background_weight
 
         loss = torch.sum(weights * squared_root_difference) / torch.sum(weights)
         # ---------------- Computing rest of metrics -----------------
@@ -178,14 +178,19 @@ class FastFlow3DModelScatter(pl.LightningModule):
         # For loss calculation we need to know which elements are actually present and not padding
         # Therefore we need the mast of the current frame as batch tensor
         # It is True for all points that just are padded and of size (batch_size, max_points)
-        # Invert the matrix for our purpose
-        current_frame_mask = ~x[1][2].unsqueeze(-1)
+        # Invert the matrix for our purpose to get all points that are NOT padded
+        current_frame_masks = ~x[1][2]
+
+        # Remove all points that are padded
+        y = y[current_frame_masks]
+        y_hat = y_hat[current_frame_masks]
+        # This will yield a (n_real_points, 3) tensor with the batch size being included already
 
         # The first 3 dimensions are the actual flow. The last dimension is the class id.
-        y_flow = y[:, :, :3]
+        y_flow = y[:, :3]
         # Loss computation
-        labels = y[:, :, -1]
-        loss, metrics = self.compute_metrics(y_flow, y_hat, current_frame_mask, labels, self._background_weight)
+        labels = y[:, -1]
+        loss, metrics = self.compute_metrics(y_flow, y_hat, labels)
 
         return loss, metrics
 

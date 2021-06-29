@@ -17,7 +17,7 @@ class WaymoDataModule(pl.LightningDataModule):
     """
     def __init__(self, dataset_directory,
                  # These parameters are specific to the dataset
-                 grid_cell_size, x_min, x_max, y_min, y_max, z_min, z_max,
+                 grid_cell_size, x_min, x_max, y_min, y_max, z_min, z_max, n_pillars_x,
                  batch_size: int = 32,
                  has_test=False,
                  num_workers=1,
@@ -30,7 +30,8 @@ class WaymoDataModule(pl.LightningDataModule):
         self._test_ = None
         # This is a transformation class that applies to pillarization
         self._pillarization_transform = ApplyPillarization(grid_cell_size=grid_cell_size, x_min=x_min,
-                                                           y_min=y_min, z_min=z_min, z_max=z_max)
+                                                           y_min=y_min, z_min=z_min, z_max=z_max,
+                                                           n_pillars_x=n_pillars_x)
 
         # This returns a function that removes points that should not be included in the pillarization.
         # It also removes the labels if given.

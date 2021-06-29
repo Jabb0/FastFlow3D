@@ -23,7 +23,7 @@ class UnpillarNetwork(torch.nn.Module):
         # Construct the necessary indices.
         indices = torch.stack([
             torch.arange(n_points, device=indices.device),
-            indices[:, 0] * self.n_pillars_x + indices[:, 1],
+            indices,
         ])
 
         grid_lookup_matrix = torch.sparse_coo_tensor(indices, torch.ones(n_points),

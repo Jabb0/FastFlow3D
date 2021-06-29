@@ -32,7 +32,7 @@ class PillarFeatureNet(torch.nn.Module):
 
         # Construct the necessary indices. This is an array with [[first_dim0,....first_dimN],[second_dim0,...,second_dimN]]
         indices = torch.stack([
-            indices[:, 0] * self.n_pillars_x + indices[:, 1],
+            indices,
             torch.arange(n_points, device=indices.device)
         ])
 

@@ -18,6 +18,7 @@ class FastFlow3DModel(pl.LightningModule):
         self.save_hyperparameters()  # Store the constructor parameters into self.hparams
 
         self._point_feature_net = PointFeatureNet(in_features=point_features, out_features=64)
+        self._point_feature_net.apply(init_weights)
 
         self._pillar_feature_net = PillarFeatureNet(n_pillars_x=n_pillars_x, n_pillars_y=n_pillars_y,
                                                     out_features=64)

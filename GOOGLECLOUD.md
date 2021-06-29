@@ -50,6 +50,25 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
+### One time: Setup service account for the project that can be used to access the data
+The instance has already been assigned a ServiceAccount. This account is the instances identification in the Google Cloud. Thus the service account needs the rights to access our data.
+Have a look at the service account here: https://console.cloud.google.com/iam-admin/serviceaccounts?project=lidar-sceneflow
+
+gsutil and gcloud will directly use the service account associated with the machine.
+Please use gsutil and gcloud outside of the venv because they are preinstalled already.
+
+**Note**: This is now necessary for our case because the service account is not added into the source storage account. Thus we need to upload the files manually.
+Create a data directory and a folder for the raw tfrecord data.
+```bash
+sudo mkdir -p /data/tfrecords
+sudo chgrp -R developers /data
+sudo chmod g+s /data/tfrecords
+sudo chmod -R g+w /data/tfrecords
+```
+On the local machine run
+`rsync -aP waymo_flow/* <username>@<server>:/data/tfrecords`
+
+
 
 ### For each user
 Each user needs to be added to the developer group `sudo usermod -a -G developers <username>`.
@@ -59,7 +78,7 @@ export LC_ALL=en_US.utf8
 export GIT_SSH_COMMAND='ssh -i /opt/fastflow3d/secrets/deploykey-rsa'
 export WANDB_USERNAME="google_cloud_<username>"
 ```
-**NOTE:** Replace the username part in the `WANDB_USERNAME` with your name. So we know who started the service user job.
+**NOTE:** Replace the `<username>` part in the `WANDB_USERNAME` with your name. So we know who started the service user job.
 
 ## Prepare the data
 TODO:

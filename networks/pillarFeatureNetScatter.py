@@ -30,7 +30,7 @@ class PillarFeatureNetScatter(torch.nn.Module):
         # Init the matrix to only zeros
         # Now indices are (batch_size, N_points, features)
         # Construct the desired tensor
-        grid = torch.zeros((x.size(0), self.n_pillars_x * self.n_pillars_y, x.size(2)), device=x.device)
+        grid = torch.zeros((x.size(0), self.n_pillars_x * self.n_pillars_y, x.size(2)), device=x.device, dtype=x.dtype)
         # And now perform the infamous scatter_add_ that changes the grid in place
         # the source (x) and the indices matrix are now 2 dimensional with (batch_size, points)
         # The batch dimension stays the same. But the cells are looked up using the index
