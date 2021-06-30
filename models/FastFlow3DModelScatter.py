@@ -43,15 +43,19 @@ class FastFlow3DModelScatter(pl.LightningModule):
         self._thresholds = [(1, '1_1'), (0.1, '1_10')]  # 1/1 = 1, 1/10 = 0.1
 
     def _transform_point_cloud_to_embeddings(self, pc, mask):
+        pc_flattened = pc.flatten(0, 1)
+        mask_flattened = mask.flatten(0, 1)
+        # Init the result tensor for our data. This is necessary because the point net
+        # has a batch norm and this needs to ignore the masked points
+        previous_batch_pc_embedding = torch.zeros((pc_flattened.size(0), 64), device=pc.device, dtype=pc.dtype)
         # Flatten the first two dimensions to get the points as batch dimension
-        previous_batch_pc_embedding = self._point_feature_net(pc.flatten(0, 1))
+        previous_batch_pc_embedding[mask_flattened] = self._point_feature_net(pc_flattened[mask_flattened])
         # Output is (batch_size * points, embedding_features)
         # Set the points to 0 that are just there for padding
-        previous_batch_pc_embedding[mask.flatten(0, 1), :] = 0
+        # previous_batch_pc_embedding[mask_flattened, :] = 0
         # Retransform into batch dimension (batch_size, max_points, embedding_features)
-        previous_batch_pc_embedding = previous_batch_pc_embedding.unflatten(0,
-                                                                            (pc.size(0),
-                                                                             pc.size(1)))
+        previous_batch_pc_embedding = previous_batch_pc_embedding.unflatten(0, (pc.size(0), pc.size(1)))
+        # 241.307 MiB    234
         return previous_batch_pc_embedding
 
     def forward(self, x):
@@ -158,9 +162,8 @@ class FastFlow3DModelScatter(pl.LightningModule):
         # x is a list of input batches with the necessary data
         # For loss calculation we need to know which elements are actually present and not padding
         # Therefore we need the mast of the current frame as batch tensor
-        # It is True for all points that just are padded and of size (batch_size, max_points)
-        # Invert the matrix for our purpose to get all points that are NOT padded
-        current_frame_masks = ~x[1][2]
+        # It is True for all points that just are NOT padded and of size (batch_size, max_points)
+        current_frame_masks = x[1][2]
 
         # Remove all points that are padded
         y = y[current_frame_masks]

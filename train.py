@@ -6,6 +6,8 @@ import wandb
 from pathlib import Path
 
 from pytorch_lightning.loggers import WandbLogger
+from pytorch_lightning.profiler import PyTorchProfiler
+from torch.profiler import ProfilerActivity
 
 from data import WaymoDataModule
 from models import FastFlow3DModel, FastFlow3DModelScatter

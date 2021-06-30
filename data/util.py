@@ -249,13 +249,14 @@ def preprocess(tfrecord_files, output_path, frames_per_segment = None):
         loaded_file = tf.data.TFRecordDataset(data_file, compression_type='')
         previous_frame = None
         for j, frame in enumerate(loaded_file):
-            point_cloud_path = os.path.join(output_path, f"pointCloud_file_{tfrecord_filename}_frame_{j}.npy")
+            output_file_name = f"pointCloud_file_{tfrecord_filename}_frame_{j}.npy"
+            point_cloud_path = os.path.join(output_path, output_file_name)
             # Process frame and store point clouds into disk
             _, _, pose_transform = save_point_cloud(frame, point_cloud_path)
             if j == 0:
-                previous_frame = (point_cloud_path, pose_transform)
+                previous_frame = (output_file_name, pose_transform)
             else:
-                current_frame = (point_cloud_path, pose_transform)
+                current_frame = (output_file_name, pose_transform)
                 look_up_table.append([current_frame, previous_frame])
                 previous_frame = current_frame
             if frames_per_segment is not None and j == frames_per_segment:
@@ -353,9 +354,9 @@ def _pad_batch(batch):
 
     # We need a mask of all the points that actually exist
     zeros = np.zeros((len(batch), max_points_prev), dtype=bool)
-    # Mark all points that ARE padded
+    # Mark all points that ARE NOT padded
     for i, n in enumerate(true_number_of_points):
-        zeros[i, n:] = 1
+        zeros[i, :n] = 1
 
     # resize all tensors to the max points size
     return [
