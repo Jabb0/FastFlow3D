@@ -18,6 +18,7 @@ def cli():
     parser.add_argument('data_directory', type=str)
     parser.add_argument('experiment_name', type=str)
     parser.add_argument('--batch_size', default=2, type=int)
+    parser.add_argument('--full_batch_size', default=None, type=int)
     parser.add_argument('--x_max', default=85, type=float)
     parser.add_argument('--x_min', default=-85, type=float)
     parser.add_argument('--y_max', default=85, type=float)
@@ -62,8 +63,8 @@ def cli():
 
     grid_cell_size = (args.x_max + abs(args.x_min)) / args.grid_size
 
-    n_pillars_x = int(((args.x_max - args.x_min) / grid_cell_size))
-    n_pillars_y = int(((args.y_max - args.y_min) / grid_cell_size))
+    n_pillars_x = args.grid_size
+    n_pillars_y = args.grid_size
 
     if args.use_sparse_lookup:
         # Tested GPU memory increase from batch size 1 to 2 is 2350MiB
@@ -99,6 +100,7 @@ def cli():
                                       'z_min': args.z_min,
                                       'z_max': args.z_max,
                                       'batch_size': args.batch_size,
+                                      'full_batch_size': args.full_batch_size,
                                       'has_test': args.test_data_available,
                                       'num_workers': args.num_workers,
                                       'scatter_collate': args.use_sparse_lookup}
@@ -106,13 +108,22 @@ def cli():
     else:
         print("No weights and biases API key set. Using tensorboard instead!")
 
+    gradient_batch_acc = 1  # Do not accumulate batches before performing optimizer step
+    if args.full_batch_size is not None:
+        gradient_batch_acc = int(args.full_batch_size / args.batch_size)
+        print(f"A full batch size is specified. The model will perform gradient update after {gradient_batch_acc} "
+              f"smaller batches of size {args.batch_size} to approx total batch_size of {args.full_batch_size}."
+              f"PLEASE NOTE that if the network includes layers that need larger batch sizes such as BatchNorm "
+              f"they are still computed for each forward pass.")
+
     # Max epochs can be configured here to, early stopping is also configurable.
     # Some things are definable as callback from pytorch_lightning.callback
     trainer = pl.Trainer.from_argparse_args(args,
                                             precision=32,  # Precision 16 does not seem to work with batchNorm1D
                                             progress_bar_refresh_rate=25,  # Prevents Google Colab crashes
-                                            gpus=1 if torch.cuda.is_available() else 0,
-                                            logger=logger
+                                            gpus=-1 if torch.cuda.is_available() else 0,  # -1 means "all GPUs"
+                                            logger=logger,
+                                            accumulate_grad_batches=gradient_batch_acc
                                             )  # Add Trainer hparams if desired
     # The actual train loop
     trainer.fit(model, waymo_data_module)
