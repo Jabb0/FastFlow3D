@@ -77,6 +77,26 @@ class WaymoDataset(Dataset):
 
         return (previous_frame, current_frame), flows
 
+    # TODO save into disk but careful and advise that we load from disk
+    def get_flow_ranges(self):
+        min_vx_global, max_vx_global = np.inf, -np.inf
+        min_vy_global, max_vy_global = np.inf, -np.inf
+        min_vz_global, max_vz_global = np.inf, -np.inf
+        for i in range(0, len(self)):
+            (previous_frame, current_frame), flows = self[i]
+            min_vx, min_vy, min_vz = flows[:,:-1].min(axis=0)
+            max_vx, max_vy, max_vz = flows[:,:-1].max(axis=0)
+            min_vx_global = min(min_vx_global, min_vx)
+            min_vy_global = min(min_vy_global, min_vy)
+            min_vz_global = min(min_vz_global, min_vz)
+            max_vx_global = max(max_vx_global, max_vx)
+            max_vy_global = max(max_vy_global, max_vy)
+            max_vz_global = max(max_vz_global, max_vz)
+            print(f"{i} of {len(self)}")
+
+        #return min_vx_global, max_vx_global, min_vy_global, max_vy_global, min_vz_global, max_vz_global
+        return np.array([min_vx_global, min_vy_global, min_vz_global]), np.array([max_vx_global, max_vy_global, max_vz_global])
+
     def set_drop_invalid_point_function(self, drop_invalid_point_function):
         self._drop_invalid_point_function = drop_invalid_point_function
 
