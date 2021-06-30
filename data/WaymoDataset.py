@@ -79,6 +79,8 @@ class WaymoDataset(Dataset):
 
     # TODO save into disk but careful and advise that we load from disk
     def get_flow_ranges(self):
+        print("DEBUGGING THIS FUNCTION")
+        print("Computing min and max flows, this may take some time...")
         min_vx_global, max_vx_global = np.inf, -np.inf
         min_vy_global, max_vy_global = np.inf, -np.inf
         min_vz_global, max_vz_global = np.inf, -np.inf
@@ -93,6 +95,8 @@ class WaymoDataset(Dataset):
             max_vy_global = max(max_vy_global, max_vy)
             max_vz_global = max(max_vz_global, max_vz)
             print(f"{i} of {len(self)}")
+            if i > 10:
+                break
 
         #return min_vx_global, max_vx_global, min_vy_global, max_vy_global, min_vz_global, max_vz_global
         return np.array([min_vx_global, min_vy_global, min_vz_global]), np.array([max_vx_global, max_vy_global, max_vz_global])
