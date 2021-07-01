@@ -275,8 +275,6 @@ def preprocess(tfrecord_file, output_path, frames_per_segment = None):
             current_frame = (output_file_name, pose_transform)
             look_up_table.append([current_frame, previous_frame])
             previous_frame = current_frame
-        if j > 5:
-            break
         if frames_per_segment is not None and j == frames_per_segment:
             break
 
