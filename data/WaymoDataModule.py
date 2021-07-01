@@ -1,6 +1,5 @@
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader
-from torchvision import transforms
 
 from pathlib import Path
 

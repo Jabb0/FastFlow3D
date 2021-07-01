@@ -16,10 +16,10 @@ from models.FastFlow3DModelScatter import FastFlow3DModelScatter
 if __name__ == '__main__':
     parser = ArgumentParser()
 
+    parser.add_argument('data_directory', type=str)
+    parser.add_argument('config_file', type=str)
     # NOTE: IF MODEL IS NONE IT WILL VISUALIZE GROUND TRUTH DATA
     parser.add_argument('--model_path', default=None, type=str)
-    parser.add_argument('--config_file', default=None, type=str)
-    parser.add_argument('--data_directory', type=str)
 
     # start_frame and end_frame allow us just visualize a set of frames
     parser.add_argument('--start_frame', default=0, type=int)
@@ -46,7 +46,6 @@ if __name__ == '__main__':
         model = None
         print("DISPLAYING GROUND TRUTH DATA - NO MODEL HAS BEEN LOADED")
 
-
     # Load config file (must be downloaded from Weights and Biases), it has the name of config.yaml
     with open(args.config_file, 'r') as stream:
         try:
@@ -68,8 +67,6 @@ if __name__ == '__main__':
                                                         x_max=x_max, y_min=y_min, y_max=y_max,
                                                         z_min=z_min, z_max=z_max)
             waymo_dataset.set_drop_invalid_point_function(drop_points_function)
-
-
         except yaml.YAMLError as exc:
             print(exc)
             exit(1)

@@ -19,6 +19,8 @@ class LaserScanVis:
         self.end_frame = end_frame
         self.model = model
 
+        self.model.eval()
+
         self.mins, self.maxs = self.dataset.get_flow_ranges()
 
         self.reset()
@@ -68,7 +70,6 @@ class LaserScanVis:
         self.img_grid.add_widget(self.img_view, 0, 0)
         self.img_vis = visuals.Image(cmap='viridis')
         self.img_view.add(self.img_vis)
-
 
     def update_scan(self):
         # first open data

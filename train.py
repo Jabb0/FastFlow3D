@@ -1,13 +1,10 @@
-import torch
 from argparse import ArgumentParser
-import pytorch_lightning as pl
-import wandb
-
 from pathlib import Path
 
+import pytorch_lightning as pl
+import torch
+import wandb
 from pytorch_lightning.loggers import WandbLogger
-from pytorch_lightning.profiler import PyTorchProfiler
-from torch.profiler import ProfilerActivity
 
 from data import WaymoDataModule
 from models import FastFlow3DModel, FastFlow3DModelScatter
@@ -27,7 +24,6 @@ def cli():
     parser.add_argument('--z_max', default=3, type=float)
     parser.add_argument('--z_min', default=-3, type=float)
     parser.add_argument('--grid_size', default=512, type=float)
-    parser.add_argument('--background_weight', default=0.1, type=float)
     parser.add_argument('--test_data_available', default=False, type=bool)
     parser.add_argument('--fast_dev_run', default=False, type=bool)
     parser.add_argument('--num_workers', default=4, type=int)
@@ -37,13 +33,20 @@ def cli():
     parser.add_argument('--use_sparse_lookup', default=False, type=bool)
     parser.add_argument('--architecture', default='FastFlowNet', type=str)
 
+    temp_args, _ = parser.parse_known_args()
+    # Add the correct model specific args
+    if temp_args.architecture == 'FastFlowNet':
+        if temp_args.use_sparse_lookup:
+            parser = FastFlow3DModel.add_model_specific_args(parser)
+        else:
+            parser = FastFlow3DModelScatter.add_model_specific_args(parser)
+
     # Set default dtype to float and not double
     # torch.set_default_dtype(torch.float)
 
     # NOTE: Readd this to see all parameters of the trainer
     # parser = pl.Trainer.add_argparse_args(parser)  # Add arguments for the trainer
     # Add model specific arguments here
-    parser = FastFlow3DModel.add_model_specific_args(parser)
     args = parser.parse_args()
 
     if args.use_sparse_lookup and not args.fast_dev_run:
@@ -77,7 +80,8 @@ def cli():
             # Tested GPU memory increase from batch size 1 to 2 is 1824MiB
             model = FastFlow3DModelScatter(n_pillars_x=n_pillars_x, n_pillars_y=n_pillars_y,
                                            background_weight=args.background_weight, point_features=8,
-                                           learning_rate=args.learning_rate)
+                                           learning_rate=args.learning_rate,
+                                           use_group_norm=args.use_group_norm)
 
     elif args.architecture == 'FlowNet':  # baseline
         model = Flow3DModel(learning_rate=args.learning_rate)
@@ -113,7 +117,8 @@ def cli():
                                       'full_batch_size': args.full_batch_size,
                                       'has_test': args.test_data_available,
                                       'num_workers': args.num_workers,
-                                      'scatter_collate': args.use_sparse_lookup}
+                                      'scatter_collate': args.use_sparse_lookup
+                                      }
         logger.log_hyperparams(additional_hyperparameters)
     else:
         print("No weights and biases API key set. Using tensorboard instead!")

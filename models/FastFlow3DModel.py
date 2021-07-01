@@ -1,7 +1,6 @@
 import pytorch_lightning as pl
 import torch
 from torch.nn import functional as F
-from pytorch_lightning.metrics import functional as FM
 from argparse import ArgumentParser
 
 from networks import PillarFeatureNet, ConvEncoder, ConvDecoder, UnpillarNetwork, PointFeatureNet

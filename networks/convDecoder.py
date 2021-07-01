@@ -41,8 +41,6 @@ class ConvDecoder(torch.nn.Module):
         # V: Input is U, which is the output of block_3
         self._block_4 = torch.nn.Sequential(
             torch.nn.Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding_mode='zeros', padding=(1, 1)),
-            torch.nn.BatchNorm2d(64),
-            torch.nn.ReLU(),
         )
 
     def forward(self, B_prev, F_prev, L_prev, R_prev, B_cur, F_cur, L_cur, R_cur):

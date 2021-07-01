@@ -1,8 +1,7 @@
+from argparse import ArgumentParser
+
 import pytorch_lightning as pl
 import torch
-from torch.nn import functional as F
-from pytorch_lightning.metrics import functional as FM
-from argparse import ArgumentParser
 
 from networks import PillarFeatureNetScatter, ConvEncoder, ConvDecoder, UnpillarNetworkScatter, PointFeatureNet
 from .utils import init_weights
@@ -12,6 +11,7 @@ class FastFlow3DModelScatter(pl.LightningModule):
     def __init__(self, n_pillars_x, n_pillars_y,
                  background_weight=0.1,
                  point_features=8,
+                 use_group_norm=False,
                  learning_rate=1e-6,
                  adam_beta_1=0.9,
                  adam_beta_2=0.999):
@@ -25,7 +25,7 @@ class FastFlow3DModelScatter(pl.LightningModule):
                                                            out_features=64)
         self._pillar_feature_net.apply(init_weights)
 
-        self._conv_encoder_net = ConvEncoder(in_channels=64, out_channels=256)
+        self._conv_encoder_net = ConvEncoder(in_channels=64, out_channels=256, use_group_norm=use_group_norm)
         self._conv_encoder_net.apply(init_weights)
 
         self._conv_decoder_net = ConvDecoder()
@@ -51,8 +51,6 @@ class FastFlow3DModelScatter(pl.LightningModule):
         # Flatten the first two dimensions to get the points as batch dimension
         previous_batch_pc_embedding[mask_flattened] = self._point_feature_net(pc_flattened[mask_flattened])
         # Output is (batch_size * points, embedding_features)
-        # Set the points to 0 that are just there for padding
-        # previous_batch_pc_embedding[mask_flattened, :] = 0
         # Retransform into batch dimension (batch_size, max_points, embedding_features)
         previous_batch_pc_embedding = previous_batch_pc_embedding.unflatten(0, (pc.size(0), pc.size(1)))
         # 241.307 MiB    234
@@ -257,4 +255,6 @@ class FastFlow3DModelScatter(pl.LightningModule):
         """
         parser = ArgumentParser(parents=[parent_parser], add_help=False)
         parser.add_argument('--learning_rate', type=float, default=1e-6)
+        parser.add_argument('--use_group_norm', type=bool, default=False)
+        parser.add_argument('--background_weight', default=0.1, type=float)
         return parser
