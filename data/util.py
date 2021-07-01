@@ -226,45 +226,43 @@ def save_point_cloud(compressed_frame, file_path):
     return points, flows, transform
 
 
-def preprocess(tfrecord_files, output_path, frames_per_segment = None):
+def preprocess(tfrecord_file, output_path, frames_per_segment = None):
     """
-    Preprocess a list of TFRecord files to store in a suitable form for training
+    TFRecord file to store in a suitable form for training
     in disk. A point cloud in disk has dimensions [N, 9] where N is the number of points
     and per each point it stores [x, y, z, intensity, elongation, vx, vy, vz, label].
     It stores a look-up table: It has the form [[t_1, t_0], [t_2, t_1], ... , [t_n, t_(n-1)]], where t_i is
     (file_path, transform), where file_path is the file where the point cloud is stored and transform the transformation
     to apply to a point to change it reference frame from global to the car frame in that moment.
 
-    :param tfrecord_files: list with paths of TFRecord files. They should have the flow extension.
+    :param tfrecord_file: TFRecord file. It should have the flow extension.
                           They can be downloaded from https://console.cloud.google.com/storage/browser/waymo_open_dataset_scene_flow
     :param output_path: path where the processed point clouds will be saved.
     """
-    tfrecord_files = [tfrecord_files]
-    for data_file in tfrecord_files:
-        tfrecord_filename = os.path.basename(data_file)
-        tfrecord_filename = os.path.splitext(tfrecord_filename)[0]
+    tfrecord_filename = os.path.basename(tfrecord_file)
+    tfrecord_filename = os.path.splitext(tfrecord_filename)[0]
 
-        look_up_table = []
-        look_up_table_path = os.path.join(output_path, f"look_up_table_{tfrecord_filename}")
-        loaded_file = tf.data.TFRecordDataset(data_file, compression_type='')
-        previous_frame = None
-        for j, frame in enumerate(loaded_file):
-            output_file_name = f"pointCloud_file_{tfrecord_filename}_frame_{j}.npy"
-            point_cloud_path = os.path.join(output_path, output_file_name)
-            # Process frame and store point clouds into disk
-            _, _, pose_transform = save_point_cloud(frame, point_cloud_path)
-            if j == 0:
-                previous_frame = (output_file_name, pose_transform)
-            else:
-                current_frame = (output_file_name, pose_transform)
-                look_up_table.append([current_frame, previous_frame])
-                previous_frame = current_frame
-            if frames_per_segment is not None and j == frames_per_segment:
-                break
+    look_up_table = []
+    look_up_table_path = os.path.join(output_path, f"look_up_table_{tfrecord_filename}")
+    loaded_file = tf.data.TFRecordDataset(tfrecord_file, compression_type='')
+    previous_frame = None
+    for j, frame in enumerate(loaded_file):
+        output_file_name = f"pointCloud_file_{tfrecord_filename}_frame_{j}.npy"
+        point_cloud_path = os.path.join(output_path, output_file_name)
+        # Process frame and store point clouds into disk
+        _, _, pose_transform = save_point_cloud(frame, point_cloud_path)
+        if j == 0:
+            previous_frame = (output_file_name, pose_transform)
+        else:
+            current_frame = (output_file_name, pose_transform)
+            look_up_table.append([current_frame, previous_frame])
+            previous_frame = current_frame
+        if frames_per_segment is not None and j == frames_per_segment:
+            break
 
-        # Save look-up-table into disk
-        with open(look_up_table_path, 'wb') as look_up_table_file:
-            pickle.dump(look_up_table, look_up_table_file)
+    # Save look-up-table into disk
+    with open(look_up_table_path, 'wb') as look_up_table_file:
+        pickle.dump(look_up_table, look_up_table_file)
 
 
 def get_uncompressed_frame(compressed_frame):

@@ -11,8 +11,8 @@ from tqdm import tqdm
 global output_directory
 
 
-def preprocess_wrap(tfrecord_files):
-    preprocess(tfrecord_files, output_directory, frames_per_segment=None)
+def preprocess_wrap(tfrecord_file):
+    preprocess(tfrecord_file, output_directory, frames_per_segment=None)
 
 
 # https://github.com/tqdm/tqdm/issues/484
