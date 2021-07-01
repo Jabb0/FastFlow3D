@@ -390,7 +390,6 @@ def _pad_batch(batch):
     # Get the number of points in the largest point cloud
     true_number_of_points = [e[1].shape[0] for e in batch]
     max_points_prev = np.max(true_number_of_points)
-    point_features = batch[0][0].shape[1]
 
     # We need a mask of all the points that actually exist
     zeros = np.zeros((len(batch), max_points_prev), dtype=bool)
@@ -399,10 +398,11 @@ def _pad_batch(batch):
         zeros[i, :n] = 1
 
     # resize all tensors to the max points size
+    # Use np.pad to perform this action. Do not pad the second dimension and pad the first dimension AFTER only
     return [
         [
-            np.resize(entry[0], (max_points_prev, point_features)),
-            np.resize(entry[1], max_points_prev),
+            np.pad(entry[0], ((0, max_points_prev - entry[0].shape[0]), (0, 0))),
+            np.pad(entry[1], (0, max_points_prev - entry[1].shape[0])),
             zeros[i]
         ] for i, entry in enumerate(batch)
     ]
@@ -411,9 +411,8 @@ def _pad_batch(batch):
 def _pad_targets(batch):
     true_number_of_points = [e.shape[0] for e in batch]
     max_points = np.max(true_number_of_points)
-    target_features = batch[0].shape[1]
     return [
-        np.resize(entry, (max_points, target_features))
+        np.pad(entry, ((0, max_points - entry.shape[0]), (0, 0)))
         for entry in batch
     ]
 

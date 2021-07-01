@@ -4,6 +4,7 @@ torchvision~=0.10.0
 torch-geometric
 torch-scatter
 torch-sparse
+torch-cluster
 numpy~=1.19.5
 waymo-open-dataset-tf-2-4-0
 tensorflow==2.4.0
