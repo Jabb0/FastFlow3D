@@ -226,46 +226,73 @@ def save_point_cloud(compressed_frame, file_path):
     return points, flows, transform
 
 
-def preprocess(tfrecord_files, output_path, frames_per_segment = None):
+def preprocess(tfrecord_file, output_path, frames_per_segment = None):
     """
-    Preprocess a list of TFRecord files to store in a suitable form for training
+    TFRecord file to store in a suitable form for training
     in disk. A point cloud in disk has dimensions [N, 9] where N is the number of points
     and per each point it stores [x, y, z, intensity, elongation, vx, vy, vz, label].
-    It stores a look-up table: It has the form [[t_1, t_0], [t_2, t_1], ... , [t_n, t_(n-1)]], where t_i is
-    (file_path, transform), where file_path is the file where the point cloud is stored and transform the transformation
-    to apply to a point to change it reference frame from global to the car frame in that moment.
+    It stores in a dictionary relevant metadata:
+        - look-up table: It has the form [[t_1, t_0], [t_2, t_1], ... , [t_n, t_(n-1)]], where t_i is
+        (file_path, transform), where file_path is the file where the point cloud is stored and transform the transformation
+        to apply to a point to change it reference frame from global to the car frame in that moment.
+        - flows information: min and max flows encountered for then visualize pointclouds properly
 
-    :param tfrecord_files: list with paths of TFRecord files. They should have the flow extension.
+    :param tfrecord_file: TFRecord file. It should have the flow extension.
                           They can be downloaded from https://console.cloud.google.com/storage/browser/waymo_open_dataset_scene_flow
     :param output_path: path where the processed point clouds will be saved.
     """
-    tfrecord_files = [tfrecord_files]
-    for data_file in tfrecord_files:
-        tfrecord_filename = os.path.basename(data_file)
-        tfrecord_filename = os.path.splitext(tfrecord_filename)[0]
+    tfrecord_filename = os.path.basename(tfrecord_file)
+    tfrecord_filename = os.path.splitext(tfrecord_filename)[0]
 
-        look_up_table = []
-        look_up_table_path = os.path.join(output_path, f"look_up_table_{tfrecord_filename}")
-        loaded_file = tf.data.TFRecordDataset(data_file, compression_type='')
-        previous_frame = None
-        for j, frame in enumerate(loaded_file):
-            output_file_name = f"pointCloud_file_{tfrecord_filename}_frame_{j}.npy"
-            point_cloud_path = os.path.join(output_path, output_file_name)
-            # Process frame and store point clouds into disk
-            _, _, pose_transform = save_point_cloud(frame, point_cloud_path)
-            if j == 0:
-                previous_frame = (output_file_name, pose_transform)
-            else:
-                current_frame = (output_file_name, pose_transform)
-                look_up_table.append([current_frame, previous_frame])
-                previous_frame = current_frame
-            if frames_per_segment is not None and j == frames_per_segment:
-                break
+    look_up_table = []
+    metadata_path = os.path.join(output_path, f"metadata_{tfrecord_filename}")  # look-up table and flows mins and maxs
+    loaded_file = tf.data.TFRecordDataset(tfrecord_file, compression_type='')
+    previous_frame = None
 
-        # Save look-up-table into disk
-        with open(look_up_table_path, 'wb') as look_up_table_file:
-            pickle.dump(look_up_table, look_up_table_file)
+    # Needed of max and min flows for normalizing in visualization
+    min_vx_global, max_vx_global = np.inf, -np.inf
+    min_vy_global, max_vy_global = np.inf, -np.inf
+    min_vz_global, max_vz_global = np.inf, -np.inf
 
+    for j, frame in enumerate(loaded_file):
+        output_file_name = f"pointCloud_file_{tfrecord_filename}_frame_{j}.npy"
+        point_cloud_path = os.path.join(output_path, output_file_name)
+        # Process frame and store point clouds into disk
+        _, flows, pose_transform = save_point_cloud(frame, point_cloud_path)
+        # TODO filter invalid flow (label -1)
+        min_vx, min_vy, min_vz = flows[:, :-1].min(axis=0)
+        max_vx, max_vy, max_vz = flows[:, :-1].max(axis=0)
+        min_vx_global = min(min_vx_global, min_vx)
+        min_vy_global = min(min_vy_global, min_vy)
+        min_vz_global = min(min_vz_global, min_vz)
+        max_vx_global = max(max_vx_global, max_vx)
+        max_vy_global = max(max_vy_global, max_vy)
+        max_vz_global = max(max_vz_global, max_vz)
+
+        if j == 0:
+            previous_frame = (output_file_name, pose_transform)
+        else:
+            current_frame = (output_file_name, pose_transform)
+            look_up_table.append([current_frame, previous_frame])
+            previous_frame = current_frame
+        if j > 5:
+            break
+        if frames_per_segment is not None and j == frames_per_segment:
+            break
+
+    # Save metadata into disk
+    flows_info = {'min_vx': min_vx_global,
+                  'max_vx': max_vx_global,
+                  'min_vy': min_vy_global,
+                  'max_vy': max_vy_global,
+                  'min_vz': min_vz_global,
+                  'max_vz': max_vz_global}
+
+    metadata = {'look_up_table': look_up_table,
+                'flows_information': flows_info}
+
+    with open(metadata_path, 'wb') as metadata_file:
+        pickle.dump(metadata, metadata_file)
 
 def get_uncompressed_frame(compressed_frame):
     """
@@ -324,26 +351,41 @@ def get_coordinates_and_features(point_cloud, transform=None):
     return point_cloud
 
 
-def merge_look_up_tables(input_path):
+def merge_metadata(input_path):
     """
-    Merge individual look-up table and store it in the input_path with the name look_up_table
-    :param input_path: Path with the local look-up tables in the form look_up_table_[tfRecordName]
+    Merge individual look-up table and flows mins and maxs and store it in the input_path with the name metadata
+    :param input_path: Path with the local metadata in the form metadata_[tfRecordName]
     """
     look_up_table = []
+    flows_info = None
+
     os.chdir(input_path)
-    for file in glob.glob("look_up_table_*"):
+    for file in glob.glob("metadata_*"):
         file_name = os.path.abspath(file)
         try:
-            with open(file_name, 'rb') as look_up_table_file:
-                look_up_table_local = pickle.load(look_up_table_file)
-                look_up_table.extend(look_up_table_local)
+            with open(file_name, 'rb') as metadata_file:
+                metadata_local = pickle.load(metadata_file)
+                look_up_table.extend(metadata_local['look_up_table'])
+                flows_information = metadata_local['flows_information']
+                if flows_info is None:
+                    flows_info = flows_information
+                else:
+                    flows_info['min_vx'] = min(flows_info['min_vx'], flows_information['min_vx'])
+                    flows_info['min_vx'] = min(flows_info['min_vx'], flows_information['min_vy'])
+                    flows_info['min_vz'] = min(flows_info['min_vz'], flows_information['min_vz'])
+                    flows_info['max_vx'] = max(flows_info['max_vx'], flows_information['max_vx'])
+                    flows_info['max_vy'] = max(flows_info['max_vy'], flows_information['max_vy'])
+                    flows_info['max_vz'] = max(flows_info['max_vz'], flows_information['max_vz'])
+
         except FileNotFoundError:
             raise FileNotFoundError(
-                "Look-up table not found when merging individual look-up tables")
+                "Metadata not found when merging individual metadata")
 
-    # Save look-up-table into disk
-    with open(os.path.join(input_path, "look_up_table"), 'wb') as look_up_table_file:
-        pickle.dump(look_up_table, look_up_table_file)
+    # Save metadata into disk
+    metadata = {'look_up_table': look_up_table,
+                'flows_information': flows_info}
+    with open(os.path.join(input_path, "metadata"), 'wb') as metadata_file:
+        pickle.dump(metadata, metadata_file)
 
 
 def _pad_batch(batch):

@@ -2,7 +2,7 @@ import time
 from pathlib import Path
 from argparse import ArgumentParser
 
-from data.util import preprocess, merge_look_up_tables
+from data.util import preprocess, merge_metadata
 import os
 import glob
 import multiprocessing as mp
@@ -11,8 +11,8 @@ from tqdm import tqdm
 global output_directory
 
 
-def preprocess_wrap(tfrecord_files):
-    preprocess(tfrecord_files, output_directory, frames_per_segment=None)
+def preprocess_wrap(tfrecord_file):
+    preprocess(tfrecord_file, output_directory, frames_per_segment=None)
 
 
 # https://github.com/tqdm/tqdm/issues/484
@@ -69,8 +69,8 @@ if __name__ == '__main__':
     pool.join()  # postpones the execution of next line of code until all processes in the queue are done.
 
     # Merge look up tables
-    print("Merging individual look-up-tables...")
-    merge_look_up_tables(os.path.abspath(output_directory))
+    print("Merging individual metadata...")
+    merge_metadata(os.path.abspath(output_directory))
 
     print(f"Preprocessing duration: {(time.time() - t):.2f} s")
 
