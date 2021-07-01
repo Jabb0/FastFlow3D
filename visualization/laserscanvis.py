@@ -18,8 +18,8 @@ class LaserScanVis:
         self.offset = start_frame
         self.end_frame = end_frame
         self.model = model
-
-        self.model.eval()
+        if model is not None:
+            self.model.eval()
 
         self.mins, self.maxs = self.dataset.get_flow_ranges()
 
