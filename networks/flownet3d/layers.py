@@ -29,7 +29,8 @@ class SetConvLayer(torch.nn.Module):
 
         # For each region, get all points which are within in the region (defined by radius r)
         row, col = torch_geometric.nn.radius(pos, pos[idx], self.radius, batch, batch[idx])
-
+        # TODO: This stack is unecessary the .radius function already returns the desired index
+        #   Please check if this is true or we need to unsqueeze a batch dimension
         edge_index = torch.stack([col, row], dim=0)
 
         # Apply point net

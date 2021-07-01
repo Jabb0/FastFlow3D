@@ -66,6 +66,10 @@ class Flow3DModel(BaseModel):
         current_batch_pc, _, current_batch_mask = current_batch
 
         # transform each point from (cx, cy, cz,  Δx, Δy, Δz, l0, l1) to (x, y, z, l0, l1)
+        # TODO: Maybe we should change the dataloader to skip pillarization
+        #  and use a third collate function that does not process the grid indices
+        #   Otherwise these tensor operations might have additional memory
+        #   consumption because of the torch computation graph?
         previous_batch_pc = transform_data(previous_batch_pc)
         current_batch_pc = transform_data(current_batch_pc)
 

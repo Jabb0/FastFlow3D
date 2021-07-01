@@ -40,6 +40,10 @@ def cli():
             parser = FastFlow3DModel.add_model_specific_args(parser)
         else:
             parser = FastFlow3DModelScatter.add_model_specific_args(parser)
+    elif temp_args.architecture == 'FlowNet':  # baseline
+        parser = Flow3DModel.add_model_specific_args(parser)
+    else:
+        raise ValueError("no architecture {0} implemented".format(temp_args.architecture))
 
     # Set default dtype to float and not double
     # torch.set_default_dtype(torch.float)
