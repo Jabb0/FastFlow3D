@@ -34,6 +34,11 @@ class WaymoDataset(Dataset):
         self._drop_invalid_point_function = drop_invalid_point_function
         self._point_cloud_transform = point_cloud_transform
 
+        # This parameter is useful when visualizing, since we need to pass
+        # the pillarized point cloud to the model for infer but we would
+        # like to display the points without pillarizing them
+        self._apply_pillarization = True
+
         try:
             with open(look_up_table_path, 'rb') as look_up_table_file:
                 self.look_up_table = pickle.load(look_up_table_file)
@@ -70,12 +75,39 @@ class WaymoDataset(Dataset):
             previous_frame, _ = self._drop_invalid_point_function(previous_frame, None)
 
         # Perform the pillarization of the point_cloud
-        if self._point_cloud_transform is not None:
+        if self._point_cloud_transform is not None and self._apply_pillarization:
             current_frame = self._point_cloud_transform(current_frame)
             previous_frame = self._point_cloud_transform(previous_frame)
         # This returns a tuple of augmented pointcloud and grid indices
 
         return (previous_frame, current_frame), flows
+
+    def pillarize(self, apply_pillarization):
+        self._apply_pillarization = apply_pillarization
+
+    # TODO save into disk but careful and advise that we load from disk
+    def get_flow_ranges(self):
+        print("DEBUGGING THIS FUNCTION")
+        print("Computing min and max flows, this may take some time...")
+        min_vx_global, max_vx_global = np.inf, -np.inf
+        min_vy_global, max_vy_global = np.inf, -np.inf
+        min_vz_global, max_vz_global = np.inf, -np.inf
+        for i in range(0, len(self)):
+            _, flows = self[i]
+            min_vx, min_vy, min_vz = flows[:,:-1].min(axis=0)
+            max_vx, max_vy, max_vz = flows[:,:-1].max(axis=0)
+            min_vx_global = min(min_vx_global, min_vx)
+            min_vy_global = min(min_vy_global, min_vy)
+            min_vz_global = min(min_vz_global, min_vz)
+            max_vx_global = max(max_vx_global, max_vx)
+            max_vy_global = max(max_vy_global, max_vy)
+            max_vz_global = max(max_vz_global, max_vz)
+            print(f"{i} of {len(self)}")
+            if i > 10:
+                break
+
+        #return min_vx_global, max_vx_global, min_vy_global, max_vy_global, min_vz_global, max_vz_global
+        return np.array([min_vx_global, min_vy_global, min_vz_global]), np.array([max_vx_global, max_vy_global, max_vz_global])
 
     def set_drop_invalid_point_function(self, drop_invalid_point_function):
         self._drop_invalid_point_function = drop_invalid_point_function
