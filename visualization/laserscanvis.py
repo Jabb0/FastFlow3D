@@ -6,19 +6,18 @@ import vispy
 from vispy.scene import visuals, SceneCanvas
 import numpy as np
 import torch
+from data.util import custom_collate_batch
 
 
 class LaserScanVis:
     """Class that creates and handles a visualizer for a pointcloud"""
 
-    def __init__(self, dataset, start_frame=0, end_frame=None, model=None, pillarization=False):
+    def __init__(self, dataset, start_frame=0, end_frame=None, model=None):
         # If model is None then it displays ground truth
         self.dataset = dataset  # This must be a configured Waymo dataset
         self.offset = start_frame
         self.end_frame = end_frame
         self.model = model
-        self.pillarization = False  # The dataset applies pillarization operation. We need to know that because the
-        # frame shape is different and indexing can lead to errors
 
         self.mins, self.maxs = self.dataset.get_flow_ranges()
 
@@ -73,16 +72,19 @@ class LaserScanVis:
 
     def update_scan(self):
         # first open data
+        self.dataset.pillarize(False)
         (previous_frame, current_frame), flows = self.dataset[self.offset]
         flows = flows[:, :-1]  # Remove the label
         raw_point_cloud = current_frame[:, 0:3]
         # raw_point_cloud = current_frame[0][:, 0:3]
         if self.model is not None:
+            self.dataset.pillarize(True)
+            (previous_frame, current_frame), flows = self.dataset[self.offset]
             # We set batchsize of 1 for predictions
-            previous_frame_tensor = [(torch.tensor(previous_frame[0]), torch.tensor(previous_frame[1]))]
-            current_frame_tensor = [(torch.tensor(current_frame[0]), torch.tensor(current_frame[1]))]
+            batch = custom_collate_batch([((previous_frame, current_frame), flows)])
             with torch.no_grad():
-                output = self.model((previous_frame_tensor, current_frame_tensor))
+                #output = self.model((previous_frame_tensor, current_frame_tensor))
+                output = self.model(batch[0])
             flows = output[0].data.cpu().numpy()
 
         # then change names

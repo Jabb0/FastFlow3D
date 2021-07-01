@@ -99,6 +99,8 @@ def cli():
                                       'y_min': args.y_min,
                                       'z_min': args.z_min,
                                       'z_max': args.z_max,
+                                      'n_pillars_x': n_pillars_x,
+                                      'n_pillars_y': n_pillars_y,
                                       'batch_size': args.batch_size,
                                       'full_batch_size': args.full_batch_size,
                                       'has_test': args.test_data_available,
