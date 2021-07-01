@@ -11,6 +11,7 @@ from torch.profiler import ProfilerActivity
 
 from data import WaymoDataModule
 from models import FastFlow3DModel, FastFlow3DModelScatter
+from models.Flow3DModel import Flow3DModel
 
 
 def cli():
@@ -34,6 +35,7 @@ def cli():
     parser.add_argument('--wandb_project', default="fastflow3d", type=str)
     parser.add_argument('--wandb_entity', default='dllab21fastflow3d', type=str)
     parser.add_argument('--use_sparse_lookup', default=False, type=bool)
+    parser.add_argument('--architecture', default='FastFlowNet', type=str)
 
     # Set default dtype to float and not double
     # torch.set_default_dtype(torch.float)
@@ -66,15 +68,21 @@ def cli():
     n_pillars_x = args.grid_size
     n_pillars_y = args.grid_size
 
-    if args.use_sparse_lookup:
-        # Tested GPU memory increase from batch size 1 to 2 is 2350MiB
-        model = FastFlow3DModel(n_pillars_x=n_pillars_x, n_pillars_y=n_pillars_y, point_features=8,
-                                learning_rate=args.learning_rate)
+    if args.architecture == 'FastFlowNet':
+        if args.use_sparse_lookup:
+            # Tested GPU memory increase from batch size 1 to 2 is 2350MiB
+            model = FastFlow3DModel(n_pillars_x=n_pillars_x, n_pillars_y=n_pillars_y, point_features=8,
+                                    learning_rate=args.learning_rate)
+        else:
+            # Tested GPU memory increase from batch size 1 to 2 is 1824MiB
+            model = FastFlow3DModelScatter(n_pillars_x=n_pillars_x, n_pillars_y=n_pillars_y,
+                                           background_weight=args.background_weight, point_features=8,
+                                           learning_rate=args.learning_rate)
+
+    elif args.architecture == 'FlowNet':  # baseline
+        model = Flow3DModel(learning_rate=args.learning_rate)
     else:
-        # Tested GPU memory increase from batch size 1 to 2 is 1824MiB
-        model = FastFlow3DModelScatter(n_pillars_x=n_pillars_x, n_pillars_y=n_pillars_y,
-                                       background_weight=args.background_weight, point_features=8,
-                                       learning_rate=args.learning_rate)
+        raise ValueError("no architecture {0} implemented".format(args.architecture))
     waymo_data_module = WaymoDataModule(dataset_path, grid_cell_size=grid_cell_size, x_min=args.x_min,
                                         x_max=args.x_max, y_min=args.y_min,
                                         y_max=args.y_max, z_min=args.z_min, z_max=args.z_max,

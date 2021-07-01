@@ -71,7 +71,9 @@ class SetUpConvLayer(torch.nn.Module):
     def __init__(self, r: float, mlp: torch.nn.Sequential):
         super().__init__()
         self.radius = r
-        self.point_conv = _SetUpPointConv(mlp)
+        # add self loops must be false, because we only aggregate features of points in the target input
+        # and we not include the point of the source input
+        self.point_conv = torch_geometric.nn.PointConv(mlp, add_self_loops=False)
 
     def forward(self, src: torch.Tensor, target: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         src_features, src_pos, src_batch = src  # embeddings
@@ -115,35 +117,5 @@ class _FlowEmbeddingPointConv(MessagePassing):
 
     def message(self, x_i: torch.Tensor, x_j: torch.Tensor, pos_i: torch.Tensor, pos_j: torch.Tensor) -> torch.Tensor:
         msg = torch.cat([x_i, x_j, pos_j - pos_i], dim=1)
-        msg = self.nn(msg)
-        return msg
-
-
-class _SetUpPointConv(MessagePassing):
-    def __init__(self, mlp: torch.nn.Sequential, aggr: str = 'max'):
-        super(_SetUpPointConv, self).__init__(aggr=aggr)
-        self.nn = mlp
-        self.reset_parameters()
-
-    def reset_parameters(self):
-        reset(self.nn)
-
-    def forward(self, x: Union[OptTensor, PairOptTensor],
-                pos: Union[torch.Tensor, PairTensor], edge_index: Adj) -> torch.Tensor:
-        """"""
-        if not isinstance(x, tuple):
-            x: PairOptTensor = (x, None)
-
-        if isinstance(pos, torch.Tensor):
-            pos: PairTensor = (pos, pos)
-
-        # propagate_type: (x: PairOptTensor, pos: PairTensor)
-        out = self.propagate(edge_index, x=x, pos=pos, size=None)
-
-        return out
-
-    def message(self, x_i: torch.Tensor, x_j: torch.Tensor, pos_i: torch.Tensor, pos_j: torch.Tensor) -> torch.Tensor:
-        # x_j are the src feature
-        msg = torch.cat([x_j, pos_j - pos_i], dim=1)
         msg = self.nn(msg)
         return msg
