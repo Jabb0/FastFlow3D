@@ -112,7 +112,7 @@ def cli():
     if args.full_batch_size is not None:
         gradient_batch_acc = int(args.full_batch_size / args.batch_size)
         print(f"A full batch size is specified. The model will perform gradient update after {gradient_batch_acc} "
-              f"smaller batches of size {args.batch_size} to approx total batch_size of {args.full_batch_size}."
+              f"smaller batches of size {args.batch_size} to approx. total batch size of {args.full_batch_size}."
               f"PLEASE NOTE that if the network includes layers that need larger batch sizes such as BatchNorm "
               f"they are still computed for each forward pass.")
 
