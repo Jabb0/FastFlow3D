@@ -8,7 +8,7 @@ from pytorch_lightning.loggers import WandbLogger
 
 from data import WaymoDataModule
 from models import FastFlow3DModel, FastFlow3DModelScatter
-from models.Flow3DModel import Flow3DModel
+#from models.Flow3DModel import Flow3DModel
 
 
 def cli():
@@ -42,7 +42,9 @@ def cli():
         else:
             parser = FastFlow3DModelScatter.add_model_specific_args(parser)
     elif temp_args.architecture == 'FlowNet':  # baseline
-        parser = Flow3DModel.add_model_specific_args(parser)
+        # parser = Flow3DModel.add_model_specific_args(parser)
+        print(f"ERROR: Flow3DModel (baseline) has been commented")
+        exit(1)
     else:
         raise ValueError("no architecture {0} implemented".format(temp_args.architecture))
 
