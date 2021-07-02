@@ -41,6 +41,10 @@ class ConvDecoder(torch.nn.Module):
         # V: Input is U, which is the output of block_3
         self._block_4 = torch.nn.Sequential(
             torch.nn.Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding_mode='zeros', padding=(1, 1)),
+            # TODO: These two layers are misplaced but seem to decrease the loss.
+            #  Create an experiment to test this.
+            # torch.nn.BatchNorm2d(64),
+            # torch.nn.ReLU(),
         )
 
     def forward(self, B_prev, F_prev, L_prev, R_prev, B_cur, F_cur, L_cur, R_cur):
@@ -99,6 +103,8 @@ class _UpSamplingSkip(torch.nn.Module):
         # U1
         self.conv_1 = torch.nn.Conv2d(in_channels=in_channels_conv_1, out_channels=out_channels, kernel_size=(1, 1))
         # U2
+        # TODO: Where is the stride of 0.5 that is mentioned in the paper?
+        # TODO: Instead of calculating scale_factor one can also give the desired output shape?
         self.bilinear_interp = torch.nn.Upsample(scale_factor=scale_factor, mode='bilinear', align_corners=False)
         # U3
         self.conv_2 = torch.nn.Conv2d(in_channels=in_channels_conv_2, out_channels=out_channels, kernel_size=(1, 1))

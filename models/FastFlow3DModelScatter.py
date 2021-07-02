@@ -139,7 +139,10 @@ class FastFlow3DModelScatter(pl.LightningModule):
         loss = torch.sum(weights * squared_root_difference) / torch.sum(weights)
         # ---------------- Computing rest of metrics (Paper Table 3)-----------------
 
+        # TODO: Please explain the the following metrics
+
         # TODO do not generate other vector
+        # TODO: One could also remove -1 points before calculating metrics together with the padding mask.
         # Remove weighting for metrics computation
         weights = torch.ones((squared_root_difference.shape[0]),
                              device=squared_root_difference.device,
@@ -152,7 +155,7 @@ class FastFlow3DModelScatter(pl.LightningModule):
         # --- Computing L2 mean -----
         L2_mean = {}
         nested_dict = lambda: defaultdict(nested_dict)
-        L2_thresholds = nested_dict() # To create nested dict
+        L2_thresholds = nested_dict()  # To create nested dict
         all_labels = {}
         moving_labels = {}
         stationary_labels = {}
@@ -240,7 +243,7 @@ class FastFlow3DModelScatter(pl.LightningModule):
         # The first 3 dimensions are the actual flow. The last dimension is the class id.
         y_flow = y[:, :3]
         # Loss computation
-        labels = y[:, -1]
+        labels = y[:, -1].int()  # Labels are actually integers so lets convert them
         loss, metrics = self.compute_metrics(y_flow, y_hat, labels)
 
         return loss, metrics

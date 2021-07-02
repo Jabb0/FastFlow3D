@@ -66,10 +66,13 @@ class WaymoDataset(Dataset):
         # G_T_P -> Global_TransformMatrix_Previous
         G_T_P = np.reshape(np.array(previous_frame_pose), [4, 4])
         C_T_P = np.linalg.inv(G_T_C) @ G_T_P
+        # TODO: Need to be sure this does the same as
+        # https://github.com/waymo-research/waymo-open-dataset/blob/bbcd77fc503622a292f0928bfa455f190ca5946e/waymo_open_dataset/utils/box_utils.py#L179
         previous_frame = get_coordinates_and_features(previous_frame, transform=C_T_P)
         current_frame = get_coordinates_and_features(current_frame, transform=None)
 
         # Drop invalid points according to the method supplied
+        # TODO: Are points dropped in their own reference frame or after transformation?
         if self._drop_invalid_point_function is not None:
             current_frame, flows = self._drop_invalid_point_function(current_frame, flows)
             previous_frame, _ = self._drop_invalid_point_function(previous_frame, None)
