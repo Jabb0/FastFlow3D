@@ -141,6 +141,9 @@ class FastFlow3DModelScatter(pl.LightningModule):
         loss = torch.sum(weights * squared_root_difference) / torch.sum(weights)
         # ---------------- Computing rest of metrics (Paper Table 3)-----------------
 
+        # There is an issue with the metrics that causes the logger to have different devices on epoch end
+        return loss, {}
+
         # TODO: Please explain the the following metrics
 
         L2_without_weighting = squared_root_difference
@@ -155,11 +158,11 @@ class FastFlow3DModelScatter(pl.LightningModule):
         stationary_labels = {}
         for label, class_name in self._classes:
             # --- stationary, moving and all (sum of both) elements of the class ---
-            label_mask = (torch.where(labels == label, 1, 0)) > 0  # To generate boolean mask
+            label_mask = labels == label  # To generate boolean mask
 
             # with label_mask we only take items of label
-            L2_label = torch.masked_select(L2_without_weighting, label_mask)
-            flow_vector_magnitude_label = torch.masked_select(flow_vector_magnitude, label_mask)
+            L2_label = L2_without_weighting[label_mask]
+            flow_vector_magnitude_label = flow_vector_magnitude[label_mask]
             stationary = L2_label[flow_vector_magnitude_label < self._min_velocity]
             moving = L2_label[flow_vector_magnitude_label >= self._min_velocity]
 

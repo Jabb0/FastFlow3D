@@ -149,7 +149,7 @@ def cli():
     trainer = pl.Trainer.from_argparse_args(args,
                                             precision=32,  # Precision 16 does not seem to work with batchNorm1D
                                             progress_bar_refresh_rate=25,  # Prevents Google Colab crashes
-                                            gpus=-1 if torch.cuda.is_available() else 0,  # -1 means "all GPUs"
+                                            gpus=1 if torch.cuda.is_available() else 0,  # -1 means "all GPUs"
                                             logger=logger,
                                             accumulate_grad_batches=gradient_batch_acc
                                             )  # Add Trainer hparams if desired
