@@ -37,6 +37,7 @@ def get_args():
     parser.add_argument('--wandb_entity', default='dllab21fastflow3d', type=str)
     parser.add_argument('--use_sparse_lookup', default=False, type=bool)
     parser.add_argument('--architecture', default='FastFlowNet', type=str)
+    parser.add_argument('--resume_from_checkpoint', type=str)
 
     temp_args, _ = parser.parse_known_args()
     # Add the correct model specific args
