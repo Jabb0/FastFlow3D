@@ -11,7 +11,11 @@ from models import FastFlow3DModel, FastFlow3DModelScatter
 #from models.Flow3DModel import Flow3DModel
 
 
-def cli():
+def get_args():
+    """
+    Setup all arguments and parse them from commandline.
+    :return: The ArgParser args object with everything parsed.
+    """
     parser = ArgumentParser()
     parser.add_argument('data_directory', type=str)
     parser.add_argument('experiment_name', type=str)
@@ -48,13 +52,14 @@ def cli():
     else:
         raise ValueError("no architecture {0} implemented".format(temp_args.architecture))
 
-    # Set default dtype to float and not double
-    # torch.set_default_dtype(torch.float)
-
     # NOTE: Readd this to see all parameters of the trainer
     # parser = pl.Trainer.add_argparse_args(parser)  # Add arguments for the trainer
     # Add model specific arguments here
-    args = parser.parse_args()
+    return parser.parse_args()
+
+
+def cli():
+    args = get_args()
 
     if args.use_sparse_lookup and not args.fast_dev_run:
         print(f"ERROR: Sparse model is not implemented completely. No full run allowed")
