@@ -133,7 +133,6 @@ class FastFlow3DModelScatter(pl.LightningModule):
         weights = torch.ones((squared_root_difference.shape[0]),
                              device=squared_root_difference.device,
                              dtype=squared_root_difference.dtype)  # weights -> (batch_size * N)
-        weights[labels == -1] = 0
         weights[labels == 0] = self._background_weight
 
         loss = torch.sum(weights * squared_root_difference) / torch.sum(weights)
@@ -141,16 +140,8 @@ class FastFlow3DModelScatter(pl.LightningModule):
 
         # TODO: Please explain the the following metrics
 
-        # TODO do not generate other vector
-        # TODO: One could also remove -1 points before calculating metrics together with the padding mask.
-        # Remove weighting for metrics computation
-        weights = torch.ones((squared_root_difference.shape[0]),
-                             device=squared_root_difference.device,
-                             dtype=squared_root_difference.dtype)  # weights -> (batch_size * N)
-        weights[labels == -1] = 0
-
-        L2_without_weighting = weights * squared_root_difference
-        flow_vector_magnitude = weights * torch.sqrt(torch.sum(y_hat ** 2, dim=1))
+        L2_without_weighting = squared_root_difference
+        flow_vector_magnitude = torch.sqrt(torch.sum(y_hat ** 2, dim=1))
 
         # --- Computing L2 mean -----
         L2_mean = {}
@@ -244,6 +235,11 @@ class FastFlow3DModelScatter(pl.LightningModule):
         y_flow = y[:, :3]
         # Loss computation
         labels = y[:, -1].int()  # Labels are actually integers so lets convert them
+        # Remove datapoints with no flow assigned (class -1)
+        y_hat = y_hat[labels != -1]
+        y_flow = y_flow[labels != -1]
+        labels = labels[labels != -1]
+
         loss, metrics = self.compute_metrics(y_flow, y_hat, labels)
 
         return loss, metrics
