@@ -5,6 +5,7 @@ import torch
 
 from networks import PillarFeatureNetScatter, ConvEncoder, ConvDecoder, UnpillarNetworkScatter, PointFeatureNet
 from .utils import init_weights
+from collections import defaultdict
 
 
 class FastFlow3DModelScatter(pl.LightningModule):
@@ -41,6 +42,7 @@ class FastFlow3DModelScatter(pl.LightningModule):
         # TODO delete no flow class
         self._classes = [(0, 'background'), (1, 'vehicle'), (2, 'pedestrian'), (3, 'sign'), (4, 'cyclist')]
         self._thresholds = [(1, '1_1'), (0.1, '1_10')]  # 1/1 = 1, 1/10 = 0.1
+        self._min_velocity = 0.5  # If velocity higher than 0.5 then it is considered as the object is moving
 
     def _transform_point_cloud_to_embeddings(self, pc, mask):
         pc_flattened = pc.flatten(0, 1)
@@ -135,16 +137,83 @@ class FastFlow3DModelScatter(pl.LightningModule):
         weights[labels == 0] = self._background_weight
 
         loss = torch.sum(weights * squared_root_difference) / torch.sum(weights)
-        # ---------------- Computing rest of metrics -----------------
+        # ---------------- Computing rest of metrics (Paper Table 3)-----------------
+
+        # TODO do not generate other vector
+        # Remove weighting for metrics computation
+        weights = torch.ones((squared_root_difference.shape[0]),
+                             device=squared_root_difference.device,
+                             dtype=squared_root_difference.dtype)  # weights -> (batch_size * N)
+        weights[labels == -1] = 0
+
+        L2_without_weighting = weights * squared_root_difference
+        flow_vector_magnitude = weights * torch.sqrt(torch.sum(y_hat ** 2, dim=1))
+
+        # --- Computing L2 mean -----
+        L2_mean = {}
+        nested_dict = lambda: defaultdict(nested_dict)
+        L2_thresholds = nested_dict() # To create nested dict
+        all_labels = {}
+        moving_labels = {}
+        stationary_labels = {}
+        for label, class_name in self._classes:
+            # --- stationary, moving and all (sum of both) elements of the class ---
+            label_mask = (torch.where(labels == label, 1, 0)) > 0  # To generate boolean mask
+
+            # with label_mask we only take items of label
+            L2_label = torch.masked_select(L2_without_weighting, label_mask)
+            flow_vector_magnitude_label = torch.masked_select(flow_vector_magnitude, label_mask)
+            stationary = L2_label[flow_vector_magnitude_label < self._min_velocity]
+            moving = L2_label[flow_vector_magnitude_label >= self._min_velocity]
+
+            n_items_of_label = label_mask.sum()
+
+            mean_label_all = 0
+            mean_label_moving = 0
+            mean_label_stationary = 0
+            if n_items_of_label != 0:
+                mean_label_stationary = stationary.sum() / n_items_of_label
+                mean_label_moving = moving.sum() / n_items_of_label
+                mean_label_all = L2_label.sum() / n_items_of_label
+
+            all_labels[class_name] = mean_label_all
+            moving_labels[class_name] = mean_label_moving
+            stationary_labels[class_name] = mean_label_stationary
+
+            n_moving = moving.shape[0]
+            n_stationary = stationary.shape[0]
+
+            # TODO better len() than shape[0]? how this behaves with batch sizes?
+            # --- Computing L2 with threshold ---
+            for threshold, name in self._thresholds:
+                stationary_accuracy = 0
+                moving_accuracy = 0
+                all_accuracy = 0
+
+                stationary_below_threshold = stationary[stationary <= threshold]
+                if n_stationary != 0:
+                    stationary_accuracy = stationary_below_threshold.shape[0] / n_stationary
+
+                moving_below_threshold = moving[moving <= threshold]
+                if n_moving != 0:
+                    moving_accuracy = moving_below_threshold.shape[0] / n_moving
+
+                all_below_threshold = L2_label[L2_label < threshold]
+                if n_items_of_label != 0:
+                    all_accuracy = all_below_threshold.shape[0] / n_items_of_label
+
+                L2_thresholds[name]['all'][class_name] = all_accuracy
+                L2_thresholds[name]['moving'][class_name] = moving_accuracy
+                L2_thresholds[name]['stationary'][class_name] = stationary_accuracy
+
+
+        L2_mean['all'] = all_labels
+        L2_mean['moving'] = moving_labels
+        L2_mean['stationary'] = stationary_labels
+
         metrics = {}
-        # --- Computing L2 with threshold ---
-        for threshold, name in self._thresholds:
-            L2_list = {}
-            for label, class_name in self._classes:
-                correct_prediction = (squared_root_difference < threshold).sum()
-                metric = correct_prediction / squared_root_difference.shape[0]
-                L2_list[class_name] = metric
-            metrics[name] = L2_list
+        metrics['mean'] = L2_mean
+        metrics.update(L2_thresholds)
         return loss, metrics
 
     def general_step(self, batch, batch_idx, mode):
@@ -180,8 +249,9 @@ class FastFlow3DModelScatter(pl.LightningModule):
         # phase should be training, validation or test
         metrics_dict = {}
         for metric in metrics:
-            for label in metrics[metric]:
-                metrics_dict[f'{phase}/{metric}/{label}'] = metrics[metric][label]
+            for state in metrics[metric]:
+                for label in metrics[metric][state]:
+                    metrics_dict[f'{phase}/{metric}/{state}/{label}'] = metrics[metric][state][label]
 
         # Do not log the in depth metrics in the progress bar
         self.log(f'{phase}/loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
