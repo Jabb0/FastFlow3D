@@ -259,15 +259,16 @@ def preprocess(tfrecord_file, output_path, frames_per_segment = None):
         point_cloud_path = os.path.join(output_path, output_file_name)
         # Process frame and store point clouds into disk
         _, flows, pose_transform = save_point_cloud(frame, point_cloud_path)
-        # TODO filter invalid flow (label -1)
-        min_vx, min_vy, min_vz = flows[:, :-1].min(axis=0)
-        max_vx, max_vy, max_vz = flows[:, :-1].max(axis=0)
-        min_vx_global = min(min_vx_global, min_vx)
-        min_vy_global = min(min_vy_global, min_vy)
-        min_vz_global = min(min_vz_global, min_vz)
-        max_vx_global = max(max_vx_global, max_vx)
-        max_vy_global = max(max_vy_global, max_vy)
-        max_vz_global = max(max_vz_global, max_vz)
+        flows = flows[flows[:, -1] != -1]
+        if flows.size != 0:  # May all the flows are invalid
+            min_vx, min_vy, min_vz = flows[:, :-1].min(axis=0)
+            max_vx, max_vy, max_vz = flows[:, :-1].max(axis=0)
+            min_vx_global = min(min_vx_global, min_vx)
+            min_vy_global = min(min_vy_global, min_vy)
+            min_vz_global = min(min_vz_global, min_vz)
+            max_vx_global = max(max_vx_global, max_vx)
+            max_vy_global = max(max_vy_global, max_vy)
+            max_vz_global = max(max_vz_global, max_vz)
 
         if j == 0:
             previous_frame = (output_file_name, pose_transform)
