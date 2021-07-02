@@ -73,6 +73,9 @@ class FastFlow3DModelScatter(pl.LightningModule):
         previous_batch, current_batch = x
         previous_batch_pc, previous_batch_grid, previous_batch_mask = previous_batch
         current_batch_pc, current_batch_grid, current_batch_mask = current_batch
+        # For some reason the datatype of the input is not changed to correct precision
+        previous_batch_pc = previous_batch_pc.type(self.dtype)
+        current_batch_pc = current_batch_pc.type(self.dtype)
 
         # batch_pc = (batch_size, N, 8) | batch_grid = (n_batch, N, 2) | batch_mask = (n_batch, N)
         # The grid indices are (batch_size, max_points) long. But we need them as
@@ -84,11 +87,11 @@ class FastFlow3DModelScatter(pl.LightningModule):
         # Pass the whole batch of point clouds to get the embedding for each point in the cloud
         # Input pc is (batch_size, max_n_points, features_in)
         # per each point, there are 8 features: [cx, cy, cz,  Δx, Δy, Δz, l0, l1], as stated in the paper
-        previous_batch_pc_embedding = self._transform_point_cloud_to_embeddings(previous_batch_pc.float(),
+        previous_batch_pc_embedding = self._transform_point_cloud_to_embeddings(previous_batch_pc,
                                                                                 previous_batch_mask)
         # previous_batch_pc_embedding = [n_batch, N, 64]
         # Output pc is (batch_size, max_n_points, embedding_features)
-        current_batch_pc_embedding = self._transform_point_cloud_to_embeddings(current_batch_pc.float(),
+        current_batch_pc_embedding = self._transform_point_cloud_to_embeddings(current_batch_pc,
                                                                                current_batch_mask)
 
         # Now we need to scatter the points into their 2D matrix
