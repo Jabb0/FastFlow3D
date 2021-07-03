@@ -74,7 +74,7 @@ class Flow3DModel(BaseModel):
         current_batch_pc = transform_data(current_batch_pc)
 
         batch_size, n_points_prev, _ = current_batch_pc.shape
-
+        batch_size, n_points_cur, _ = current_batch_pc.shape
         # --- Point Feature Part ---
         _, _, pf_prev_3 = self._point_feature_net(previous_batch_pc.float(), previous_batch_mask)
         pf_curr_1, pf_curr_2, pf_curr_3 = self._point_feature_net(current_batch_pc.float(), current_batch_mask)
@@ -87,8 +87,11 @@ class Flow3DModel(BaseModel):
         features, pos, batch = x
         x = self._fc(features)
 
-        x = x.view(batch_size, n_points_prev, 3)
-        return x
+        output = torch.empty(size=(batch_size, n_points_cur, 3))
+        output[current_batch_mask] = x
+        output[torch.logical_not(current_batch_mask)] = 0
+
+        return output
 
 
 # class Flow3DKaolinModel(BaseModel):
