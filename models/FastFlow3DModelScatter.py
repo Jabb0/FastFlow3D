@@ -130,6 +130,7 @@ class FastFlow3DModelScatter(pl.LightningModule):
         :return:
         """
         squared_root_difference = torch.sqrt(torch.sum((y - y_hat) ** 2, dim=1))
+        device = squared_root_difference.device
         # We compute the weighting vector for background_points
         # weights is a mask which background_weight value for backgrounds and 1 for no backgrounds, in order to
         # downweight the background points
@@ -142,7 +143,7 @@ class FastFlow3DModelScatter(pl.LightningModule):
         # ---------------- Computing rest of metrics (Paper Table 3)-----------------
 
         # There is an issue with the metrics that causes the logger to have different devices on epoch end
-        return loss, {}
+        #return loss, {}
 
         # TODO: Please explain the the following metrics
 
@@ -168,13 +169,13 @@ class FastFlow3DModelScatter(pl.LightningModule):
 
             n_items_of_label = label_mask.sum()
 
-            mean_label_all = 0
-            mean_label_moving = 0
-            mean_label_stationary = 0
+            mean_label_all = torch.tensor(0, device=device)
+            mean_label_moving = torch.tensor(0, device=device)
+            mean_label_stationary = torch.tensor(0, device=device)
             if n_items_of_label != 0:
-                mean_label_stationary = stationary.sum() / n_items_of_label
-                mean_label_moving = moving.sum() / n_items_of_label
-                mean_label_all = L2_label.sum() / n_items_of_label
+                mean_label_stationary = torch.tensor(stationary.sum() / n_items_of_label, device=device)
+                mean_label_moving = torch.tensor(moving.sum() / n_items_of_label, device=device)
+                mean_label_all = torch.tensor(L2_label.sum() / n_items_of_label, device=device)
 
             all_labels[class_name] = mean_label_all
             moving_labels[class_name] = mean_label_moving
@@ -186,21 +187,21 @@ class FastFlow3DModelScatter(pl.LightningModule):
             # TODO better len() than shape[0]? how this behaves with batch sizes?
             # --- Computing L2 with threshold ---
             for threshold, name in self._thresholds:
-                stationary_accuracy = 0
-                moving_accuracy = 0
-                all_accuracy = 0
+                stationary_accuracy = torch.tensor(0, device=device)
+                moving_accuracy = torch.tensor(0, device=device)
+                all_accuracy = torch.tensor(0, device=device)
 
                 stationary_below_threshold = stationary[stationary <= threshold]
                 if n_stationary != 0:
-                    stationary_accuracy = stationary_below_threshold.shape[0] / n_stationary
+                    stationary_accuracy = torch.tensor(stationary_below_threshold.shape[0] / n_stationary, device=device)
 
                 moving_below_threshold = moving[moving <= threshold]
                 if n_moving != 0:
-                    moving_accuracy = moving_below_threshold.shape[0] / n_moving
+                    moving_accuracy = torch.tensor(moving_below_threshold.shape[0] / n_moving, device=device)
 
                 all_below_threshold = L2_label[L2_label < threshold]
                 if n_items_of_label != 0:
-                    all_accuracy = all_below_threshold.shape[0] / n_items_of_label
+                    all_accuracy = torch.tensor(all_below_threshold.shape[0] / n_items_of_label, device=device)
 
                 L2_thresholds[name]['all'][class_name] = all_accuracy
                 L2_thresholds[name]['moving'][class_name] = moving_accuracy
@@ -260,6 +261,8 @@ class FastFlow3DModelScatter(pl.LightningModule):
 
         # Do not log the in depth metrics in the progress bar
         self.log(f'{phase}/loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        #print("---- metrics ----")
+        #print(metrics_dict)
         self.log_dict(metrics_dict, on_step=True, on_epoch=True, prog_bar=False, logger=True)
 
     def training_step(self, batch, batch_idx):
