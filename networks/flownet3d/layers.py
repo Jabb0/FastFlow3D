@@ -12,10 +12,11 @@ class SetConvLayer(torch.nn.Module):
     TODO
     """
 
-    def __init__(self, r: float, sample_rate: float, mlp: torch.nn.Sequential):
+    def __init__(self, r: float, sample_rate: float, mlp: torch.nn.Sequential, max_num_neighbors: int = 5):
         super().__init__()
         self.sample_rate = sample_rate
         self.radius = r
+        self.max_num_neighbors = max_num_neighbors
         # see  https://pytorch-geometric.readthedocs.io/en/latest/modules/nn.html?highlight=point%20conv#torch_geometric.nn.conv.PointConv
         self.point_conv = torch_geometric.nn.PointConv(mlp)
 
@@ -28,9 +29,8 @@ class SetConvLayer(torch.nn.Module):
         idx = torch_geometric.nn.fps(pos, batch, ratio=self.sample_rate)
 
         # For each region, get all points which are within in the region (defined by radius r)
-        row, col = torch_geometric.nn.radius(pos, pos[idx], self.radius, batch, batch[idx])
-        # TODO: This stack is unecessary the .radius function already returns the desired index
-        #   Please check if this is true or we need to unsqueeze a batch dimension
+        row, col = torch_geometric.nn.radius(pos, pos[idx], self.radius, batch, batch[idx],
+                                             max_num_neighbors=self.max_num_neighbors)
         edge_index = torch.stack([col, row], dim=0)
 
         # Apply point net
@@ -44,10 +44,11 @@ class FlowEmbeddingLayer(torch.nn.Module):
     """
     TODO
     """
-    def __init__(self, r: float, sample_rate: float, mlp: torch.nn.Sequential):
+    def __init__(self, r: float, sample_rate: float, mlp: torch.nn.Sequential, max_num_neighbors: int = 5):
         super().__init__()
         self.sample_rate = sample_rate
         self.radius = r
+        self.max_num_neighbors = max_num_neighbors
         self.point_conv = _FlowEmbeddingPointConv(mlp)
 
     def forward(self, x1: Tuple[torch.Tensor, torch.Tensor, torch.Tensor],
@@ -56,7 +57,8 @@ class FlowEmbeddingLayer(torch.nn.Module):
         x2_features, x2_pos, x2_batch = x2
 
         # For each points in x2, find all points in x, within distance of r
-        row, col = torch_geometric.nn.radius(x1_pos, x2_pos, self.radius, x1_batch, x2_batch)
+        row, col = torch_geometric.nn.radius(x1_pos, x2_pos, self.radius, x1_batch, x2_batch,
+                                             max_num_neighbors=self.max_num_neighbors)
         edge_index = torch.stack([col, row], dim=0)  # build COO format matrix
 
         x = self.point_conv((x1_features, x2_features), (x1_pos, x2_pos), edge_index)
@@ -69,9 +71,10 @@ class SetUpConvLayer(torch.nn.Module):
     """
     TODO
     """
-    def __init__(self, r: float, mlp: torch.nn.Sequential):
+    def __init__(self, r: float, mlp: torch.nn.Sequential, max_num_neighbors: int = 5):
         super().__init__()
         self.radius = r
+        self.max_num_neighbors = max_num_neighbors
         # add self loops must be false, because we only aggregate features of points in the target input
         # and we not include the point of the source input
         self.point_conv = torch_geometric.nn.PointConv(mlp, add_self_loops=False)
@@ -82,7 +85,8 @@ class SetUpConvLayer(torch.nn.Module):
 
         # For each region, get all points which are within in the region (defined by radius r)
         # row, col = torch_geometric.nn.radius(target_pos, src_pos, self.radius, target_batch, src_batch)
-        row, col = torch_geometric.nn.radius(src_pos, target_pos, self.radius, src_batch, target_batch)
+        row, col = torch_geometric.nn.radius(src_pos, target_pos, self.radius, src_batch, target_batch,
+                                             max_num_neighbors=self.max_num_neighbors)
         edge_index = torch.stack([col, row], dim=0)
 
         # Apply point net
