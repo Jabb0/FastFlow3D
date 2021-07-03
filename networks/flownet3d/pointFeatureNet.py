@@ -39,12 +39,8 @@ class PointFeatureNet(torch.nn.Module):
         pos = pos.view(batch_size * n_points, -1)
         pos = pos[mask, :]
 
-        # TODO: This can be replaced by an arange followed by a expand this will
-        #  just create a view of the appropriate size onto the arange vector
-        batch = torch.zeros((batch_size, n_points), device=pos.device, dtype=torch.long)
-        for i in range(batch_size):
-            batch[i] = i
-        batch = batch.view(-1)
+        batch = torch.arange(batch_size)
+        batch = batch.repeat_interleave(n_points)
         batch = batch[mask]
 
         x1 = (features, pos, batch)
