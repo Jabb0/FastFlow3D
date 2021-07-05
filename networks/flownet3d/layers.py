@@ -91,7 +91,7 @@ class SetUpConvLayer(torch.nn.Module):
 
         # Apply point net
         # features = self.point_conv(target_features, (target_pos, src_pos), edge_index)
-        features = self.point_conv((src_features, target_features), (src_pos, target_pos), edge_index)
+        features = self.point_conv(src_features, (src_pos, target_pos), edge_index)
         pos, batch = target_pos, target_batch
 
         return features, pos, batch
