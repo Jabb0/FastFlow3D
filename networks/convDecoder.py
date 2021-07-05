@@ -47,31 +47,23 @@ class ConvDecoder(torch.nn.Module):
             # torch.nn.ReLU(),
         )
 
-    def forward(self, B_prev, F_prev, L_prev, R_prev, B_cur, F_cur, L_cur, R_cur):
+    def forward(self, B, F, L, R):
         """
         Do the convolutional encoder pass for the input 2D grid embedding.
-        :param B_prev: (batch_size, 64, 512, 512) unfiltered 2D grid embedding of previous point cloud.
-        :param F_prev: (batch_size, 64, 256, 256) filtered 2D grid embedding of previous point cloud.
-        :param L_prev: (batch_size, 128, 128, 128) filtered 2D grid embedding of previous point cloud.
-        :param R_prev: (batch_size, 256, 64, 64) filtered 2D grid embedding of previous point cloud.
-
-        :param B_cur: (batch_size, 64, 512, 512) unfiltered 2D grid embedding of current point cloud.
-        :param F_cur: (batch_size, 64, 256, 256) filtered 2D grid embedding of current point cloud.
-        :param L_cur: (batch_size, 128, 128, 128) filtered 2D grid embedding of current point cloud.
-        :param R_cur: (batch_size, 256, 64, 64) filtered 2D grid embedding of current point cloud.
+        All params have second dimension = 2. These are the embeddings for (prev, cur).
+        :param B: (batch_size, 2, 64, 512, 512) unfiltered 2D grid embedding of point cloud.
+        :param F: (batch_size, 2, 64, 256, 256) filtered 2D grid embedding of point cloud.
+        :param L: (batch_size, 2, 128, 128, 128) filtered 2D grid embedding of point cloud.
+        :param R: (batch_size, 2, 256, 64, 64) filtered 2D grid embedding of point cloud.
 
         :return: (batch_size, n_points, 3)
         """
-        # Concatenate embedded point clouds
-        B = torch.cat((B_prev, B_cur), dim=1)
-        R = torch.cat((R_prev, R_cur), dim=1)
-        F = torch.cat((F_prev, F_cur), dim=1)
-        L = torch.cat((L_prev, L_cur), dim=1)
-        # print("After concatenation of both embedded point clouds:")
-        # print(f"R Output: {R.shape}")
-        # print(f"F Output: {F.shape}")
-        # print(f"L Output: {L.shape}")
-        # print("-"*12)
+        # "Concatenate" the two point cloud embeddings by flattening the (prev, cur) dimension into depth
+        # This flatten is just a view and thus saves memory.
+        B = B.flatten(1, 2)
+        F = F.flatten(1, 2)
+        L = L.flatten(1, 2)
+        R = R.flatten(1, 2)
 
         S = self._block_1(R, L)  # S inputs are R, L
         # print(f"S Output: {S.shape}")

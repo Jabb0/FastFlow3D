@@ -8,7 +8,7 @@ from pytorch_lightning.loggers import WandbLogger
 
 from data import WaymoDataModule
 from models import FastFlow3DModel, FastFlow3DModelScatter
-#from models.Flow3DModel import Flow3DModel
+#  from models.Flow3DModel import Flow3DModel
 
 
 def get_args():
@@ -19,7 +19,7 @@ def get_args():
     parser = ArgumentParser()
     parser.add_argument('data_directory', type=str)
     parser.add_argument('experiment_name', type=str)
-    parser.add_argument('--batch_size', default=2, type=int)
+    parser.add_argument('--batch_size', default=3, type=int)
     parser.add_argument('--full_batch_size', default=None, type=int)
     parser.add_argument('--x_max', default=85, type=float)
     parser.add_argument('--x_min', default=-85, type=float)
