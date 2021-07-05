@@ -132,7 +132,6 @@ class FastFlow3DModelScatter(pl.LightningModule):
         :return:
         """
         squared_root_difference = torch.sqrt(torch.sum((y - y_hat) ** 2, dim=1))
-        device = squared_root_difference.device
         # We compute the weighting vector for background_points
         # weights is a mask which background_weight value for backgrounds and 1 for no backgrounds, in order to
         # downweight the background points
@@ -158,9 +157,9 @@ class FastFlow3DModelScatter(pl.LightningModule):
         # {mean: {...}, 1_1: {all: {label1: xxx, label2: yyy, ...}, moving: {label1: xxx, label2: yyy}, stationary: {...}}}
         # 1_1 stands for 1 / 1, which is 1 m/s, 1_10 stands for 1/10, which is 0.1 m/s.
 
-        L2_without_weighting = squared_root_difference
-        flow_vector_magnitude = torch.sqrt(torch.sum(y_hat ** 2, dim=1))
-
+        # Use detach as those metrics do not need a gradient
+        L2_without_weighting = squared_root_difference.detach()
+        flow_vector_magnitude = torch.sqrt(torch.sum(y_hat.detach() ** 2, dim=1))
 
         L2_mean = {}
         nested_dict = lambda: defaultdict(nested_dict)
@@ -172,62 +171,39 @@ class FastFlow3DModelScatter(pl.LightningModule):
             # ----------- Computing L2 mean -------------
 
             # --- stationary, moving and all (sum of both) elements of the class ---
-            label_mask = labels == label  # To generate boolean mask that will help us filter elements of the label we are iterating
+            # To generate boolean mask that will help us filter elements of the label we are iterating
+            label_mask = labels == label
 
-            # with label_mask we only take items of label
+            # with label_mask we only take items of label we are iterating
             L2_label = L2_without_weighting[label_mask]
-            flow_vector_magnitude_label = flow_vector_magnitude[label_mask]  # Only take into account flows of the label we are iterating
+            flow_vector_magnitude_label = flow_vector_magnitude[label_mask]
+
             stationary = L2_label[flow_vector_magnitude_label < self._min_velocity]  # Extract stationary flows
             moving = L2_label[flow_vector_magnitude_label >= self._min_velocity]  # Extract flows in movement
 
-            n_items_of_label = label_mask.sum()  # Number of flows of this label
-
-            mean_label_all = torch.tensor(0, device=device)
-            mean_label_moving = torch.tensor(0, device=device)
-            mean_label_stationary = torch.tensor(0, device=device)
-            if n_items_of_label != 0:  # Avoid division by 0
-                mean_label_stationary = stationary.sum() / n_items_of_label  # toch.sum returns a tensor
-                mean_label_moving = moving.sum() / n_items_of_label
-                mean_label_all = L2_label.sum() / n_items_of_label
+            mean_label_all = moving.mean()
+            mean_label_moving = stationary.mean()
+            mean_label_stationary = L2_label.mean()
 
             all_labels[class_name] = mean_label_all
             moving_labels[class_name] = mean_label_moving
             stationary_labels[class_name] = mean_label_stationary
 
-            n_moving = moving.shape[0]
-            n_stationary = stationary.shape[0]
-
-            # TODO better len() than shape[0]? how this behaves with batch sizes?
             # ----------- Computing L2 accuracy with threshold -------------
             for threshold, name in self._thresholds:
-                stationary_accuracy = torch.tensor(0, device=device)
-                moving_accuracy = torch.tensor(0, device=device)
-                all_accuracy = torch.tensor(0, device=device)
-
-                stationary_below_threshold = (stationary[stationary <= threshold]).shape[0]  # Number of items with an error lower than the threshold
-                if n_stationary != 0:
-                    stationary_accuracy = torch.tensor(stationary_below_threshold / n_stationary, device=device)
-
-                moving_below_threshold = moving[moving <= threshold].shape[0]
-                if n_moving != 0:
-                    moving_accuracy = torch.tensor(moving_below_threshold / n_moving, device=device)
-
-                all_below_threshold = (L2_label[L2_label < threshold].shape[0])
-                if n_items_of_label != 0:
-                    # TODO: this generates a warning but I cannot get rid off it
-                    all_accuracy = torch.tensor(all_below_threshold / n_items_of_label, device=device)
+                stationary_accuracy = (stationary <= threshold).float().mean()
+                moving_accuracy = (moving <= threshold).float().mean()
+                all_accuracy = (L2_label <= threshold).float().mean()
 
                 L2_thresholds[name]['all'][class_name] = all_accuracy
                 L2_thresholds[name]['moving'][class_name] = moving_accuracy
                 L2_thresholds[name]['stationary'][class_name] = stationary_accuracy
 
-
         L2_mean['all'] = all_labels
         L2_mean['moving'] = moving_labels
         L2_mean['stationary'] = stationary_labels
 
-        metrics = {}
-        metrics['mean'] = L2_mean
+        metrics = {'mean': L2_mean}
         metrics.update(L2_thresholds)
         return loss, metrics
 

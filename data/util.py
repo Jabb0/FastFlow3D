@@ -293,6 +293,7 @@ def preprocess(tfrecord_file, output_path, frames_per_segment = None):
     with open(metadata_path, 'wb') as metadata_file:
         pickle.dump(metadata, metadata_file)
 
+
 def get_uncompressed_frame(compressed_frame):
     """
     :param compressed_frame: Compressed frame

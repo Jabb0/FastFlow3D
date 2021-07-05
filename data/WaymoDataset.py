@@ -100,8 +100,9 @@ class WaymoDataset(Dataset):
 
     def read_point_cloud_pair(self, index):
         """
-        Read from disk the current and prvious point cloud given an index
+        Read from disk the current and previous point cloud given an index
         """
+        # In the lookup table entries with (current_frame, previous_frame) are stored
         current_frame = np.load(os.path.join(self.data_path, self.metadata['look_up_table'][index][0][0]))
         previous_frame = np.load(os.path.join(self.data_path, self.metadata['look_up_table'][index][1][0]))
         return current_frame, previous_frame
