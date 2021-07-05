@@ -24,6 +24,7 @@ if __name__ == '__main__':
     # start_frame and end_frame allow us just visualize a set of frames
     parser.add_argument('--start_frame', default=0, type=int)
     parser.add_argument('--end_frame', default=None, type=int)
+    parser.add_argument('--vis_previous_current', default=False, type=bool)
 
     args = parser.parse_args()
     waymo_dataset = WaymoDataset(args.data_directory)
@@ -75,7 +76,8 @@ if __name__ == '__main__':
     vis = LaserScanVis(dataset=waymo_dataset,
                        start_frame=args.start_frame,
                        end_frame=args.end_frame,
-                       model=model)
+                       model=model,
+                       vis_previous_current=args.vis_previous_current)
     vis.run()
 
 

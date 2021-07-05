@@ -12,12 +12,13 @@ from data.util import custom_collate_batch
 class LaserScanVis:
     """Class that creates and handles a visualizer for a pointcloud"""
 
-    def __init__(self, dataset, start_frame=0, end_frame=None, model=None):
+    def __init__(self, dataset, start_frame=0, end_frame=None, model=None, vis_previous_current=True):
         # If model is None then it displays ground truth
         self.dataset = dataset  # This must be a configured Waymo dataset
         self.offset = start_frame
         self.end_frame = end_frame
         self.model = model
+        self.vis_previous_current = vis_previous_current  # True if you want to display 2 point clouds instead flows
         if model is not None:
             self.model.eval()
 
@@ -77,6 +78,7 @@ class LaserScanVis:
         (previous_frame, current_frame), flows = self.dataset[self.offset]
         flows = flows[:, :-1]  # Remove the label
         raw_point_cloud = current_frame[:, 0:3]
+        raw_point_cloud_previous = previous_frame[:, 0:3]
         # raw_point_cloud = current_frame[0][:, 0:3]
         if self.model is not None:
             self.dataset.pillarize(True)
@@ -97,11 +99,21 @@ class LaserScanVis:
         # Need of clamping to 0 and 1, since may flow predictions can exceed it
         rgb_flow = np.clip(rgb_flow, a_min=0., a_max=1.)
 
-        self.scan_vis.set_data(raw_point_cloud,
-                               face_color=rgb_flow,
-                               edge_color=rgb_flow,
-                               size=1)
+        if self.vis_previous_current:
+            concatenated_point_cloud = np.concatenate((raw_point_cloud_previous, raw_point_cloud))
+            red = np.ones(raw_point_cloud_previous.shape) * np.array([1, 0, 0])
+            green = np.ones(raw_point_cloud.shape) * np.array([0, 1, 0])
+            concatenated_colors = np.concatenate((red, green))
+            self.scan_vis.set_data(concatenated_point_cloud,
+                                   face_color=concatenated_colors,
+                                   edge_color=concatenated_colors,
+                                   size=1)
 
+        else:
+            self.scan_vis.set_data(raw_point_cloud,
+                                   face_color=rgb_flow,
+                                   edge_color=rgb_flow,
+                                   size=1)
 
         self.img_vis.update()
 
