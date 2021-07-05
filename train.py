@@ -1,14 +1,26 @@
-from argparse import ArgumentParser
+from argparse import ArgumentParser, ArgumentTypeError
 from pathlib import Path
 
 import pytorch_lightning as pl
 import torch
+import os
 import wandb
 from pytorch_lightning.loggers import WandbLogger
 
 from data import WaymoDataModule
 from models import FastFlow3DModel, FastFlow3DModelScatter
 #  from models.Flow3DModel import Flow3DModel
+
+
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise ArgumentTypeError('Boolean value expected.')
 
 
 def get_args():
@@ -19,7 +31,7 @@ def get_args():
     parser = ArgumentParser()
     parser.add_argument('data_directory', type=str)
     parser.add_argument('experiment_name', type=str)
-    parser.add_argument('--batch_size', default=3, type=int)
+    parser.add_argument('--batch_size', default=2, type=int)
     parser.add_argument('--full_batch_size', default=None, type=int)
     parser.add_argument('--x_max', default=85, type=float)
     parser.add_argument('--x_min', default=-85, type=float)
@@ -27,14 +39,14 @@ def get_args():
     parser.add_argument('--y_min', default=-85, type=float)
     parser.add_argument('--z_max', default=3, type=float)
     parser.add_argument('--z_min', default=-3, type=float)
-    parser.add_argument('--grid_size', default=512, type=float)
-    parser.add_argument('--test_data_available', default=False, type=bool)
-    parser.add_argument('--fast_dev_run', default=False, type=bool)
+    parser.add_argument('--grid_size', default=512, type=int)
+    parser.add_argument('--test_data_available', type=str2bool, nargs='?', const=True, default=False)
+    parser.add_argument('--fast_dev_run', type=str2bool, nargs='?', const=True, default=False)
     parser.add_argument('--num_workers', default=4, type=int)
-    parser.add_argument('--wandb_api_key', default=None, type=str)
+    parser.add_argument('--wandb_enable', type=str2bool, nargs='?', const=True, default=False)
     parser.add_argument('--wandb_project', default="fastflow3d", type=str)
     parser.add_argument('--wandb_entity', default='dllab21fastflow3d', type=str)
-    parser.add_argument('--use_sparse_lookup', default=False, type=bool)
+    parser.add_argument('--use_sparse_lookup', type=str2bool, nargs='?', const=True, default=False)
     parser.add_argument('--architecture', default='FastFlowNet', type=str)
     parser.add_argument('--resume_from_checkpoint', type=str)
     parser.add_argument('--max_time', type=str)
@@ -114,8 +126,13 @@ def cli():
     # Project is the name of the project
     # Entity is the name of the team
     logger = True  # Not set a logger defaulting to tensorboard
-    if args.wandb_api_key is not None:
-        wandb.login(key=args.wandb_api_key)
+    if args.wandb_enable:
+        wandb_api_key = os.getenv("WANDB_API_KEY")
+        if not wandb_api_key:
+            print("No WandB API key found in env: Set WANDB_API_KEY")
+            exit(1)
+
+        wandb.login(key=wandb_api_key)
         logger = WandbLogger(name=args.experiment_name, project=args.wandb_project, entity=args.wandb_entity)
         additional_hyperparameters = {'grid_cell_size': grid_cell_size,
                                       'x_min': args.x_min,
