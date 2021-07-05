@@ -78,6 +78,9 @@ def cli():
         print(f"ERROR: Sparse model is not implemented completely. No full run allowed")
         exit(1)
 
+    if args.use_group_norm:
+        print("INFO: Using group norm instead of batch norm!")
+
     dataset_path = Path(args.data_directory)
     # Check if the dataset exists
     if not dataset_path.is_dir() or not dataset_path.exists():
