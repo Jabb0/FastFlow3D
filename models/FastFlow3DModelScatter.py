@@ -49,9 +49,11 @@ class FastFlow3DModelScatter(pl.LightningModule):
         mask_flattened = mask.flatten(0, 1)
         # Init the result tensor for our data. This is necessary because the point net
         # has a batch norm and this needs to ignore the masked points
-        previous_batch_pc_embedding = torch.zeros((pc_flattened.size(0), 64), device=pc.device, dtype=pc.dtype)
+        previous_batch_pc_embedding = torch.zeros((pc_flattened.size(0), 64),
+                                                  device=pc.device, dtype=pc.dtype)
         # Flatten the first two dimensions to get the points as batch dimension
         previous_batch_pc_embedding[mask_flattened] = self._point_feature_net(pc_flattened[mask_flattened])
+        # This allows backprop towards the MLP: Checked with backward hooks. Gradient is present.
         # Output is (batch_size * points, embedding_features)
         # Retransform into batch dimension (batch_size, max_points, embedding_features)
         previous_batch_pc_embedding = previous_batch_pc_embedding.unflatten(0, (pc.size(0), pc.size(1)))
