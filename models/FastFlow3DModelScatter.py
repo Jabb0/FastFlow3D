@@ -103,17 +103,30 @@ class FastFlow3DModelScatter(pl.LightningModule):
         current_pillar_embeddings = self._pillar_feature_net(current_batch_pc_embedding, current_batch_grid)
         # pillar_embeddings = (batch_size, 64, 512, 512)
 
+        # Concatenate the previous and current batches along a new dimension.
+        # This allows to have twice the amount of entries in the forward pass
+        # of the encoder which is good for batch norm.
+        pillar_embeddings = torch.stack((previous_pillar_embeddings, current_pillar_embeddings), dim=1)
+        # This is now (batch_size, 2, 64, 512, 512) large
+        pillar_embeddings = pillar_embeddings.flatten(0, 1)
+        # Flatten into (batch_size * 2, 64, 512, 512) for encoder forward pass.
+
         # 2. Apply the U-net encoder step
         # Note that weight sharing is used here. The same U-net is used for both point clouds.
-        # Corresponds to F, L and R from the paper
-        prev_64_conv, prev_128_conv, prev_256_conv = self._conv_encoder_net(previous_pillar_embeddings)
-        cur_64_conv, cur_128_conv, cur_256_conv = self._conv_encoder_net(current_pillar_embeddings)
+        # Corresponds to F, L and R from the paper. Number corresponds to the depth.
+        conv_64, conv_128, conv_256 = self._conv_encoder_net(pillar_embeddings)
+        # Output is (batch_size * 2, C, W, H) for each layer.
+        # Now unflatten the first dimension again such that they are viewed as
+        # (batch_size, 2, C, W, H) with the second dimension being (prev, cur)
+        # This removed the need to concatenate the two layers on as we can just view their channels together
+        batch_size = current_pillar_embeddings.size(0)
+        pillar_embeddings = pillar_embeddings.unflatten(0, (batch_size, 2))
+        conv_64 = conv_64.unflatten(0, (batch_size, 2))
+        conv_128 = conv_128.unflatten(0, (batch_size, 2))
+        conv_256 = conv_256.unflatten(0, (batch_size, 2))
 
         # 3. Apply the U-net decoder with skip connections
-        grid_flow_embeddings = self._conv_decoder_net(previous_pillar_embeddings, prev_64_conv,
-                                                      prev_128_conv, prev_256_conv,
-                                                      current_pillar_embeddings, cur_64_conv,
-                                                      cur_128_conv, cur_256_conv)
+        grid_flow_embeddings = self._conv_decoder_net(pillar_embeddings, conv_64, conv_128, conv_256)
 
         # grid_flow_embeddings -> [batch_size, 64, 512, 512]
 
