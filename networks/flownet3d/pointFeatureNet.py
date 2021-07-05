@@ -21,28 +21,27 @@ class PointFeatureNet(torch.nn.Module):
         set_conv_mlp_2 = make_mlp(64+3, [64, 64, 128])
         self.set_conv_2 = SetConvLayer(r=1.0, sample_rate=0.25, mlp=set_conv_mlp_2)
 
-    def forward(self, x: torch.tensor) -> torch.tensor:
+    def forward(self, x: torch.tensor, mask: torch.tensor) -> torch.tensor:
         """
         Input is a point cloud of shape (batch_size, n_points, n_features),
         where the first three features are the x,y,z coordinate of the point.
         """
         batch_size, n_points, _ = x.shape  # (batch_size, n_points, n_features)
+        mask = mask.flatten()
 
         # get features
         features = x[:, :, 3:]
-        # TODO: I think you can use .flatten which is a wrapper for view.
-        features = features.view(batch_size * n_points, -1)
+        features = features.flatten(0, 1)
+        features = features[mask, :]
 
         # get pos
         pos = x[:, :, :3]
         pos = pos.view(batch_size * n_points, -1)
+        pos = pos[mask, :]
 
-        # TODO: This can be replaced by an arange followed by a expand this will
-        #  just create a view of the appropriate size onto the arange vector
-        batch = torch.zeros((batch_size, n_points), device=pos.device, dtype=torch.long)
-        for i in range(batch_size):
-            batch[i] = i
-        batch = batch.view(-1)
+        batch = torch.arange(batch_size)
+        batch = batch.repeat_interleave(n_points)
+        batch = batch[mask]
 
         x1 = (features, pos, batch)
         x2 = self.set_conv_1(x1)

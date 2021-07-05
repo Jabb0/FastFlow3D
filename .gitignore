@@ -3,3 +3,5 @@ lightning_logs
 venv
 wandb
 checkpoints
+data/waymo_dataset
+*.pyc
