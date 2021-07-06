@@ -33,24 +33,8 @@ class LaserScanVis:
         # safety critical, so let's do things wrong)
         self.action = "no"  # no, next, back, quit are the possibilities
 
-        # new canvas prepared for visualizing data
-        self.canvas = SceneCanvas(keys='interactive', show=True)
-        # interface (n next, b back, q quit, very simple)
-        self.canvas.events.key_press.connect(self.key_press)
-        self.canvas.events.draw.connect(self.draw)
-        # grid
-        self.grid = self.canvas.central_widget.add_grid()
 
-        # laserscan part
-        self.scan_view = vispy.scene.widgets.ViewBox(
-            border_color='white', parent=self.canvas.scene)
-        self.grid.add_widget(self.scan_view, 0, 0)
-        self.scan_vis = visuals.Markers()
-        self.scan_view.camera = 'turntable'
-        self.scan_view.add(self.scan_vis)
-        visuals.XYZAxis(parent=self.scan_view.scene)
-
-        # new canvas prepared for visualizing data
+        # --- Canvas for ground truth ---
         self.gt_canvas = SceneCanvas(keys='interactive', show=True)
         # interface (n next, b back, q quit, very simple)
         self.gt_canvas.events.key_press.connect(self.key_press)
@@ -65,30 +49,24 @@ class LaserScanVis:
         self.gt_vis = visuals.Markers()
         self.gt_view.camera = 'turntable'
         self.gt_view.add(self.gt_vis)
-        #self.gt_view.add(self.gt_vis)
         visuals.XYZAxis(parent=self.gt_view.scene)
 
-
-        # img canvas size
-        self.multiplier = 1
-        self.canvas_W = 1024
-        self.canvas_H = 64
-
-        # new canvas for img
-        #self.img_canvas = SceneCanvas(keys='interactive', show=True,
-        #                              size=(self.canvas_W, self.canvas_H * self.multiplier))
-        # grid
-        #self.img_grid = self.img_canvas.central_widget.add_grid()
+        # --- Canvas por prediction ---
+        self.predicted_canvas = SceneCanvas(keys='interactive', show=True)
         # interface (n next, b back, q quit, very simple)
-        #self.img_canvas.events.key_press.connect(self.key_press)
-        #self.img_canvas.events.draw.connect(self.draw)
+        self.predicted_canvas.events.key_press.connect(self.key_press)
+        self.predicted_canvas.events.draw.connect(self.draw)
+        # grid
+        self.predicted_grid = self.predicted_canvas.central_widget.add_grid()
 
-        # add a view for the depth
-        #self.img_view = vispy.scene.widgets.ViewBox(
-        #    border_color='white', parent=self.img_canvas.scene)
-        #self.img_grid.add_widget(self.img_view, 0, 0)
-        #self.img_vis = visuals.Image(cmap='viridis')
-        #self.img_view.add(self.img_vis)
+        self.predicted_view = vispy.scene.widgets.ViewBox(
+            border_color='white', parent=self.predicted_canvas.scene)
+        self.predicted_grid.add_widget(self.predicted_view, 0, 0)
+        self.predicted_vis = visuals.Markers()
+        self.predicted_view.camera = 'turntable'
+        self.predicted_view.add(self.predicted_vis)
+        visuals.XYZAxis(parent=self.predicted_view.scene)
+
 
     def update_scan(self):
         # first open data
@@ -108,7 +86,7 @@ class LaserScanVis:
             predicted_flows = output[0].data.cpu().numpy()
 
         # then change names
-        self.canvas.title = "Predicted frame " + str(self.offset) + " of Waymo"
+        self.predicted_canvas.title = "Predicted frame " + str(self.offset) + " of Waymo"
         self.gt_canvas.title = "Ground truth frame " + str(self.offset) + " of Waymo"
 
         rgb_flow = (gt_flows - self.mins) / (self.maxs - self.mins)
@@ -120,7 +98,7 @@ class LaserScanVis:
             red = np.ones(raw_point_cloud_previous.shape) * np.array([1, 0, 0])
             green = np.ones(raw_point_cloud.shape) * np.array([0, 1, 0])
             concatenated_colors = np.concatenate((red, green))
-            self.scan_vis.set_data(concatenated_point_cloud,
+            self.predicted_vis.set_data(concatenated_point_cloud,
                                    face_color=concatenated_colors,
                                    edge_color=concatenated_colors,
                                    size=1)
@@ -130,22 +108,22 @@ class LaserScanVis:
                 rgb_flow_predicted = (predicted_flows - self.mins) / (self.maxs - self.mins)
                 # Need of clamping to 0 and 1, since may flow predictions can exceed it
                 rgb_flow_predicted = np.clip(rgb_flow_predicted, a_min=0., a_max=1.)
-                self.gt_vis.set_data(raw_point_cloud,
+                self.predicted_vis.set_data(raw_point_cloud,
                                        face_color=rgb_flow_predicted,
                                        edge_color=rgb_flow_predicted,
                                        size=1)
-                #self.gt_vis.update()
+                self.predicted_vis.update()
 
-            self.scan_vis.set_data(raw_point_cloud,
+            self.gt_vis.set_data(raw_point_cloud,
                                    face_color=rgb_flow,
                                    edge_color=rgb_flow,
                                    size=1)
 
-        self.scan_vis.update()
+        self.gt_vis.update()
 
     # interface
     def key_press(self, event):
-        self.canvas.events.key_press.block()
+        self.predicted_canvas.events.key_press.block()
         self.gt_canvas.events.key_press.block()
         if event.key == 'N':
             if self.offset < (self.end_frame - 1) and self.offset < len(self.dataset) - 1:
@@ -160,14 +138,14 @@ class LaserScanVis:
             self.destroy()
 
     def draw(self, event):
-        if self.canvas.events.key_press.blocked():
-            self.canvas.events.key_press.unblock()
+        if self.predicted_canvas.events.key_press.blocked():
+            self.predicted_canvas.events.key_press.unblock()
         if self.gt_canvas.events.key_press.blocked():
             self.gt_canvas.events.key_press.unblock()
 
     def destroy(self):
         # destroy the visualization
-        self.canvas.close()
+        self.predicted_canvas.close()
         self.gt_canvas.close()
         vispy.app.quit()
 
