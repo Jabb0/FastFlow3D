@@ -5,6 +5,7 @@ import torch
 
 from networks import PillarFeatureNetScatter, ConvEncoder, ConvDecoder, UnpillarNetworkScatter, PointFeatureNet
 from .utils import init_weights
+from utils import str2bool
 from collections import defaultdict
 
 
@@ -246,9 +247,10 @@ class FastFlow3DModelScatter(pl.LightningModule):
         # Loss computation
         labels = y[:, -1].int()  # Labels are actually integers so lets convert them
         # Remove datapoints with no flow assigned (class -1)
-        y_hat = y_hat[labels != -1]
-        y_flow = y_flow[labels != -1]
-        labels = labels[labels != -1]
+        mask = labels != -1
+        y_hat = y_hat[mask]
+        y_flow = y_flow[mask]
+        labels = labels[mask]
 
         loss, metrics = self.compute_metrics(y_flow, y_hat, labels)
 
@@ -264,9 +266,7 @@ class FastFlow3DModelScatter(pl.LightningModule):
 
         # Do not log the in depth metrics in the progress bar
         self.log(f'{phase}/loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        #print("---- metrics ----")
-        #print(metrics_dict)
-        self.log_dict(metrics_dict, on_step=True, on_epoch=True, prog_bar=False, logger=True)
+        self.log_dict(metrics_dict, on_step=False, on_epoch=True, prog_bar=False, logger=True)
 
     def training_step(self, batch, batch_idx):
         """
@@ -336,6 +336,6 @@ class FastFlow3DModelScatter(pl.LightningModule):
         """
         parser = ArgumentParser(parents=[parent_parser], add_help=False)
         parser.add_argument('--learning_rate', type=float, default=1e-6)
-        parser.add_argument('--use_group_norm', type=bool, default=False)
+        parser.add_argument('--use_group_norm', type=str2bool, nargs='?', const=True, default=False)
         parser.add_argument('--background_weight', default=0.1, type=float)
         return parser

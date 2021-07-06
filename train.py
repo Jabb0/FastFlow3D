@@ -1,4 +1,4 @@
-from argparse import ArgumentParser, ArgumentTypeError
+from argparse import ArgumentParser
 from pathlib import Path
 
 import pytorch_lightning as pl
@@ -10,17 +10,7 @@ from pytorch_lightning.loggers import WandbLogger
 from data import WaymoDataModule
 from models import FastFlow3DModel, FastFlow3DModelScatter
 #  from models.Flow3DModel import Flow3DModel
-
-
-def str2bool(v):
-    if isinstance(v, bool):
-        return v
-    if v.lower() in ('yes', 'true', 't', 'y', '1'):
-        return True
-    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
-        return False
-    else:
-        raise ArgumentTypeError('Boolean value expected.')
+from utils import str2bool
 
 
 def get_args():
