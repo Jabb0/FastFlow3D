@@ -50,6 +50,24 @@ class LaserScanVis:
         self.scan_view.add(self.scan_vis)
         visuals.XYZAxis(parent=self.scan_view.scene)
 
+        # new canvas prepared for visualizing data
+        self.gt_canvas = SceneCanvas(keys='interactive', show=True)
+        # interface (n next, b back, q quit, very simple)
+        self.gt_canvas.events.key_press.connect(self.key_press)
+        self.gt_canvas.events.draw.connect(self.draw)
+        # grid
+        self.gt_grid = self.gt_canvas.central_widget.add_grid()
+
+        # laserscan part
+        self.gt_view = vispy.scene.widgets.ViewBox(
+            border_color='white', parent=self.gt_canvas.scene)
+        self.gt_grid.add_widget(self.gt_view, 0, 0)
+        self.gt_vis = visuals.Markers()
+        self.gt_view.camera = 'turntable'
+        self.gt_view.add(self.gt_vis)
+        #self.gt_view.add(self.gt_vis)
+        visuals.XYZAxis(parent=self.gt_view.scene)
+
 
         # img canvas size
         self.multiplier = 1
@@ -57,45 +75,43 @@ class LaserScanVis:
         self.canvas_H = 64
 
         # new canvas for img
-        self.img_canvas = SceneCanvas(keys='interactive', show=True,
-                                      size=(self.canvas_W, self.canvas_H * self.multiplier))
+        #self.img_canvas = SceneCanvas(keys='interactive', show=True,
+        #                              size=(self.canvas_W, self.canvas_H * self.multiplier))
         # grid
-        self.img_grid = self.img_canvas.central_widget.add_grid()
+        #self.img_grid = self.img_canvas.central_widget.add_grid()
         # interface (n next, b back, q quit, very simple)
-        self.img_canvas.events.key_press.connect(self.key_press)
-        self.img_canvas.events.draw.connect(self.draw)
+        #self.img_canvas.events.key_press.connect(self.key_press)
+        #self.img_canvas.events.draw.connect(self.draw)
 
         # add a view for the depth
-        self.img_view = vispy.scene.widgets.ViewBox(
-            border_color='white', parent=self.img_canvas.scene)
-        self.img_grid.add_widget(self.img_view, 0, 0)
-        self.img_vis = visuals.Image(cmap='viridis')
-        self.img_view.add(self.img_vis)
+        #self.img_view = vispy.scene.widgets.ViewBox(
+        #    border_color='white', parent=self.img_canvas.scene)
+        #self.img_grid.add_widget(self.img_view, 0, 0)
+        #self.img_vis = visuals.Image(cmap='viridis')
+        #self.img_view.add(self.img_vis)
 
     def update_scan(self):
         # first open data
         self.dataset.pillarize(False)
         (previous_frame, current_frame), flows = self.dataset[self.offset]
-        flows = flows[:, :-1]  # Remove the label
+        gt_flows = flows[:, :-1]  # Remove the label
         raw_point_cloud = current_frame[:, 0:3]
         raw_point_cloud_previous = previous_frame[:, 0:3]
         # raw_point_cloud = current_frame[0][:, 0:3]
-        if self.model is not None:
+        if self.model is not None:  # Display predicted values
             self.dataset.pillarize(True)
             (previous_frame, current_frame), flows = self.dataset[self.offset]
             # We set batchsize of 1 for predictions
             batch = custom_collate_batch([((previous_frame, current_frame), flows)])
             with torch.no_grad():
-                #output = self.model((previous_frame_tensor, current_frame_tensor))
                 output = self.model(batch[0])
-            flows = output[0].data.cpu().numpy()
+            predicted_flows = output[0].data.cpu().numpy()
 
         # then change names
-        title = "scan " + str(self.offset) + " of Waymo"
-        self.canvas.title = title
-        self.img_canvas.title = title
+        self.canvas.title = "Predicted frame " + str(self.offset) + " of Waymo"
+        self.gt_canvas.title = "Ground truth frame " + str(self.offset) + " of Waymo"
 
-        rgb_flow = (flows - self.mins) / (self.maxs - self.mins)
+        rgb_flow = (gt_flows - self.mins) / (self.maxs - self.mins)
         # Need of clamping to 0 and 1, since may flow predictions can exceed it
         rgb_flow = np.clip(rgb_flow, a_min=0., a_max=1.)
 
@@ -110,17 +126,27 @@ class LaserScanVis:
                                    size=1)
 
         else:
+            if self.model is not None:
+                rgb_flow_predicted = (predicted_flows - self.mins) / (self.maxs - self.mins)
+                # Need of clamping to 0 and 1, since may flow predictions can exceed it
+                rgb_flow_predicted = np.clip(rgb_flow_predicted, a_min=0., a_max=1.)
+                self.gt_vis.set_data(raw_point_cloud,
+                                       face_color=rgb_flow_predicted,
+                                       edge_color=rgb_flow_predicted,
+                                       size=1)
+                #self.gt_vis.update()
+
             self.scan_vis.set_data(raw_point_cloud,
                                    face_color=rgb_flow,
                                    edge_color=rgb_flow,
                                    size=1)
 
-        self.img_vis.update()
+        self.scan_vis.update()
 
     # interface
     def key_press(self, event):
         self.canvas.events.key_press.block()
-        self.img_canvas.events.key_press.block()
+        self.gt_canvas.events.key_press.block()
         if event.key == 'N':
             if self.offset < (self.end_frame - 1) and self.offset < len(self.dataset) - 1:
                 self.offset += 1
@@ -136,13 +162,13 @@ class LaserScanVis:
     def draw(self, event):
         if self.canvas.events.key_press.blocked():
             self.canvas.events.key_press.unblock()
-        if self.img_canvas.events.key_press.blocked():
-            self.img_canvas.events.key_press.unblock()
+        if self.gt_canvas.events.key_press.blocked():
+            self.gt_canvas.events.key_press.unblock()
 
     def destroy(self):
         # destroy the visualization
         self.canvas.close()
-        self.img_canvas.close()
+        self.gt_canvas.close()
         vispy.app.quit()
 
     def run(self):
