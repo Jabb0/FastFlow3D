@@ -462,7 +462,7 @@ def custom_collate_batch(batch):
     # Return a tensor that consists of
     # the data batches consist of batches of tensors
     #   1. (batch_size, max_n_points, features) the point cloud batch
-    #   2. (batch_size, max_n_points, 2) the 2D grid_indices to map to
+    #   2. (batch_size, max_n_points) the 1D grid_indices encoding to map to
     #   3. (batch_size, max_n_points) the 0-1 encoding if the element is padded
     # Batch previous for the previous frame
     # Batch current for the current frame
