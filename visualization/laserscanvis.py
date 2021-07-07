@@ -7,7 +7,7 @@ from vispy.scene import visuals, SceneCanvas
 import numpy as np
 import torch
 from data.util import custom_collate_batch
-from matplotlib import cm
+import cv2
 
 
 class LaserScanVis:
@@ -77,20 +77,20 @@ class LaserScanVis:
         Returns: (N, 3) RGB values normalized between 0 and 1
 
         """
+        # https://stackoverflow.com/questions/28898346/visualize-optical-flow-with-color-model
+        # Use Hue, Saturation, Value colour model
+        hsv = np.zeros((flows.shape[0], 1, 3), dtype=np.uint8)
+        hsv[..., 1] = 255
 
-        #rgb_flow = (flows - self.mins) / (self.maxs - self.mins)
-        #rgb_flow = np.clip(rgb_flow, a_min=0., a_max=1.)
-        #return rgb_flow
+        mag, ang = cv2.cartToPolar(flows[..., 0], flows[..., 1])
+        hsv[..., 0] = ang * 180 / np.pi / 2
+        hsv[..., 2] = cv2.normalize(mag, None, 0, 255, cv2.NORM_MINMAX)
+        rgb = cv2.cvtColor(hsv, cv2.COLOR_HSV2RGB)
 
-        # https://matplotlib.org/stable/tutorials/colors/colormaps.html
-        angles = np.arctan2(flows[:, 1], flows[:, 0])  # in radians, [-pi, pi]
-        # Normalize form 0 to 255
-        angles_normalized = (((angles + np.pi) / (np.pi*2.)) * 255).astype(int)
-        rgb = cm.hsv(angles_normalized)[:, :-1] # hsv is cyclic
-        magnitude = np.sqrt(np.sum(flows**2, axis=1))
-        magnitude /= magnitude.max()
-        return rgb * magnitude[:, np.newaxis]
+        rgb = rgb[:, 0, :] / 255.  # Normalize to 1
+        rgb[rgb < 0.2] = 0.2  # Just for visualize not moving points
 
+        return rgb
 
     def update_scan(self):
         # first open data
@@ -114,9 +114,6 @@ class LaserScanVis:
         self.gt_canvas.title = "Ground truth frame " + str(self.offset) + " of Waymo"
 
         rgb_flow = self.flow_to_rgb(gt_flows)
-        #rgb_flow = (gt_flows - self.mins) / (self.maxs - self.mins)
-        # Need of clamping to 0 and 1, since may flow predictions can exceed it
-        #rgb_flow = np.clip(rgb_flow, a_min=0., a_max=1.)
 
         if self.vis_previous_current:
             concatenated_point_cloud = np.concatenate((raw_point_cloud_previous, raw_point_cloud))
@@ -130,9 +127,7 @@ class LaserScanVis:
 
         else:
             if self.model is not None:
-                rgb_flow_predicted = (predicted_flows - self.mins) / (self.maxs - self.mins)
-                # Need of clamping to 0 and 1, since may flow predictions can exceed it
-                rgb_flow_predicted = np.clip(rgb_flow_predicted, a_min=0., a_max=1.)
+                rgb_flow_predicted = self.flow_to_rgb(predicted_flows)
                 self.predicted_vis.set_data(raw_point_cloud,
                                        face_color=rgb_flow_predicted,
                                        edge_color=rgb_flow_predicted,
