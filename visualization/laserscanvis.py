@@ -7,6 +7,7 @@ from vispy.scene import visuals, SceneCanvas
 import numpy as np
 import torch
 from data.util import custom_collate_batch
+from matplotlib import cm
 
 
 class LaserScanVis:
@@ -67,6 +68,29 @@ class LaserScanVis:
         self.predicted_view.add(self.predicted_vis)
         visuals.XYZAxis(parent=self.predicted_view.scene)
 
+    def flow_to_rgb(self, flows):
+        """
+        Convert a flow to a rgb value
+        Args:
+            flows: (N, 3) vector flow
+
+        Returns: (N, 3) RGB values normalized between 0 and 1
+
+        """
+
+        #rgb_flow = (flows - self.mins) / (self.maxs - self.mins)
+        #rgb_flow = np.clip(rgb_flow, a_min=0., a_max=1.)
+        #return rgb_flow
+
+        # https://matplotlib.org/stable/tutorials/colors/colormaps.html
+        angles = np.arctan2(flows[:, 1], flows[:, 0])  # in radians, [-pi, pi]
+        # Normalize form 0 to 255
+        angles_normalized = (((angles + np.pi) / (np.pi*2.)) * 255).astype(int)
+        rgb = cm.hsv(angles_normalized)[:, :-1] # hsv is cyclic
+        magnitude = np.sqrt(np.sum(flows**2, axis=1))
+        magnitude /= magnitude.max()
+        return rgb * magnitude[:, np.newaxis]
+
 
     def update_scan(self):
         # first open data
@@ -89,9 +113,10 @@ class LaserScanVis:
         self.predicted_canvas.title = "Predicted frame " + str(self.offset) + " of Waymo"
         self.gt_canvas.title = "Ground truth frame " + str(self.offset) + " of Waymo"
 
-        rgb_flow = (gt_flows - self.mins) / (self.maxs - self.mins)
+        rgb_flow = self.flow_to_rgb(gt_flows)
+        #rgb_flow = (gt_flows - self.mins) / (self.maxs - self.mins)
         # Need of clamping to 0 and 1, since may flow predictions can exceed it
-        rgb_flow = np.clip(rgb_flow, a_min=0., a_max=1.)
+        #rgb_flow = np.clip(rgb_flow, a_min=0., a_max=1.)
 
         if self.vis_previous_current:
             concatenated_point_cloud = np.concatenate((raw_point_cloud_previous, raw_point_cloud))
