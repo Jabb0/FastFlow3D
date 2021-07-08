@@ -77,24 +77,27 @@ class BaseModel(pl.LightningModule):
             stationary = L2_label[flow_vector_magnitude_label < self._min_velocity]  # Extract stationary flows
             moving = L2_label[flow_vector_magnitude_label >= self._min_velocity]  # Extract flows in movement
 
-            mean_label_all = L2_label.mean()
-            mean_label_moving = moving.mean()
-            mean_label_stationary = stationary.mean()
-
-            if L2_label != torch.Size([]):
+            if L2_label.numel() != 0:
+                mean_label_all = L2_label.mean()
                 all_labels[class_name] = mean_label_all
-            moving_labels[class_name] = mean_label_moving
-            stationary_labels[class_name] = mean_label_stationary
+            if moving.numel() != 0:
+                mean_label_moving = moving.mean()
+                moving_labels[class_name] = mean_label_moving
+            if stationary.numel() != 0:
+                mean_label_stationary = stationary.mean()
+                stationary_labels[class_name] = mean_label_stationary
 
             # ----------- Computing L2 accuracy with threshold -------------
             for threshold, name in self._thresholds:
-                stationary_accuracy = (stationary <= threshold).float().mean()
-                moving_accuracy = (moving <= threshold).float().mean()
-                all_accuracy = (L2_label <= threshold).float().mean()
-
-                L2_thresholds[name]['all'][class_name] = all_accuracy
-                L2_thresholds[name]['moving'][class_name] = moving_accuracy
-                L2_thresholds[name]['stationary'][class_name] = stationary_accuracy
+                if L2_label.numel() != 0:
+                    all_accuracy = (L2_label <= threshold).float().mean()
+                    L2_thresholds[name]['all'][class_name] = all_accuracy
+                if stationary.numel() != 0:
+                    stationary_accuracy = (stationary <= threshold).float().mean()
+                    L2_thresholds[name]['stationary'][class_name] = stationary_accuracy
+                if moving.numel() != 0:
+                    moving_accuracy = (moving <= threshold).float().mean()
+                    L2_thresholds[name]['moving'][class_name] = moving_accuracy
 
         L2_mean['all'] = all_labels
         L2_mean['moving'] = moving_labels
