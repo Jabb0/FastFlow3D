@@ -77,11 +77,12 @@ class BaseModel(pl.LightningModule):
             stationary = L2_label[flow_vector_magnitude_label < self._min_velocity]  # Extract stationary flows
             moving = L2_label[flow_vector_magnitude_label >= self._min_velocity]  # Extract flows in movement
 
-            mean_label_all = moving.mean()
-            mean_label_moving = stationary.mean()
-            mean_label_stationary = L2_label.mean()
+            mean_label_all = L2_label.mean()
+            mean_label_moving = moving.mean()
+            mean_label_stationary = stationary.mean()
 
-            all_labels[class_name] = mean_label_all
+            if L2_label != torch.Size([]):
+                all_labels[class_name] = mean_label_all
             moving_labels[class_name] = mean_label_moving
             stationary_labels[class_name] = mean_label_stationary
 
@@ -167,7 +168,8 @@ class BaseModel(pl.LightningModule):
         # Automatically reduces this metric after each epoch
         self.log_metrics(loss, metrics, phase)
         # Return loss for backpropagation
-        #print(f"training step finished, loss {loss}")
+        print(f"training step finished, loss {loss}")
+        print(f"training step finished, metrics {metrics}")
         return loss
 
     def validation_step(self, batch, batch_idx):
