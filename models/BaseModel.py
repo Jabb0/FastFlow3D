@@ -171,8 +171,6 @@ class BaseModel(pl.LightningModule):
         # Automatically reduces this metric after each epoch
         self.log_metrics(loss, metrics, phase)
         # Return loss for backpropagation
-        print(f"training step finished, loss {loss}")
-        print(f"training step finished, metrics {metrics}")
         return loss
 
     def validation_step(self, batch, batch_idx):
