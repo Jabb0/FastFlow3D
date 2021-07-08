@@ -266,7 +266,7 @@ class FastFlow3DModelScatter(pl.LightningModule):
 
         # Do not log the in depth metrics in the progress bar
         self.log(f'{phase}/loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        self.log_dict(metrics_dict, on_step=False, on_epoch=True, prog_bar=False, logger=True)
+        # self.log_dict(metrics_dict, on_step=False, on_epoch=True, prog_bar=False, logger=True)
 
     def training_step(self, batch, batch_idx):
         """
