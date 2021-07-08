@@ -102,6 +102,7 @@ class BaseModel(pl.LightningModule):
         metrics = {'mean': L2_mean}
         metrics.update(L2_thresholds)
         return loss, metrics
+        #return loss, {}
 
     def general_step(self, batch, batch_idx, mode):
         """
@@ -148,7 +149,7 @@ class BaseModel(pl.LightningModule):
 
         # Do not log the in depth metrics in the progress bar
         self.log(f'{phase}/loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        # self.log_dict(metrics_dict, on_step=False, on_epoch=True, prog_bar=False, logger=True)
+        self.log_dict(metrics_dict, on_step=True, on_epoch=True, prog_bar=False, logger=True)
 
     def training_step(self, batch, batch_idx):
         """
@@ -166,6 +167,7 @@ class BaseModel(pl.LightningModule):
         # Automatically reduces this metric after each epoch
         self.log_metrics(loss, metrics, phase)
         # Return loss for backpropagation
+        #print(f"training step finished, loss {loss}")
         return loss
 
     def validation_step(self, batch, batch_idx):

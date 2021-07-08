@@ -161,7 +161,8 @@ def cli():
                                             progress_bar_refresh_rate=25,  # Prevents Google Colab crashes
                                             gpus=1 if torch.cuda.is_available() else 0,  # -1 means "all GPUs"
                                             logger=logger,
-                                            accumulate_grad_batches=gradient_batch_acc
+                                            accumulate_grad_batches=gradient_batch_acc,
+                                            log_every_n_steps=5
                                             )  # Add Trainer hparams if desired
     # The actual train loop
     trainer.fit(model, waymo_data_module)
