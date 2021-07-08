@@ -40,6 +40,7 @@ def get_args():
     parser.add_argument('--architecture', default='FastFlowNet', type=str)
     parser.add_argument('--resume_from_checkpoint', type=str)
     parser.add_argument('--max_time', type=str)
+    parser.add_argument('--background_weight', default=0.1, type=float)
 
     temp_args, _ = parser.parse_known_args()
     # Add the correct model specific args
