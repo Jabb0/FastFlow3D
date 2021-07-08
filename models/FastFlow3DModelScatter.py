@@ -35,12 +35,6 @@ class FastFlow3DModelScatter(BaseModel):
         self._n_pillars_x = n_pillars_x
         self._background_weight = background_weight
 
-        # ----- Metrics information -----
-        # TODO delete no flow class
-        self._classes = [(0, 'background'), (1, 'vehicle'), (2, 'pedestrian'), (3, 'sign'), (4, 'cyclist')]
-        self._thresholds = [(1, '1_1'), (0.1, '1_10')]  # 1/1 = 1, 1/10 = 0.1
-        self._min_velocity = 0.5  # If velocity higher than 0.5 then it is considered as the object is moving
-
     def _transform_point_cloud_to_embeddings(self, pc, mask):
         pc_flattened = pc.flatten(0, 1)
         mask_flattened = mask.flatten(0, 1)
