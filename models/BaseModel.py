@@ -55,7 +55,7 @@ class BaseModel(pl.LightningModule):
 
         # Use detach as those metrics do not need a gradient
         L2_without_weighting = squared_root_difference.detach()
-        flow_vector_magnitude = torch.sqrt(torch.sum(y_hat.detach() ** 2, dim=1))
+        flow_vector_magnitude_gt = torch.sqrt(torch.sum(y.detach() ** 2, dim=1))
 
         L2_mean = {}
         nested_dict = lambda: defaultdict(nested_dict)
@@ -72,7 +72,7 @@ class BaseModel(pl.LightningModule):
 
             # with label_mask we only take items of label we are iterating
             L2_label = L2_without_weighting[label_mask]
-            flow_vector_magnitude_label = flow_vector_magnitude[label_mask]
+            flow_vector_magnitude_label = flow_vector_magnitude_gt[label_mask]
 
             stationary = L2_label[flow_vector_magnitude_label < self._min_velocity]  # Extract stationary flows
             moving = L2_label[flow_vector_magnitude_label >= self._min_velocity]  # Extract flows in movement
