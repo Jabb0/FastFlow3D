@@ -49,9 +49,7 @@ def get_args():
         else:
             parser = FastFlow3DModelScatter.add_model_specific_args(parser)
     elif temp_args.architecture == 'FlowNet':  # baseline
-        # parser = Flow3DModel.add_model_specific_args(parser)
-        print(f"ERROR: Flow3DModel (baseline) has been commented")
-        exit(1)
+        parser = Flow3DModelV2.add_model_specific_args(parser)
     else:
         raise ValueError("no architecture {0} implemented".format(temp_args.architecture))
 
@@ -111,7 +109,8 @@ def cli():
                                         batch_size=args.batch_size,
                                         has_test=args.test_data_available,
                                         num_workers=args.num_workers,
-                                        scatter_collate=not args.use_sparse_lookup,
+                                        #  Only scatter for the FastFlowNet model
+                                        scatter_collate=args.architecture == 'FastFlowNet',
                                         n_pillars_x=n_pillars_x,
                                         #  Only pillarization for the FastFlowNet model
                                         pillarization=args.architecture == 'FastFlowNet')

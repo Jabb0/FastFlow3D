@@ -48,9 +48,9 @@ class Flow3DModelV2(BaseModel):
         super(Flow3DModelV2, self).__init__()
         self.save_hyperparameters()  # Store the constructor parameters into self.hparams
 
-        self._point_feature_net = PointFeatureNetV2(in_channels=5)
+        self._point_feature_net = PointFeatureNetV2(in_channels=5, n_samples=1)
         self._point_mixture = PointMixtureNetV2()
-        self._flow_refinement = FlowRefinementNetV2(in_channels=512)
+        self._flow_refinement = FlowRefinementNetV2(in_channels=512, n_samples=1)
         self._fc = torch.nn.Linear(in_features=128, out_features=3)
 
     def forward(self, x):
