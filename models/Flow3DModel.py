@@ -73,8 +73,9 @@ class Flow3DModelV2(BaseModel):
         #  and use a third collate function that does not process the grid indices
         #   Otherwise these tensor operations might have additional memory
         #   consumption because of the torch computation graph?
-        previous_batch_pc = transform_data(previous_batch_pc)
-        current_batch_pc = transform_data(current_batch_pc)
+        
+        #previous_batch_pc = transform_data(previous_batch_pc)
+        #current_batch_pc = transform_data(current_batch_pc)
 
         batch_size, n_points_prev, _ = previous_batch_pc.shape
         batch_size, n_points_cur, _ = current_batch_pc.shape

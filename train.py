@@ -109,8 +109,7 @@ def cli():
                                         batch_size=args.batch_size,
                                         has_test=args.test_data_available,
                                         num_workers=args.num_workers,
-                                        #  Only scatter for the FastFlowNet model
-                                        scatter_collate=args.architecture == 'FastFlowNet',
+                                        scatter_collate=not args.use_sparse_lookup,
                                         n_pillars_x=n_pillars_x,
                                         #  Only pillarization for the FastFlowNet model
                                         pillarization=args.architecture == 'FastFlowNet')
