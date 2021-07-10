@@ -9,7 +9,7 @@ from pytorch_lightning.loggers import WandbLogger
 
 from data import WaymoDataModule
 from models import FastFlow3DModel, FastFlow3DModelScatter
-#  from models.Flow3DModel import Flow3DModel
+from models.Flow3DModel import Flow3DModelV2
 from utils import str2bool
 
 
@@ -102,7 +102,7 @@ def cli():
                                            use_group_norm=args.use_group_norm)
 
     elif args.architecture == 'FlowNet':  # baseline
-        model = Flow3DModel(learning_rate=args.learning_rate)
+        model = Flow3DModelV2(learning_rate=args.learning_rate)
     else:
         raise ValueError("no architecture {0} implemented".format(args.architecture))
     waymo_data_module = WaymoDataModule(dataset_path, grid_cell_size=grid_cell_size, x_min=args.x_min,
@@ -112,7 +112,9 @@ def cli():
                                         has_test=args.test_data_available,
                                         num_workers=args.num_workers,
                                         scatter_collate=not args.use_sparse_lookup,
-                                        n_pillars_x=n_pillars_x)
+                                        n_pillars_x=n_pillars_x,
+                                        #  Only pillarization for the FastFlowNet model
+                                        pillarization=args.architecture == 'FastFlowNet')
 
     # Initialize the weights and biases logger.
     # Name is the name of this run
