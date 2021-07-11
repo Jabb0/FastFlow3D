@@ -20,22 +20,17 @@ class WaymoDataModule(pl.LightningDataModule):
                  batch_size: int = 32,
                  has_test=False,
                  num_workers=1,
-                 scatter_collate=True,
-                 pillarization = True):
+                 scatter_collate=True):
         super(WaymoDataModule, self).__init__()
         self._dataset_directory = Path(dataset_directory)
         self._batch_size = batch_size
         self._train_ = None
         self._val_ = None
         self._test_ = None
-        # This is a transformation class that applies to pillarization
-        self._pillarization = pillarization
-        if self._pillarization:
-            self._pillarization_transform = ApplyPillarization(grid_cell_size=grid_cell_size, x_min=x_min,
+
+        self._pillarization_transform = ApplyPillarization(grid_cell_size=grid_cell_size, x_min=x_min,
                                                                y_min=y_min, z_min=z_min, z_max=z_max,
                                                                n_pillars_x=n_pillars_x)
-        else:
-            self._pillarization_transform = None
 
         # This returns a function that removes points that should not be included in the pillarization.
         # It also removes the labels if given.

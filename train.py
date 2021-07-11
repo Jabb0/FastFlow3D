@@ -112,9 +112,7 @@ def cli():
                                         has_test=args.test_data_available,
                                         num_workers=args.num_workers,
                                         scatter_collate=not args.use_sparse_lookup,
-                                        n_pillars_x=n_pillars_x,
-                                        #  Only pillarization for the FastFlowNet model
-                                        pillarization=args.architecture == 'FastFlowNet')
+                                        n_pillars_x=n_pillars_x)
 
     # Initialize the weights and biases logger.
     # Name is the name of this run
