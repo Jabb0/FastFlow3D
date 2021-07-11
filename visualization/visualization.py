@@ -7,7 +7,6 @@ import yaml
 from data.util import ApplyPillarization, drop_points_function
 from laserscanvis import LaserScanVis
 from models.FastFlow3DModelScatter import FastFlow3DModelScatter
-from models.Flow3DModel import Flow3DModelV2
 
 
 # vispy
@@ -73,6 +72,7 @@ if __name__ == '__main__':
                     model.eval()
                     print("DISPLAYING PREDICTED DATA WITH FASTFLOWNET")
                 elif architecture == "FlowNet":
+                    from models.Flow3DModel import Flow3DModelV2
                     model = Flow3DModelV2.load_from_checkpoint(args.model_path)
                     model.eval()
                     print("DISPLAYING PREDICTED DATA WITH FLOWNET (baseline)")
