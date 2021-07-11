@@ -41,7 +41,7 @@ def get_args():
     parser.add_argument('--resume_from_checkpoint', type=str)
     parser.add_argument('--n_samples', default=2, type=int)
     parser.add_argument('--max_time', type=str)
-    parser.add_argument('--n_points', default=None, type=float)
+    parser.add_argument('--n_points', default=None, type=int)
 
     temp_args, _ = parser.parse_known_args()
     # Add the correct model specific args
