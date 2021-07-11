@@ -1,4 +1,5 @@
 import torch
+from networks.flownet3d.util import make_mlp
 from networks.flownet3d.layersv2 import SetConvUpLayerV2
 
 
