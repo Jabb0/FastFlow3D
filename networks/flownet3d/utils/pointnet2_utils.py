@@ -27,7 +27,7 @@ except ImportError:
         extra_include_paths=[osp.join(_ext_src_root, "include")],
         extra_cflags=["-O3"],
         extra_cuda_cflags=["-O3", "-Xfatbin", "-compress-all"],
-        with_cuda=True,
+        with_cuda=False,
     )
 
 

@@ -117,6 +117,9 @@ class WaymoDataset(Dataset):
     def set_point_cloud_transform(self, point_cloud_transform):
         self._point_cloud_transform = point_cloud_transform
 
+    def set_n_points(self, n_points):
+        self._n_points = n_points
+
     def read_point_cloud_pair(self, index):
         """
         Read from disk the current and previous point cloud given an index
