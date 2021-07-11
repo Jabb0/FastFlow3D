@@ -39,6 +39,7 @@ def get_args():
     parser.add_argument('--use_sparse_lookup', type=str2bool, nargs='?', const=True, default=False)
     parser.add_argument('--architecture', default='FastFlowNet', type=str)
     parser.add_argument('--resume_from_checkpoint', type=str)
+    parser.add_argument('--n_samples', default=2, type=int)
     parser.add_argument('--max_time', type=str)
 
     temp_args, _ = parser.parse_known_args()
@@ -100,7 +101,7 @@ def cli():
                                            use_group_norm=args.use_group_norm)
 
     elif args.architecture == 'FlowNet':  # baseline
-        model = Flow3DModelV2(learning_rate=args.learning_rate)
+        model = Flow3DModelV2(learning_rate=args.learning_rate, n_samples=args.n_samples)
     else:
         raise ValueError("no architecture {0} implemented".format(args.architecture))
     waymo_data_module = WaymoDataModule(dataset_path, grid_cell_size=grid_cell_size, x_min=args.x_min,
@@ -138,7 +139,8 @@ def cli():
                                       'full_batch_size': args.full_batch_size,
                                       'has_test': args.test_data_available,
                                       'num_workers': args.num_workers,
-                                      'scatter_collate': args.use_sparse_lookup
+                                      'scatter_collate': args.use_sparse_lookup,
+                                      'architecture': args.architecture
                                       }
         logger.log_hyperparams(additional_hyperparameters)
     else:

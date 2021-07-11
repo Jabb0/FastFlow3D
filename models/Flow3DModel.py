@@ -44,13 +44,15 @@ class Flow3DModelV2(BaseModel):
     def __init__(self,
                  learning_rate=1e-6,
                  adam_beta_1=0.9,
-                 adam_beta_2=0.999):
+                 adam_beta_2=0.999,
+                 n_samples=2):
         super(Flow3DModelV2, self).__init__()
+        self._n_samples=n_samples
         self.save_hyperparameters()  # Store the constructor parameters into self.hparams
 
-        self._point_feature_net = PointFeatureNetV2(in_channels=5, n_samples=8)
+        self._point_feature_net = PointFeatureNetV2(in_channels=5, n_samples=self._n_samples)
         self._point_mixture = PointMixtureNetV2()
-        self._flow_refinement = FlowRefinementNetV2(in_channels=512, n_samples=8)
+        self._flow_refinement = FlowRefinementNetV2(in_channels=512, n_samples=self._n_samples)
         self._fc = torch.nn.Linear(in_features=128, out_features=3)
 
     def forward(self, x):
@@ -74,8 +76,8 @@ class Flow3DModelV2(BaseModel):
         #   Otherwise these tensor operations might have additional memory
         #   consumption because of the torch computation graph?
         
-        #previous_batch_pc = transform_data(previous_batch_pc)
-        #current_batch_pc = transform_data(current_batch_pc)
+        previous_batch_pc = transform_data(previous_batch_pc)
+        current_batch_pc = transform_data(current_batch_pc)
 
         batch_size, n_points_prev, _ = previous_batch_pc.shape
         batch_size, n_points_cur, _ = current_batch_pc.shape
