@@ -41,6 +41,7 @@ def get_args():
     parser.add_argument('--resume_from_checkpoint', type=str)
     parser.add_argument('--n_samples', default=2, type=int)
     parser.add_argument('--max_time', type=str)
+    parser.add_argument('--n_points', default=None, type=float)
 
     temp_args, _ = parser.parse_known_args()
     # Add the correct model specific args
@@ -111,7 +112,8 @@ def cli():
                                         has_test=args.test_data_available,
                                         num_workers=args.num_workers,
                                         scatter_collate=not args.use_sparse_lookup,
-                                        n_pillars_x=n_pillars_x)
+                                        n_pillars_x=n_pillars_x,
+                                        n_points=args.n_points)
 
     # Initialize the weights and biases logger.
     # Name is the name of this run
@@ -140,7 +142,8 @@ def cli():
                                       'has_test': args.test_data_available,
                                       'num_workers': args.num_workers,
                                       'scatter_collate': args.use_sparse_lookup,
-                                      'architecture': args.architecture
+                                      'architecture': args.architecture,
+                                      'n_points': args.n_points
                                       }
         logger.log_hyperparams(additional_hyperparameters)
     else:
