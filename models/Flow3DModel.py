@@ -4,12 +4,12 @@ from models.BaseModel import BaseModel
 
 from networks.flownet3d.util import transform_data
 
-from networks.flownet3d.pointFeatureNet import PointFeatureNetV2
-from networks.flownet3d.pointMixture import PointMixtureNetV2
-from networks.flownet3d.flowRefinement import FlowRefinementNetV2
+from networks.flownet3d.pointFeatureNet import PointFeatureNet
+from networks.flownet3d.pointMixture import PointMixtureNet
+from networks.flownet3d.flowRefinement import FlowRefinementNet
 
 
-class Flow3DModelV2(BaseModel):
+class Flow3DModel(BaseModel):
     """
     FlowNet3D consists of three main blocks:
         1. PointFeatureNet:
@@ -46,13 +46,13 @@ class Flow3DModelV2(BaseModel):
                  adam_beta_1=0.9,
                  adam_beta_2=0.999,
                  n_samples=2):
-        super(Flow3DModelV2, self).__init__()
+        super(Flow3DModel, self).__init__()
         self._n_samples=n_samples
         self.save_hyperparameters()  # Store the constructor parameters into self.hparams
 
-        self._point_feature_net = PointFeatureNetV2(in_channels=5, n_samples=self._n_samples)
-        self._point_mixture = PointMixtureNetV2(n_samples=self._n_samples)
-        self._flow_refinement = FlowRefinementNetV2(in_channels=512, n_samples=self._n_samples)
+        self._point_feature_net = PointFeatureNet(in_channels=5, n_samples=self._n_samples)
+        self._point_mixture = PointMixtureNet(n_samples=self._n_samples)
+        self._flow_refinement = FlowRefinementNet(in_channels=512, n_samples=self._n_samples)
         self._fc = torch.nn.Linear(in_features=128, out_features=3)
 
     def forward(self, x):

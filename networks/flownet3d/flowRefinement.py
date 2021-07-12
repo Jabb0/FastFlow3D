@@ -1,9 +1,8 @@
 import torch
-from networks.flownet3d.util import make_mlp
-from networks.flownet3d.layersv2 import SetConvUpLayerV2
+from networks.flownet3d.layers import SetConvUpLayer
 
 
-class FlowRefinementNetV2(torch.nn.Module):
+class FlowRefinementNet(torch.nn.Module):
     """
     FlowRefinementNet which is the last part of FlowNet3D and consists of four SetUpConvLayers
 
@@ -13,10 +12,10 @@ class FlowRefinementNetV2(torch.nn.Module):
        https://arxiv.org/pdf/1806.01411.pdf
     """
     def __init__(self, in_channels: int, n_samples: int = 2):
-        super(FlowRefinementNetV2, self).__init__()
+        super(FlowRefinementNet, self).__init__()
         self.n_samples = n_samples
 
-        self.setup_conv_1 = SetConvUpLayerV2(
+        self.setup_conv_1 = SetConvUpLayer(
             mlp=[in_channels, 128, 128, 256],
             sample_rate=4.0,
             radius=4.0,
@@ -24,7 +23,7 @@ class FlowRefinementNetV2(torch.nn.Module):
             use_xyz=True,
         )
 
-        self.setup_conv_2 = SetConvUpLayerV2(
+        self.setup_conv_2 = SetConvUpLayer(
             mlp=[256, 128, 128, 256],
             sample_rate=4.0,
             radius=2.0,
@@ -32,7 +31,7 @@ class FlowRefinementNetV2(torch.nn.Module):
             use_xyz=True,
         )
 
-        self.setup_conv_3 = SetConvUpLayerV2(
+        self.setup_conv_3 = SetConvUpLayer(
             mlp=[256, 128, 128, 128],
             sample_rate=4.0,
             radius=1.0,
@@ -40,7 +39,7 @@ class FlowRefinementNetV2(torch.nn.Module):
             use_xyz=True,
         )
 
-        self.setup_conv_4 = SetConvUpLayerV2(
+        self.setup_conv_4 = SetConvUpLayer(
             mlp=[128, 128, 128, 128],
             sample_rate=4.0,
             radius=0.5,
