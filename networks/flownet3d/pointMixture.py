@@ -14,9 +14,9 @@ class PointMixtureNetV2(torch.nn.Module):
     .. FlowNet3D: Learning Scene Flow in 3D Point Clouds: Xingyu Liu, Charles R. Qi, Leonidas J. Guibas
        https://arxiv.org/pdf/1806.01411.pdf
     """
-    def __init__(self):
+    def __init__(self, n_samples: int = 2):
         super(PointMixtureNetV2, self).__init__()
-        self.n_samples = 2
+        self.n_samples = n_samples
         self.fe_1 = FlowEmbeddingLayerV2(mlp=[(2*128), 128, 128, 128],
                                      sample_rate=1.0,
                                      radius=5.0,
