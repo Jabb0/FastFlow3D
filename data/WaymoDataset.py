@@ -17,12 +17,14 @@ class WaymoDataset(Dataset):
 
     def __init__(self, data_path,
                  drop_invalid_point_function=None,
-                 point_cloud_transform=None):
+                 point_cloud_transform=None,
+                 n_points=None):
         """
         Args:
             data_path (string): Folder with the compressed data.
             transform (callable, optional): Optional transform to be applied
                 on a sample.
+            n_points (int): Number of maximum points. If None all points will be used
         """
         super().__init__()
         # Config parameters
@@ -45,6 +47,8 @@ class WaymoDataset(Dataset):
         except FileNotFoundError:
             raise FileNotFoundError("Metadata not found, please create it by running preprocess.py")
 
+        self._n_points = n_points
+
     def __len__(self) -> int:
         return len(self.metadata['look_up_table'])
 
@@ -59,6 +63,9 @@ class WaymoDataset(Dataset):
         current_frame, previous_frame = self.read_point_cloud_pair(index)
         current_frame_pose, previous_frame_pose = self.get_pose_transform(index)
         flows = self.get_flows(current_frame)
+
+        if self._n_points is not None:
+            current_frame, previous_frame, flows = self.subsample_points(current_frame, previous_frame, flows)
 
         # G_T_C -> Global_TransformMatrix_Current
         G_T_C = np.reshape(np.array(current_frame_pose), [4, 4])
@@ -83,6 +90,18 @@ class WaymoDataset(Dataset):
 
         return (previous_frame, current_frame), flows
 
+    def subsample_points(self, current_frame, previous_frame, flows):
+        # current_frame.shape[0] == flows.shape[0]
+        if current_frame.shape[0] > self._n_points:
+            indexes_current_frame = np.linspace(0, current_frame.shape[0]-1, num=self._n_points).astype(int)
+            current_frame = current_frame[indexes_current_frame, :]
+            flows = flows[indexes_current_frame, :]
+        if previous_frame.shape[0] > self._n_points:
+            indexes_previous_frame = np.linspace(0, previous_frame.shape[0]-1, num=self._n_points).astype(int)
+            previous_frame = previous_frame[indexes_previous_frame, :]
+        return current_frame, previous_frame, flows
+
+
     def pillarize(self, apply_pillarization):
         self._apply_pillarization = apply_pillarization
 
@@ -97,6 +116,9 @@ class WaymoDataset(Dataset):
 
     def set_point_cloud_transform(self, point_cloud_transform):
         self._point_cloud_transform = point_cloud_transform
+
+    def set_n_points(self, n_points):
+        self._n_points = n_points
 
     def read_point_cloud_pair(self, index):
         """

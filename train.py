@@ -9,7 +9,6 @@ from pytorch_lightning.loggers import WandbLogger
 
 from data import WaymoDataModule
 from models import FastFlow3DModel, FastFlow3DModelScatter
-#  from models.Flow3DModel import Flow3DModel
 from utils import str2bool
 
 
@@ -39,7 +38,9 @@ def get_args():
     parser.add_argument('--use_sparse_lookup', type=str2bool, nargs='?', const=True, default=False)
     parser.add_argument('--architecture', default='FastFlowNet', type=str)
     parser.add_argument('--resume_from_checkpoint', type=str)
+    parser.add_argument('--n_samples', default=2, type=int)
     parser.add_argument('--max_time', type=str)
+    parser.add_argument('--n_points', default=None, type=int)
 
     temp_args, _ = parser.parse_known_args()
     # Add the correct model specific args
@@ -49,9 +50,8 @@ def get_args():
         else:
             parser = FastFlow3DModelScatter.add_model_specific_args(parser)
     elif temp_args.architecture == 'FlowNet':  # baseline
-        # parser = Flow3DModel.add_model_specific_args(parser)
-        print(f"ERROR: Flow3DModel (baseline) has been commented")
-        exit(1)
+        from models.Flow3DModel import Flow3DModelV2
+        parser = Flow3DModelV2.add_model_specific_args(parser)
     else:
         raise ValueError("no architecture {0} implemented".format(temp_args.architecture))
 
@@ -102,7 +102,8 @@ def cli():
                                            use_group_norm=args.use_group_norm)
 
     elif args.architecture == 'FlowNet':  # baseline
-        model = Flow3DModel(learning_rate=args.learning_rate)
+        from models.Flow3DModel import Flow3DModelV2
+        model = Flow3DModelV2(learning_rate=args.learning_rate, n_samples=args.n_samples)
     else:
         raise ValueError("no architecture {0} implemented".format(args.architecture))
     waymo_data_module = WaymoDataModule(dataset_path, grid_cell_size=grid_cell_size, x_min=args.x_min,
@@ -112,7 +113,8 @@ def cli():
                                         has_test=args.test_data_available,
                                         num_workers=args.num_workers,
                                         scatter_collate=not args.use_sparse_lookup,
-                                        n_pillars_x=n_pillars_x)
+                                        n_pillars_x=n_pillars_x,
+                                        n_points=args.n_points)
 
     # Initialize the weights and biases logger.
     # Name is the name of this run
@@ -140,7 +142,9 @@ def cli():
                                       'full_batch_size': args.full_batch_size,
                                       'has_test': args.test_data_available,
                                       'num_workers': args.num_workers,
-                                      'scatter_collate': args.use_sparse_lookup
+                                      'scatter_collate': args.use_sparse_lookup,
+                                      'architecture': args.architecture,
+                                      'n_points': args.n_points
                                       }
         logger.log_hyperparams(additional_hyperparameters)
     else:

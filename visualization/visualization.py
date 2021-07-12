@@ -39,14 +39,6 @@ if __name__ == '__main__':
     if args.start_frame > args.end_frame:
         raise ValueError("Start frame cannot be greater than end frame")
 
-    if args.model_path is not None:
-        model = FastFlow3DModelScatter.load_from_checkpoint(args.model_path)
-        model.eval()
-        print("DISPLAYING PREDICTED DATA")
-    else:
-        model = None
-        print("DISPLAYING GROUND TRUTH DATA - NO MODEL HAS BEEN LOADED")
-
     # Load config file (must be downloaded from Weights and Biases), it has the name of config.yaml
     with open(args.config_file, 'r') as stream:
         try:
@@ -68,6 +60,31 @@ if __name__ == '__main__':
                                                         x_max=x_max, y_min=y_min, y_max=y_max,
                                                         z_min=z_min, z_max=z_max)
             waymo_dataset.set_drop_invalid_point_function(drop_points_function)
+
+            if "n_points" in config_info.keys():
+                n_points = config_info['n_points']['value']
+                waymo_dataset.set_n_points(n_points)
+
+            if "architecture" in config_info.keys():
+                architecture = config_info['architecture']['value']
+            else:
+                architecture = "FastFlowNet"
+            if args.model_path is not None:
+                if architecture == "FastFlowNet":
+                    model = FastFlow3DModelScatter.load_from_checkpoint(args.model_path)
+                    model.eval()
+                    print("DISPLAYING PREDICTED DATA WITH FASTFLOWNET")
+                elif architecture == "FlowNet":
+                    from models.Flow3DModel import Flow3DModelV2
+                    model = Flow3DModelV2.load_from_checkpoint(args.model_path)
+                    model.eval()
+                    print("DISPLAYING PREDICTED DATA WITH FLOWNET (baseline)")
+                else:
+                    raise ValueError("no architecture {0} implemented".format(architecture))
+            else:
+                model = None
+                print("DISPLAYING GROUND TRUTH DATA - NO MODEL HAS BEEN LOADED")
+
         except yaml.YAMLError as exc:
             print(exc)
             exit(1)
