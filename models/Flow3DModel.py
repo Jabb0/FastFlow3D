@@ -64,8 +64,6 @@ class Flow3DModel(BaseModel):
         :param x:
         :return:
         """
-        import time
-        t = time.time()
         previous_batch, current_batch = x
         previous_batch_pc, _, previous_batch_mask = previous_batch
         current_batch_pc, _, current_batch_mask = current_batch
@@ -97,6 +95,5 @@ class Flow3DModel(BaseModel):
         pos, features = x
         features = features.transpose(1, 2)
         x = self._fc(features)
-        print("TIME: ", time.time() - t)
         return x
 
