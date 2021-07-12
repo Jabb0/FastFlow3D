@@ -1,9 +1,8 @@
 import torch
-from networks.flownet3d.util import make_mlp
-from networks.flownet3d.layersv2 import SetConvLayerV2
+from networks.flownet3d.layers import SetConvLayer
 
 
-class PointFeatureNetV2(torch.nn.Module):
+class PointFeatureNet(torch.nn.Module):
     """
     PointFeatureNet which is the first part of FlowNet3D and consists of four SetConvLayers.
 
@@ -13,10 +12,10 @@ class PointFeatureNetV2(torch.nn.Module):
        https://arxiv.org/pdf/1806.01411.pdf
     """
     def __init__(self, in_channels: int, n_samples: int = 2):
-        super(PointFeatureNetV2, self).__init__()
+        super(PointFeatureNet, self).__init__()
         self.n_samples = n_samples
 
-        self.set_conv_1_2 = SetConvLayerV2(
+        self.set_conv_1_2 = SetConvLayer(
             mlp=[in_channels - 3, 32, 32, 64],
             sample_rate=0.5,
             radius=0.5,
@@ -24,7 +23,7 @@ class PointFeatureNetV2(torch.nn.Module):
             use_xyz=True,
         )
 
-        self.set_conv_2_2 = SetConvLayerV2(
+        self.set_conv_2_2 = SetConvLayer(
             mlp=[64, 64, 64, 128],
             sample_rate=0.25,
             radius=1.0,

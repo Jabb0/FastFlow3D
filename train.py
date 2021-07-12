@@ -53,8 +53,8 @@ def get_args():
         else:
             parser = FastFlow3DModelScatter.add_model_specific_args(parser)
     elif temp_args.architecture == 'FlowNet':  # baseline
-        from models.Flow3DModel import Flow3DModelV2
-        parser = Flow3DModelV2.add_model_specific_args(parser)
+        from models.Flow3DModel import Flow3DModel
+        parser = Flow3DModel.add_model_specific_args(parser)
     else:
         raise ValueError("no architecture {0} implemented".format(temp_args.architecture))
 
@@ -105,8 +105,8 @@ def cli():
                                            use_group_norm=args.use_group_norm)
 
     elif args.architecture == 'FlowNet':  # baseline
-        from models.Flow3DModel import Flow3DModelV2
-        model = Flow3DModelV2(learning_rate=args.learning_rate, n_samples=args.n_samples)
+        from models.Flow3DModel import Flow3DModel
+        model = Flow3DModel(learning_rate=args.learning_rate, n_samples=args.n_samples)
     else:
         raise ValueError("no architecture {0} implemented".format(args.architecture))
     waymo_data_module = WaymoDataModule(dataset_path, grid_cell_size=grid_cell_size, x_min=args.x_min,
