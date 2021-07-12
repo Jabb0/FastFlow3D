@@ -9,7 +9,6 @@ from pytorch_lightning.loggers import WandbLogger
 
 from data import WaymoDataModule
 from models import FastFlow3DModel, FastFlow3DModelScatter
-from models.Flow3DModel import Flow3DModelV2
 from utils import str2bool
 
 
@@ -51,6 +50,7 @@ def get_args():
         else:
             parser = FastFlow3DModelScatter.add_model_specific_args(parser)
     elif temp_args.architecture == 'FlowNet':  # baseline
+        from models.Flow3DModel import Flow3DModelV2
         parser = Flow3DModelV2.add_model_specific_args(parser)
     else:
         raise ValueError("no architecture {0} implemented".format(temp_args.architecture))
@@ -102,6 +102,7 @@ def cli():
                                            use_group_norm=args.use_group_norm)
 
     elif args.architecture == 'FlowNet':  # baseline
+        from models.Flow3DModel import Flow3DModelV2
         model = Flow3DModelV2(learning_rate=args.learning_rate, n_samples=args.n_samples)
     else:
         raise ValueError("no architecture {0} implemented".format(args.architecture))

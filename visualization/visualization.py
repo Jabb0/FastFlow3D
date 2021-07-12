@@ -65,7 +65,10 @@ if __name__ == '__main__':
                 n_points = config_info['n_points']['value']
                 waymo_dataset.set_n_points(n_points)
 
-            architecture = config_info['architecture']['value']
+            if "architecture" in config_info.keys():
+                architecture = config_info['architecture']['value']
+            else:
+                architecture = "FastFlowNet"
             if args.model_path is not None:
                 if architecture == "FastFlowNet":
                     model = FastFlow3DModelScatter.load_from_checkpoint(args.model_path)
