@@ -50,16 +50,16 @@ class FastFlow3DModelScatter(pl.LightningModule):
         mask_flattened = mask.flatten(0, 1)
         # Init the result tensor for our data. This is necessary because the point net
         # has a batch norm and this needs to ignore the masked points
-        previous_batch_pc_embedding = torch.zeros((pc_flattened.size(0), 64),
+        batch_pc_embedding = torch.zeros((pc_flattened.size(0), 64),
                                                   device=pc.device, dtype=pc.dtype)
         # Flatten the first two dimensions to get the points as batch dimension
-        previous_batch_pc_embedding[mask_flattened] = self._point_feature_net(pc_flattened[mask_flattened])
+        batch_pc_embedding[mask_flattened] = self._point_feature_net(pc_flattened[mask_flattened])
         # This allows backprop towards the MLP: Checked with backward hooks. Gradient is present.
         # Output is (batch_size * points, embedding_features)
         # Retransform into batch dimension (batch_size, max_points, embedding_features)
-        previous_batch_pc_embedding = previous_batch_pc_embedding.unflatten(0, (pc.size(0), pc.size(1)))
+        batch_pc_embedding = batch_pc_embedding.unflatten(0, (pc.size(0), pc.size(1)))
         # 241.307 MiB    234
-        return previous_batch_pc_embedding
+        return batch_pc_embedding
 
     def forward(self, x):
         """
@@ -100,6 +100,7 @@ class FastFlow3DModelScatter(pl.LightningModule):
         # Now we need to scatter the points into their 2D matrix
         # batch_pc_embeddings -> (batch_size, N, 64)
         # batch_grid -> (batch_size, N, 64)
+        # No learnable params in this part
         previous_pillar_embeddings = self._pillar_feature_net(previous_batch_pc_embedding, previous_batch_grid)
         current_pillar_embeddings = self._pillar_feature_net(current_batch_pc_embedding, current_batch_grid)
         # pillar_embeddings = (batch_size, 64, 512, 512)

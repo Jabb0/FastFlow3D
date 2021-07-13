@@ -62,10 +62,12 @@ class ConvDecoder(torch.nn.Module):
         # This flatten is just a view and thus saves memory.
         B = B.flatten(1, 2)
         F = F.flatten(1, 2)
-        L = L.flatten(1, 2)
-        R = R.flatten(1, 2)
+        L = L.flatten(1, 2)  # (batch_size, 2 * 128 = 256, 128, 128)
+        R = R.flatten(1, 2)  # (batch_size, 2 * 256 = 512, 64, 64)
 
-        S = self._block_1(R, L)  # S inputs are R, L
+        # In: (2, 512, 64, 64) and (2, 256, 128, 128)
+        S = self._block_1(R, L)  # S inputs are R, L with R = concat(R_prev, R_cur) and same for L
+
         # print(f"S Output: {S.shape}")
         T = self._block_2(S, F)  # T, inputs are S, F
         # print(f"T Output: {T.shape}")
@@ -109,7 +111,7 @@ class _UpSamplingSkip(torch.nn.Module):
                                       padding_mode='zeros', padding=(1, 1))
 
     def forward(self, alpha, beta):
-        U1 = self.conv_1(alpha)
+        U1 = self.conv_1(alpha)  # 1x1 convolution to reduce depth
         U2 = self.bilinear_interp(U1)
         U3 = self.conv_2(beta)
         U4 = torch.cat((U2, U3), dim=1)

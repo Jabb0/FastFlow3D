@@ -15,7 +15,7 @@ class PointFeatureNet(torch.nn.Module):
         :return: (n_points, out_features)
         """
         # linear transformation
-        x = self.linear(x)
-        x = self.batch_norm(x)
+        x = self.linear(x)  # 8 * 64 = 512 weights + 64 biases = 576 Params
+        x = self.batch_norm(x)  # Small number of weights for affine transform per channel
         x = self.relu(x)
         return x
