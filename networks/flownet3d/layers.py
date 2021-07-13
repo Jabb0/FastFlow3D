@@ -1,126 +1,181 @@
+from typing import List, Optional, Tuple
+
 import torch
-import torch_geometric.nn
-
-from typing import Tuple, Union
-from torch_geometric.nn.inits import reset
-from torch_geometric.typing import OptTensor, PairOptTensor, PairTensor, Adj
-from torch_geometric.nn.conv import MessagePassing
+import torch.nn as nn
+import torch.nn.functional as F
+from networks.flownet3d.utils.pointnet2_utils import QueryAndGroup, GroupAll, gather_operation, furthest_point_sample
+from networks.flownet3d.util import build_shared_mlp
 
 
-class SetConvLayer(torch.nn.Module):
+class SetConvLayer(nn.Module):
     """
-    TODO
-    """
+    SetConvLayer of FlowNet3D:
+        Takes a point cloud as input and samples points (called regions) from it by using furthest point sampling (FPS).
+        For each sampled point/region, it aggregates over the features of the points of the input point cloud, which are
+        within the given radius. The aggregated features are now the new features for the sampled point/region.
 
-    def __init__(self, r: float, sample_rate: float, mlp: torch.nn.Sequential, max_num_neighbors: int = 5):
-        super().__init__()
+    References
+    ----------
+    .. FlowNet3D: Learning Scene Flow in 3D Point Clouds: Xingyu Liu, Charles R. Qi, Leonidas J. Guibas
+       https://arxiv.org/pdf/1806.01411.pdf
+    """
+    def __init__(self, sample_rate: float, radius: float, n_samples: int, mlp: List[int],
+                 bn: bool = True, use_xyz: bool = True):
+        super(SetConvLayer, self).__init__()
+
         self.sample_rate = sample_rate
-        self.radius = r
-        self.max_num_neighbors = max_num_neighbors
-        # see  https://pytorch-geometric.readthedocs.io/en/latest/modules/nn.html?highlight=point%20conv#torch_geometric.nn.conv.PointConv
-        self.point_conv = torch_geometric.nn.PointConv(mlp)
+        self.grouper = QueryAndGroup(radius, n_samples, use_xyz=use_xyz) \
+            if sample_rate is not None else GroupAll(use_xyz)
 
-    def forward(self,
-                x: Tuple[torch.Tensor, torch.Tensor, torch.Tensor]) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        """ Input must be point cloud tensor of shape (n_points, n_features)  """
-        features, pos, batch = x
+        if use_xyz:
+            mlp[0] += 3
 
-        # sample points (regions) by using iterative farthest point sampling (FPS)
-        idx = torch_geometric.nn.fps(pos, batch, ratio=self.sample_rate)
+        self.mlp = build_shared_mlp(mlp, bn)
 
-        # For each region, get all points which are within in the region (defined by radius r)
-        row, col = torch_geometric.nn.radius(pos, pos[idx], self.radius, batch, batch[idx],
-                                             max_num_neighbors=self.max_num_neighbors)
-        edge_index = torch.stack([col, row], dim=0)
+    def forward(self, pos: torch.Tensor, features: Optional[torch.Tensor]) -> Tuple[torch.Tensor, torch.Tensor]:
+        r"""
+        Parameters
+        ----------
+        pos : torch.Tensor
+            (B, N, 3) tensor of the xyz coordinates of the features
+        features : torch.Tensor
+            (B, C, N) tensor of the descriptors of the the features
 
-        # Apply point net
-        features = self.point_conv(features, (pos, pos[idx]), edge_index)
-        pos, batch = pos[idx], batch[idx]
+        Returns
+        -------
+        new_xyz : torch.Tensor
+            (B, N * sample_rate, 3) tensor of the new features' xyz
+        new_features : torch.Tensor
+            (B,  \sum_k(mlp[k][-1]), N * sample_rate) tensor of the new_features descriptors
+        """
+        n_points = int(pos.shape[1] * self.sample_rate)
 
-        return features, pos, batch
+        xyz_flipped = pos.transpose(1, 2).contiguous()
+        new_xyz = (
+            gather_operation(xyz_flipped, furthest_point_sample(pos, n_points)).transpose(1, 2).contiguous()
+            if self.sample_rate is not None else None
+        )
+
+        new_features = self.grouper(pos, new_xyz, features)  # (B, C, n_points, n_samples)
+
+        new_features = self.mlp(new_features)  # (B, mlp[-1], n_points, n_samples)
+        new_features = F.max_pool2d(new_features, kernel_size=[1, new_features.size(3)])  # (B, mlp[-1], n_points, 1)
+        new_features = new_features.squeeze(-1)  # (B, mlp[-1], n_points)
+
+        return new_xyz, new_features
 
 
-class FlowEmbeddingLayer(torch.nn.Module):
+class FlowEmbeddingLayer(nn.Module):
     """
-    TODO
+    FlowEmbeddingLayer of FlowNet3D:
+        Takes two point clouds as input and aggregates for each point, in the first point cloud, the features of the
+        points in the second point cloud, which are within a given radius w.r.t the point of the first point cloud.
+        The aggregated features are now the new features for the point in the first point cloud.
+
+    References
+    ----------
+    .. FlowNet3D: Learning Scene Flow in 3D Point Clouds: Xingyu Liu, Charles R. Qi, Leonidas J. Guibas
+       https://arxiv.org/pdf/1806.01411.pdf
     """
-    def __init__(self, r: float, sample_rate: float, mlp: torch.nn.Sequential, max_num_neighbors: int = 5):
-        super().__init__()
+    def __init__(self, sample_rate: float, radius: float, n_samples: int, mlp: List[int],
+                 bn: bool = True, use_xyz: bool = True):
+        super(FlowEmbeddingLayer, self).__init__()
+
         self.sample_rate = sample_rate
-        self.radius = r
-        self.max_num_neighbors = max_num_neighbors
-        self.point_conv = _FlowEmbeddingPointConv(mlp)
+        self.grouper = QueryAndGroup(radius, n_samples, use_xyz=use_xyz)\
+            if sample_rate is not None else GroupAll(use_xyz)
 
-    def forward(self, x1: Tuple[torch.Tensor, torch.Tensor, torch.Tensor],
-                x2: Tuple[torch.Tensor, torch.Tensor, torch.Tensor]) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        x1_features, x1_pos, x1_batch = x1
-        x2_features, x2_pos, x2_batch = x2
+        if use_xyz:
+            mlp[0] += 3
 
-        # For each points in x2, find all points in x, within distance of r
-        row, col = torch_geometric.nn.radius(x1_pos, x2_pos, self.radius, x1_batch, x2_batch,
-                                             max_num_neighbors=self.max_num_neighbors)
-        edge_index = torch.stack([col, row], dim=0)  # build COO format matrix
+        self.mlp = build_shared_mlp(mlp, bn)
 
-        x = self.point_conv((x1_features, x2_features), (x1_pos, x2_pos), edge_index)
-        pos, batch = x2_pos, x2_batch
+    def forward(self, pos1: torch.Tensor, features1: Optional[torch.Tensor],
+                pos2: torch.Tensor, features2: Optional[torch.Tensor]) -> Tuple[torch.Tensor, torch.Tensor]:
+        r"""
+        Parameters
+        ----------
+        pos1 : torch.Tensor
+            (B, N1, 3) tensor of the xyz coordinates of the features
+        features1 : torch.Tensor
+            (B, C, N1) tensor of the descriptors of the the features
+        pos2 : torch.Tensor
+            (B, N2, 3) tensor of the xyz coordinates of the features
+        features2 : torch.Tensor
+            (B, C, N2) tensor of the descriptors of the the features
 
-        return x, pos, batch
+        Returns
+        -------
+        new_xyz : torch.Tensor
+            (B, N2, 3) tensor of the new features' xyz
+        new_features : torch.Tensor
+            (B,  \sum_k(mlp[k][-1]), N2) tensor of the new_features descriptors
+        """
+
+        new_features = self.grouper(pos1, pos2, features1, features2)  # (B, C, n_points, n_samples)
+
+        new_features = self.mlp(new_features)  # (B, mlp[-1], n_points, n_samples)
+        new_features = F.max_pool2d(
+            new_features, kernel_size=[1, new_features.size(3)]
+        )  # (B, mlp[-1], n_points, 1)
+        new_features = new_features.squeeze(-1)  # (B, mlp[-1], n_points)
+
+        return pos2, new_features
 
 
-class SetUpConvLayer(torch.nn.Module):
+class SetConvUpLayer(nn.Module):
     """
-    TODO
+    SetConvUpLayer of FlowNet3D:
+        Takes two point clouds as input (also called source and target) and propagates the features from the source
+        point cloud to the target point cloud.
+        This feature propagation is done by aggregating all features in the source point cloud for each point
+        in the target point cloud, only features of points are aggregated which are within the given radius w.r.t.
+        the point in the target point cloud.
+
+    References
+    ----------
+    .. FlowNet3D: Learning Scene Flow in 3D Point Clouds: Xingyu Liu, Charles R. Qi, Leonidas J. Guibas
+       https://arxiv.org/pdf/1806.01411.pdf
     """
-    def __init__(self, r: float, mlp: torch.nn.Sequential, max_num_neighbors: int = 5):
-        super().__init__()
-        self.radius = r
-        self.max_num_neighbors = max_num_neighbors
-        # add self loops must be false, because we only aggregate features of points in the target input
-        # and we not include the point of the source input
-        self.point_conv = torch_geometric.nn.PointConv(mlp, add_self_loops=False)
+    def __init__(self, sample_rate: float, radius: float, n_samples: int, mlp: List[int],
+                 bn: bool = True, use_xyz: bool = True):
+        super(SetConvUpLayer, self).__init__()
 
-    def forward(self, src: torch.Tensor, target: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        src_features, src_pos, src_batch = src  # embeddings
-        target_features, target_pos, target_batch = target
+        self.sample_rate = sample_rate
+        self.grouper = QueryAndGroup(radius, n_samples, use_xyz=use_xyz) \
+            if sample_rate is not None else GroupAll(use_xyz)
 
-        # For each region, get all points which are within in the region (defined by radius r)
-        # row, col = torch_geometric.nn.radius(target_pos, src_pos, self.radius, target_batch, src_batch)
-        row, col = torch_geometric.nn.radius(src_pos, target_pos, self.radius, src_batch, target_batch,
-                                             max_num_neighbors=self.max_num_neighbors)
-        edge_index = torch.stack([col, row], dim=0)
+        if use_xyz:
+            mlp[0] += 3
 
-        # Apply point net
-        # features = self.point_conv(target_features, (target_pos, src_pos), edge_index)
-        features = self.point_conv(src_features, (src_pos, target_pos), edge_index)
-        pos, batch = target_pos, target_batch
+        self.mlp = build_shared_mlp(mlp, bn)
 
-        return features, pos, batch
+    def forward(self, src_pos: torch.Tensor, src_features: Optional[torch.Tensor],
+                target_pos: torch.Tensor, target_features: Optional[torch.Tensor]) -> Tuple[torch.Tensor, torch.Tensor]:
+        r"""
+        Parameters
+        ----------
+        src_pos : torch.Tensor
+            (B, N1, 3) tensor of the xyz coordinates of the features
+        src_features : torch.Tensor
+            (B, C, N1) tensor of the descriptors of the the features
+        target_pos : torch.Tensor
+            (B, N2, 3) tensor of the xyz coordinates of the features
+        target_features : torch.Tensor
+            (B, C, N2) tensor of the descriptors of the the features
 
+        Returns
+        -------
+        target_pos : torch.Tensor
+            (B, N2, 3) tensor of the new features' xyz
+        new_features : torch.Tensor
+            (B,  \sum_k(mlp[k][-1]), N2) tensor of the new_features descriptors
+        """
 
-class _FlowEmbeddingPointConv(MessagePassing):
-    def __init__(self, mlp: torch.nn.Sequential, aggr: str = 'max'):
-        super(_FlowEmbeddingPointConv, self).__init__(aggr=aggr)
-        self.nn = mlp
-        self.reset_parameters()
+        new_features = self.grouper(src_pos, target_pos, src_features)  # (B, C, n_points, n_samples)
 
-    def reset_parameters(self):
-        reset(self.nn)
+        new_features = self.mlp(new_features)  # (B, mlp[-1], n_points, n_samples)
+        new_features = F.max_pool2d(new_features, kernel_size=[1, new_features.size(3)])  # (B, mlp[-1], n_points, 1)
+        new_features = new_features.squeeze(-1)  # (B, mlp[-1], n_points)
 
-    def forward(self, x: Union[OptTensor, PairOptTensor],
-                pos: Union[torch.Tensor, PairTensor], edge_index: Adj) -> torch.Tensor:
-        """"""
-        if not isinstance(x, tuple):
-            x: PairOptTensor = (x, None)
-
-        if isinstance(pos, torch.Tensor):
-            pos: PairTensor = (pos, pos)
-
-        # propagate_type: (x: PairOptTensor, pos: PairTensor)
-        out = self.propagate(edge_index, x=x, pos=pos, size=None)
-
-        return out
-
-    def message(self, x_i: torch.Tensor, x_j: torch.Tensor, pos_i: torch.Tensor, pos_j: torch.Tensor) -> torch.Tensor:
-        msg = torch.cat([x_i, x_j, pos_j - pos_i], dim=1)
-        msg = self.nn(msg)
-        return msg
+        return target_pos, new_features

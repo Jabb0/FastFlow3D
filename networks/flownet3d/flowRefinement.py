@@ -1,6 +1,5 @@
 import torch
-from networks.flownet3d.util import make_mlp
-from networks.flownet3d.layers import SetUpConvLayer
+from networks.flownet3d.layers import SetConvUpLayer
 
 
 class FlowRefinementNet(torch.nn.Module):
@@ -12,19 +11,41 @@ class FlowRefinementNet(torch.nn.Module):
     .. FlowNet3D: Learning Scene Flow in 3D Point Clouds: Xingyu Liu, Charles R. Qi, Leonidas J. Guibas
        https://arxiv.org/pdf/1806.01411.pdf
     """
-    def __init__(self, in_channels: int):
+    def __init__(self, in_channels: int, n_samples: int = 2):
         super(FlowRefinementNet, self).__init__()
-        setup_conv_mlp_1 = make_mlp(in_channels, [128, 128, 256])
-        self.setup_conv_1 = SetUpConvLayer(r=4.0, mlp=setup_conv_mlp_1)
+        self.n_samples = n_samples
 
-        setup_conv_mlp_2 = make_mlp(256 + 3, [128, 128, 256])
-        self.setup_conv_2 = SetUpConvLayer(r=2.0, mlp=setup_conv_mlp_2)
+        self.setup_conv_1 = SetConvUpLayer(
+            mlp=[in_channels, 128, 128, 256],
+            sample_rate=4.0,
+            radius=4.0,
+            n_samples=self.n_samples,
+            use_xyz=True,
+        )
 
-        setup_conv_mlp_3 = make_mlp(256 + 3, [128, 128, 128])
-        self.setup_conv_3 = SetUpConvLayer(r=1.0, mlp=setup_conv_mlp_3)
+        self.setup_conv_2 = SetConvUpLayer(
+            mlp=[256, 128, 128, 256],
+            sample_rate=4.0,
+            radius=2.0,
+            n_samples=self.n_samples,
+            use_xyz=True,
+        )
 
-        setup_conv_mlp_4 = make_mlp(128 + 3, [128, 128, 128])
-        self.setup_conv_4 = SetUpConvLayer(r=0.5, mlp=setup_conv_mlp_4)
+        self.setup_conv_3 = SetConvUpLayer(
+            mlp=[256, 128, 128, 128],
+            sample_rate=4.0,
+            radius=1.0,
+            n_samples=self.n_samples,
+            use_xyz=True,
+        )
+
+        self.setup_conv_4 = SetConvUpLayer(
+            mlp=[128, 128, 128, 128],
+            sample_rate=4.0,
+            radius=0.5,
+            n_samples=self.n_samples,
+            use_xyz=True,
+        )
 
     def forward(self, pf_curr_1: torch.tensor, pf_curr_2: torch.tensor,
                 pf_curr_3: torch.tensor, fe_2: torch.tensor, fe_3: torch.tensor) -> torch.tensor:
@@ -38,9 +59,9 @@ class FlowRefinementNet(torch.nn.Module):
         """
         # target: Are locations we want to propagate the source point features to
         # target must have higher number of points than source
-        x = self.setup_conv_1(src=fe_3, target=fe_2)
-        x = self.setup_conv_2(src=x, target=pf_curr_3)
-        x = self.setup_conv_3(src=x, target=pf_curr_2)
-        x = self.setup_conv_4(src=x, target=pf_curr_1)
+        x = self.setup_conv_1(*fe_3, *fe_2)
+        x = self.setup_conv_2(*x, *pf_curr_3)
+        x = self.setup_conv_3(*x, *pf_curr_2)
+        x = self.setup_conv_4(*x, *pf_curr_1)
 
         return x

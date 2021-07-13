@@ -20,17 +20,18 @@ class WaymoDataModule(pl.LightningDataModule):
                  batch_size: int = 32,
                  has_test=False,
                  num_workers=1,
-                 scatter_collate=True):
+                 scatter_collate=True,
+                 n_points=None):
         super(WaymoDataModule, self).__init__()
         self._dataset_directory = Path(dataset_directory)
         self._batch_size = batch_size
         self._train_ = None
         self._val_ = None
         self._test_ = None
-        # This is a transformation class that applies to pillarization
+
         self._pillarization_transform = ApplyPillarization(grid_cell_size=grid_cell_size, x_min=x_min,
-                                                           y_min=y_min, z_min=z_min, z_max=z_max,
-                                                           n_pillars_x=n_pillars_x)
+                                                               y_min=y_min, z_min=z_min, z_max=z_max,
+                                                               n_pillars_x=n_pillars_x)
 
         # This returns a function that removes points that should not be included in the pillarization.
         # It also removes the labels if given.
@@ -41,6 +42,7 @@ class WaymoDataModule(pl.LightningDataModule):
         self._num_workers = num_workers
 
         self._collate_fn = custom_collate_batch if scatter_collate else custom_collate
+        self._n_points = n_points
 
     def prepare_data(self) -> None:
         """
@@ -63,14 +65,17 @@ class WaymoDataModule(pl.LightningDataModule):
         """
         self._train_ = WaymoDataset(self._dataset_directory.joinpath("train"),
                                     point_cloud_transform=self._pillarization_transform,
-                                    drop_invalid_point_function=self._drop_points_function)
+                                    drop_invalid_point_function=self._drop_points_function,
+                                    n_points=self._n_points)
         self._val_ = WaymoDataset(self._dataset_directory.joinpath("valid"),
                                   point_cloud_transform=self._pillarization_transform,
-                                  drop_invalid_point_function=self._drop_points_function)
+                                  drop_invalid_point_function=self._drop_points_function,
+                                  n_points=self._n_points)
         if self._has_test:
             self._test_ = WaymoDataset(self._dataset_directory.joinpath("test"),
                                        point_cloud_transform=self._pillarization_transform,
-                                       drop_invalid_point_function=self._drop_points_function)
+                                       drop_invalid_point_function=self._drop_points_function,
+                                       n_points=self._n_points)
 
     def train_dataloader(self) -> Union[DataLoader, List[DataLoader], Dict[str, DataLoader]]:
         """
