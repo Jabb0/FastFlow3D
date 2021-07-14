@@ -120,6 +120,12 @@ class WaymoDataset(Dataset):
     def set_n_points(self, n_points):
         self._n_points = n_points
 
+    def get_name_current_frame(self, index):
+        if index >= len(self):
+            print("Index is out of the length of the dataset")
+            exit(1)
+        return self.metadata['look_up_table'][index][0][0]
+
     def read_point_cloud_pair(self, index):
         """
         Read from disk the current and previous point cloud given an index

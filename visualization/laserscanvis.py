@@ -8,18 +8,20 @@ import numpy as np
 import torch
 from data.util import custom_collate_batch
 import cv2
+from util import get_flows, predict_flows
 
 
 class LaserScanVis:
     """Class that creates and handles a visualizer for a pointcloud"""
 
-    def __init__(self, dataset, start_frame=0, end_frame=None, model=None, vis_previous_current=True):
+    def __init__(self, dataset, start_frame=0, end_frame=None, model=None, vis_previous_current=True, online=True):
         # If model is None then it displays ground truth
         self.dataset = dataset  # This must be a configured Waymo dataset
         self.offset = start_frame
         self.end_frame = end_frame
         self.model = model
         self.vis_previous_current = vis_previous_current  # True if you want to display 2 point clouds instead flows
+        self.online = online  # True if predicting flows in real time, false it reads from disk the flows
         if model is not None:
             self.model.eval()
 
@@ -101,13 +103,10 @@ class LaserScanVis:
         raw_point_cloud_previous = previous_frame[:, 0:3]
         # raw_point_cloud = current_frame[0][:, 0:3]
         if self.model is not None:  # Display predicted values
-            self.dataset.pillarize(True)
-            (previous_frame, current_frame), flows = self.dataset[self.offset]
-            # We set batchsize of 1 for predictions
-            batch = custom_collate_batch([((previous_frame, current_frame), flows)])
-            with torch.no_grad():
-                output = self.model(batch[0])
-            predicted_flows = output[0].data.cpu().numpy()
+            if self.online:
+                predicted_flows = predict_flows(self.model, self.dataset, self.offset)
+            else:
+                predicted_flows = get_flows(self.dataset, self.offset)
 
         # then change names
         self.predicted_canvas.title = "Predicted frame " + str(self.offset) + " of Waymo"
@@ -132,13 +131,13 @@ class LaserScanVis:
                                        face_color=rgb_flow_predicted,
                                        edge_color=rgb_flow_predicted,
                                        size=1)
-                self.predicted_vis.update()
 
             self.gt_vis.set_data(raw_point_cloud,
                                    face_color=rgb_flow,
                                    edge_color=rgb_flow,
                                    size=1)
 
+        self.predicted_vis.update()
         self.gt_vis.update()
 
     # interface
