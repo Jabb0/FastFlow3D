@@ -36,7 +36,7 @@ class BaseModel(pl.LightningModule):
                              dtype=squared_root_difference.dtype)  # weights -> (batch_size * N)
         weights[labels == 0] = self._background_weight
 
-        loss = torch.sum(weights * squared_root_difference) / torch.sum(weights)
+        loss = torch.sum(weights * squared_root_difference) / weights.numel()
         # ---------------- Computing rest of metrics (Paper Table 3)-----------------
 
         # We compute a dictionary with 3 different metrics:
