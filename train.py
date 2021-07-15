@@ -8,6 +8,7 @@ import wandb
 from pytorch_lightning.loggers import WandbLogger
 
 from data import WaymoDataModule
+from data.FlyingThings3DDataModule import FlyingThings3DDataModule
 from models import FastFlow3DModel, FastFlow3DModelScatter
 from utils import str2bool
 
@@ -44,6 +45,7 @@ def get_args():
     # This parameters are for restoring from a checkpoint, from weights and biases
     parser.add_argument('--run_path', default=None, type=str)  # Id of the run
     parser.add_argument('--checkpoint', default=None, type=str)  # Path of the checkpoint
+    parser.add_argument('--dataset', default='waymo', type=str)  # Path of the checkpoint
 
     temp_args, _ = parser.parse_known_args()
     # Add the correct model specific args
@@ -109,15 +111,25 @@ def cli():
         model = Flow3DModel(learning_rate=args.learning_rate, n_samples=args.n_samples)
     else:
         raise ValueError("no architecture {0} implemented".format(args.architecture))
-    waymo_data_module = WaymoDataModule(dataset_path, grid_cell_size=grid_cell_size, x_min=args.x_min,
-                                        x_max=args.x_max, y_min=args.y_min,
-                                        y_max=args.y_max, z_min=args.z_min, z_max=args.z_max,
-                                        batch_size=args.batch_size,
-                                        has_test=args.test_data_available,
-                                        num_workers=args.num_workers,
-                                        scatter_collate=not args.use_sparse_lookup,
-                                        n_pillars_x=n_pillars_x,
-                                        n_points=args.n_points)
+    if args.dataset == 'waymo':
+        data_module = WaymoDataModule(dataset_path, grid_cell_size=grid_cell_size, x_min=args.x_min,
+                                      x_max=args.x_max, y_min=args.y_min,
+                                      y_max=args.y_max, z_min=args.z_min, z_max=args.z_max,
+                                      batch_size=args.batch_size,
+                                      has_test=args.test_data_available,
+                                      num_workers=args.num_workers,
+                                      scatter_collate=not args.use_sparse_lookup,
+                                      n_pillars_x=n_pillars_x,
+                                      n_points=args.n_points)
+    elif args.dataset == 'flying_things':
+        data_module = FlyingThings3DDataModule(dataset_path,
+                                               batch_size=args.batch_size,
+                                               has_test=args.test_data_available,
+                                               num_workers=args.num_workers,
+                                               scatter_collate=False,
+                                               n_points=args.n_points)
+    else:
+        raise ValueError('Dataset {} not available'.format(args.dataset))
 
     # Initialize the weights and biases logger.
     # Name is the name of this run
@@ -131,24 +143,25 @@ def cli():
             exit(1)
 
         wandb.login(key=wandb_api_key)
-        
-        #print("Loading checkpoint...")
-        #weights_file = wandb.restore("epoch=3-step=7699.ckpt", run_path="dllab21fastflow3d/fastflow3d-prod/a3vvg9pi")
-        #run_path = "dllab21fastflow3d/fastflow3d-prod/runs/a3vvg9pi/files/fastflow3d-prod/a3vvg9pi/checkpoint"
-        #run_path = "dllab21fastflow3d/fastflow3d-prod/a3vvg9pi/checkpoints"
-        #run_path = "dllab21fastflow3d/fastflow3d-prod/a3vvg9pi/fastflow3d-prod/a3vvg9pi/checkpoints"
-        #run_path = "dllab21fastflow3d/fastflow3d-prod/a3vvg9pi"
-        #file_name = "fastflow3d-prod/a3vvg9pi/checkpoints/epoch=3-step=7699.ckpt"
-        #print("RUN PATH: " + run_path)
-        #weights_file = wandb.restore(file_name, run_path=run_path)
-        #model.load_from_checkpoint(weights_file.name)
+
+        # print("Loading checkpoint...")
+        # weights_file = wandb.restore("epoch=3-step=7699.ckpt", run_path="dllab21fastflow3d/fastflow3d-prod/a3vvg9pi")
+        # run_path = "dllab21fastflow3d/fastflow3d-prod/runs/a3vvg9pi/files/fastflow3d-prod/a3vvg9pi/checkpoint"
+        # run_path = "dllab21fastflow3d/fastflow3d-prod/a3vvg9pi/checkpoints"
+        # run_path = "dllab21fastflow3d/fastflow3d-prod/a3vvg9pi/fastflow3d-prod/a3vvg9pi/checkpoints"
+        # run_path = "dllab21fastflow3d/fastflow3d-prod/a3vvg9pi"
+        # file_name = "fastflow3d-prod/a3vvg9pi/checkpoints/epoch=3-step=7699.ckpt"
+        # print("RUN PATH: " + run_path)
+        # weights_file = wandb.restore(file_name, run_path=run_path)
+        # model.load_from_checkpoint(weights_file.name)
         run_id = None
         if args.run_path is not None:
             run_id = os.path.basename(os.path.normpath(args.run_path))
             print("Continuing run " + args.run_path)
             print("Run id: " + run_id)
 
-        logger = WandbLogger(name=args.experiment_name, project=args.wandb_project, entity=args.wandb_entity, log_model=True, id=run_id)
+        logger = WandbLogger(name=args.experiment_name, project=args.wandb_project, entity=args.wandb_entity,
+                             log_model=True, id=run_id)
         additional_hyperparameters = {'grid_cell_size': grid_cell_size,
                                       'x_min': args.x_min,
                                       'x_max': args.x_max,
@@ -191,7 +204,7 @@ def cli():
                                             resume_from_checkpoint=args.checkpoint
                                             )  # Add Trainer hparams if desired
     # The actual train loop
-    trainer.fit(model, waymo_data_module)
+    trainer.fit(model, data_module)
 
     # Run also the testing
     if args.test_data_available and not args.fast_dev_run:
