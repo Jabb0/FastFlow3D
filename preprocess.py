@@ -16,13 +16,47 @@ def preprocess_wrap(tfrecord_file):
     preprocess(tfrecord_file, output_directory, frames_per_segment=None)
 
 
-def preprocess_flying_things(input_dir, output_dir):
+def preprocess_flying_things(input_dir, output_dir, view='right'):
+    """
+    Data directory must be in shape of:
+
+    parent-dir
+        disparity
+            train
+               left
+               right
+            val
+                left
+               right
+        disparity_change
+            train
+               left
+               right
+            val
+                left
+               right
+        optical_flow
+            train
+                backward
+                    left
+                    right
+                forward
+                   left
+                   right
+            val
+                backward
+                    left
+                    right
+                forward
+                   left
+                   right
+    """
     # INPUT_DIR = "./data/flyingthings3d"
     # OUTPUT_DIR = "./data/flyingthings3d_preprocessed"
 
     all_files_disparity, all_files_disparity_change, all_files_opt_flow = get_all_flying_things_frames(
-        input_dir=input_dir, disp_dir='disparity/train/right', opt_dir='optical_flow/train/forward/right',
-        disp_change_dir='disparity_change/train/right')
+        input_dir=input_dir, disp_dir='disparity/train/{}'.format(view),
+        opt_dir='optical_flow/train/backward/{}'.format(view), disp_change_dir='disparity_change/train/{}'.format(view))
 
     for i in range(len(all_files_disparity) - 1):
         disparity = all_files_disparity[i]

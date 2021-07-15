@@ -51,7 +51,7 @@ class Flow3DModel(BaseModel):
         self.save_hyperparameters()  # Store the constructor parameters into self.hparams
 
         # FIXME in_channels = 5 if using Waymo
-        self._point_feature_net = PointFeatureNet(in_channels=5, n_samples=self._n_samples)
+        self._point_feature_net = PointFeatureNet(in_channels=3, n_samples=self._n_samples)
         self._point_mixture = PointMixtureNet(n_samples=self._n_samples)
         self._flow_refinement = FlowRefinementNet(in_channels=512, n_samples=self._n_samples)
         self._fc = torch.nn.Linear(in_features=128, out_features=3)
@@ -75,8 +75,8 @@ class Flow3DModel(BaseModel):
         #   consumption because of the torch computation graph?
 
         # FIXME Uncomment if using Waymo
-        previous_batch_pc = transform_data(previous_batch_pc)
-        current_batch_pc = transform_data(current_batch_pc)
+        # previous_batch_pc = transform_data(previous_batch_pc)
+        # current_batch_pc = transform_data(current_batch_pc)
 
         batch_size, n_points_prev, _ = previous_batch_pc.shape
         batch_size, n_points_cur, _ = current_batch_pc.shape
