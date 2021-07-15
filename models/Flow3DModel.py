@@ -50,6 +50,7 @@ class Flow3DModel(BaseModel):
         self._n_samples=n_samples
         self.save_hyperparameters()  # Store the constructor parameters into self.hparams
 
+        # FIXME in_channels = 5 if using Waymo
         self._point_feature_net = PointFeatureNet(in_channels=5, n_samples=self._n_samples)
         self._point_mixture = PointMixtureNet(n_samples=self._n_samples)
         self._flow_refinement = FlowRefinementNet(in_channels=512, n_samples=self._n_samples)
@@ -65,15 +66,15 @@ class Flow3DModel(BaseModel):
         :return:
         """
         previous_batch, current_batch = x
-        previous_batch_pc, _, previous_batch_mask = previous_batch
-        current_batch_pc, _, current_batch_mask = current_batch
-
+        previous_batch_pc = previous_batch[0]
+        current_batch_pc = current_batch[0]
         # transform each point from (cx, cy, cz,  Δx, Δy, Δz, l0, l1) to (x, y, z, l0, l1)
         # TODO: Maybe we should change the dataloader to skip pillarization
         #  and use a third collate function that does not process the grid indices
         #   Otherwise these tensor operations might have additional memory
         #   consumption because of the torch computation graph?
-        
+
+        # FIXME Uncomment if using Waymo
         previous_batch_pc = transform_data(previous_batch_pc)
         current_batch_pc = transform_data(current_batch_pc)
 

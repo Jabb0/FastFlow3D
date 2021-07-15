@@ -45,7 +45,7 @@ def get_args():
     # This parameters are for restoring from a checkpoint, from weights and biases
     parser.add_argument('--run_path', default=None, type=str)  # Id of the run
     parser.add_argument('--checkpoint', default=None, type=str)  # Path of the checkpoint
-    parser.add_argument('--dataset', default='waymo', type=str)  # Path of the checkpoint
+    parser.add_argument('--dataset', default='waymo', type=str)  # Dataset, waymo or flying_things
 
     temp_args, _ = parser.parse_known_args()
     # Add the correct model specific args

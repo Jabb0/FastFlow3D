@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import Optional, Union, List, Dict
 
 from .FlyingThings3DDataset import FlyingThings3DDataset
-from .util import custom_collate, custom_collate_batch
 
 
 class FlyingThings3DDataModule(pl.LightningDataModule):
@@ -31,7 +30,6 @@ class FlyingThings3DDataModule(pl.LightningDataModule):
         self._has_test = has_test
         self._num_workers = num_workers
 
-        self._collate_fn = custom_collate_batch if scatter_collate else custom_collate
         self._n_points = n_points
 
     def prepare_data(self) -> None:
@@ -66,16 +64,14 @@ class FlyingThings3DDataModule(pl.LightningDataModule):
         Return a data loader for training
         :return: the dataloader to use
         """
-        return DataLoader(self._train_, self._batch_size, num_workers=self._num_workers,
-                          collate_fn=self._collate_fn)
+        return DataLoader(self._train_, self._batch_size, num_workers=self._num_workers)
 
     def val_dataloader(self) -> Union[DataLoader, List[DataLoader], Dict[str, DataLoader]]:
         """
         Return a data loader for validation
         :return: the dataloader to use
         """
-        return DataLoader(self._val_, self._batch_size, shuffle=False, num_workers=self._num_workers,
-                          collate_fn=self._collate_fn)
+        return DataLoader(self._val_, self._batch_size, shuffle=False, num_workers=self._num_workers)
 
     def test_dataloader(self) -> Union[DataLoader, List[DataLoader], Dict[str, DataLoader]]:
         """
@@ -84,5 +80,4 @@ class FlyingThings3DDataModule(pl.LightningDataModule):
         """
         if not self._has_test:
             raise RuntimeError("No test dataset specified. Maybe set has_test=True in DataModule init.")
-        return DataLoader(self._test_, self._batch_size, shuffle=False, num_workers=self._num_workers,
-                          collate_fn=self._collate_fn)
+        return DataLoader(self._test_, self._batch_size, shuffle=False, num_workers=self._num_workers)

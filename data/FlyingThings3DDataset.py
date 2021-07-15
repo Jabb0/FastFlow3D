@@ -1,3 +1,4 @@
+import torch
 from torch.utils.data import Dataset
 import os
 import numpy as np
@@ -19,7 +20,6 @@ class FlyingThings3DDataset(Dataset):
         self._drop_invalid_point_function = drop_invalid_point_function
 
     def __len__(self) -> int:
-        print(len(glob.glob(os.path.join(self.data_path, '*.npz'))))
         return len(glob.glob(os.path.join(self.data_path, '*.npz')))
 
     def __getitem__(self, index):
@@ -39,7 +39,8 @@ class FlyingThings3DDataset(Dataset):
         if self._drop_invalid_point_function is not None:
             current_frame, flows = self._drop_invalid_point_function(current_frame, flows)
             previous_frame, _ = self._drop_invalid_point_function(previous_frame, None)
-        print(current_frame.shape)
+        previous_frame = (torch.as_tensor(previous_frame), )
+        current_frame = (torch.as_tensor(current_frame), )
         return (previous_frame, current_frame), flows
 
     def subsample_points(self, current_frame, previous_frame, flows):

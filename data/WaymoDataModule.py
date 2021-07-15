@@ -69,13 +69,11 @@ class WaymoDataModule(pl.LightningDataModule):
                                     n_points=self._n_points)
         self._val_ = WaymoDataset(self._dataset_directory.joinpath("valid"),
                                   point_cloud_transform=self._pillarization_transform,
-                                  drop_invalid_point_function=self._drop_points_function,
-                                  n_points=self._n_points)
+                                  drop_invalid_point_function=self._drop_points_function)
         if self._has_test:
             self._test_ = WaymoDataset(self._dataset_directory.joinpath("test"),
                                        point_cloud_transform=self._pillarization_transform,
-                                       drop_invalid_point_function=self._drop_points_function,
-                                       n_points=self._n_points)
+                                       drop_invalid_point_function=self._drop_points_function)
 
     def train_dataloader(self) -> Union[DataLoader, List[DataLoader], Dict[str, DataLoader]]:
         """
