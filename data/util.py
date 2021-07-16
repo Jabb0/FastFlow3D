@@ -387,7 +387,7 @@ def merge_metadata(input_path):
 
 def _pad_batch(batch):
     # Get the number of points in the largest point cloud
-    true_number_of_points = [e[1].shape[0] for e in batch]
+    true_number_of_points = [e[0].shape[0] for e in batch]
     max_points_prev = np.max(true_number_of_points)
 
     # We need a mask of all the points that actually exist
@@ -399,11 +399,11 @@ def _pad_batch(batch):
     # resize all tensors to the max points size
     # Use np.pad to perform this action. Do not pad the second dimension and pad the first dimension AFTER only
     return [
-        [
-            np.pad(entry[0], ((0, max_points_prev - entry[0].shape[0]), (0, 0))),
-            np.pad(entry[1], (0, max_points_prev - entry[1].shape[0])),
-            zeros[i]
-        ] for i, entry in enumerate(batch)
+        [np.pad(entry[0], ((0, max_points_prev - entry[0].shape[0]), (0, 0))),
+         np.pad(entry[1], (0, max_points_prev - entry[1].shape[0])) if entry[1] is not None
+         else np.empty(shape=(max_points_prev, )),  # set empty array, if there is None entry in the tuple
+         # (for baseline, we do not have grid indices, therefore this tuple entry is None)
+         zeros[i]] for i, entry in enumerate(batch)
     ]
 
 

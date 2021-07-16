@@ -18,7 +18,6 @@ class FlyingThings3DDataModule(pl.LightningDataModule):
                  batch_size: int = 32,
                  has_test=False,
                  num_workers=1,
-                 scatter_collate=False,
                  n_points=None):
         super(FlyingThings3DDataModule, self).__init__()
         self._dataset_directory = Path(dataset_directory)

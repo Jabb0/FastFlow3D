@@ -46,6 +46,7 @@ def get_args():
     parser.add_argument('--run_path', default=None, type=str)  # Id of the run
     parser.add_argument('--checkpoint', default=None, type=str)  # Path of the checkpoint
     parser.add_argument('--dataset', default='waymo', type=str)  # Dataset, waymo or flying_things
+    parser.add_argument('--apply_pillarization', default=True, type=str2bool)  # False for baseline, true for fastflownet
 
     temp_args, _ = parser.parse_known_args()
     # Add the correct model specific args
@@ -108,7 +109,8 @@ def cli():
 
     elif args.architecture == 'FlowNet':  # baseline
         from models.Flow3DModel import Flow3DModel
-        model = Flow3DModel(learning_rate=args.learning_rate, n_samples=args.n_samples)
+        in_channels = 3 if args.dataset == 'flying_things' else 5  # TODO create cfg file?
+        model = Flow3DModel(learning_rate=args.learning_rate, n_samples=args.n_samples, in_channels=in_channels)
     else:
         raise ValueError("no architecture {0} implemented".format(args.architecture))
     if args.dataset == 'waymo':
@@ -120,13 +122,12 @@ def cli():
                                       num_workers=args.num_workers,
                                       scatter_collate=not args.use_sparse_lookup,
                                       n_pillars_x=n_pillars_x,
-                                      n_points=args.n_points)
+                                      n_points=args.n_points, apply_pillarization=args.apply_pillarization)
     elif args.dataset == 'flying_things':
         data_module = FlyingThings3DDataModule(dataset_path,
                                                batch_size=args.batch_size,
                                                has_test=args.test_data_available,
                                                num_workers=args.num_workers,
-                                               scatter_collate=False,
                                                n_points=args.n_points)
     else:
         raise ValueError('Dataset {} not available'.format(args.dataset))
@@ -177,7 +178,8 @@ def cli():
                                       'num_workers': args.num_workers,
                                       'scatter_collate': args.use_sparse_lookup,
                                       'architecture': args.architecture,
-                                      'n_points': args.n_points
+                                      'n_points': args.n_points,
+                                      'dataset': args.dataset
                                       }
         logger.log_hyperparams(additional_hyperparameters)
 

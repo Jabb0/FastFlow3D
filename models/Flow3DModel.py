@@ -2,8 +2,6 @@ import torch
 
 from models.BaseModel import BaseModel
 
-from networks.flownet3d.util import transform_data
-
 from networks.flownet3d.pointFeatureNet import PointFeatureNet
 from networks.flownet3d.pointMixture import PointMixtureNet
 from networks.flownet3d.flowRefinement import FlowRefinementNet
@@ -45,13 +43,13 @@ class Flow3DModel(BaseModel):
                  learning_rate=1e-6,
                  adam_beta_1=0.9,
                  adam_beta_2=0.999,
+                 in_channels=5,
                  n_samples=2):
         super(Flow3DModel, self).__init__()
-        self._n_samples=n_samples
+        self._n_samples = n_samples
         self.save_hyperparameters()  # Store the constructor parameters into self.hparams
 
-        # FIXME in_channels = 5 if using Waymo
-        self._point_feature_net = PointFeatureNet(in_channels=3, n_samples=self._n_samples)
+        self._point_feature_net = PointFeatureNet(in_channels=in_channels, n_samples=self._n_samples)
         self._point_mixture = PointMixtureNet(n_samples=self._n_samples)
         self._flow_refinement = FlowRefinementNet(in_channels=512, n_samples=self._n_samples)
         self._fc = torch.nn.Linear(in_features=128, out_features=3)
@@ -68,15 +66,6 @@ class Flow3DModel(BaseModel):
         previous_batch, current_batch = x
         previous_batch_pc = previous_batch[0]
         current_batch_pc = current_batch[0]
-        # transform each point from (cx, cy, cz,  Δx, Δy, Δz, l0, l1) to (x, y, z, l0, l1)
-        # TODO: Maybe we should change the dataloader to skip pillarization
-        #  and use a third collate function that does not process the grid indices
-        #   Otherwise these tensor operations might have additional memory
-        #   consumption because of the torch computation graph?
-
-        # FIXME Uncomment if using Waymo
-        # previous_batch_pc = transform_data(previous_batch_pc)
-        # current_batch_pc = transform_data(current_batch_pc)
 
         batch_size, n_points_prev, _ = previous_batch_pc.shape
         batch_size, n_points_cur, _ = current_batch_pc.shape
