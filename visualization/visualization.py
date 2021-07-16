@@ -7,6 +7,8 @@ import yaml
 from data.util import ApplyPillarization, drop_points_function
 from laserscanvis import LaserScanVis
 from models.FastFlow3DModelScatter import FastFlow3DModelScatter
+from util import predict_and_store_flows
+from utils import str2bool
 
 
 # vispy
@@ -25,6 +27,10 @@ if __name__ == '__main__':
     parser.add_argument('--start_frame', default=0, type=int)
     parser.add_argument('--end_frame', default=None, type=int)
     parser.add_argument('--vis_previous_current', default=False, type=bool)
+
+    # If you want online prediction or first predict, store the flows and predict them
+    # This is suitable for slow systems since it reads the flows then from disk
+    parser.add_argument('--online', type=str2bool, nargs='?', const=False, default=True)
 
     args = parser.parse_args()
     waymo_dataset = WaymoDataset(args.data_directory)
@@ -89,12 +95,17 @@ if __name__ == '__main__':
             print(exc)
             exit(1)
 
-    #model = None
+    if args.online is not True:
+        # Predict and store into disk
+        print(f"Predicting and storing {len(waymo_dataset)} frames...")
+        predict_and_store_flows(model, waymo_dataset)
+
     vis = LaserScanVis(dataset=waymo_dataset,
                        start_frame=args.start_frame,
                        end_frame=args.end_frame,
                        model=model,
-                       vis_previous_current=args.vis_previous_current)
+                       vis_previous_current=args.vis_previous_current,
+                       online=args.online)
     vis.run()
 
 
