@@ -55,7 +55,7 @@ class BaseModel(pl.LightningModule):
 
         # Use detach as those metrics do not need a gradient
         L2_without_weighting = squared_root_difference.detach()
-        flow_vector_magnitude_gt = torch.sqrt(torch.sum(y.detach() ** 2, dim=1))
+        flow_vector_magnitude_gt = torch.sqrt(torch.sum(y ** 2, dim=1))
 
         L2_mean = {}
         nested_dict = lambda: defaultdict(nested_dict)
@@ -74,18 +74,16 @@ class BaseModel(pl.LightningModule):
             L2_label = L2_without_weighting[label_mask]
             flow_vector_magnitude_label = flow_vector_magnitude_gt[label_mask]
 
-            stationary = L2_label[flow_vector_magnitude_label < self._min_velocity]  # Extract stationary flows
-            moving = L2_label[flow_vector_magnitude_label >= self._min_velocity]  # Extract flows in movement
+            stationary_mask = flow_vector_magnitude_label < self._min_velocity
+            stationary = L2_label[stationary_mask]  # Extract stationary flows
+            moving = L2_label[~stationary_mask]  # Extract flows in movement
 
             if L2_label.numel() != 0:
-                mean_label_all = L2_label.mean()
-                all_labels[class_name] = mean_label_all
+                all_labels[class_name] = L2_label.mean()
             if moving.numel() != 0:
-                mean_label_moving = moving.mean()
-                moving_labels[class_name] = mean_label_moving
+                moving_labels[class_name] = moving.mean()
             if stationary.numel() != 0:
-                mean_label_stationary = stationary.mean()
-                stationary_labels[class_name] = mean_label_stationary
+                stationary_labels[class_name] = stationary.mean()
 
             # ----------- Computing L2 accuracy with threshold -------------
             for threshold, name in self._thresholds:
@@ -106,7 +104,6 @@ class BaseModel(pl.LightningModule):
         metrics = {'mean': L2_mean}
         metrics.update(L2_thresholds)
         return loss, metrics
-        #return loss, {}
 
     def general_step(self, batch, batch_idx, mode):
         """
@@ -139,7 +136,7 @@ class BaseModel(pl.LightningModule):
         y_flow = y_flow[mask]
         labels = labels[mask]
 
-        loss, metrics = self.compute_metrics(y_flow, y_hat, labels)
+        loss, metrics = self.compute_metrics(y_hat.detach(), y_hat, labels)
 
         return loss, metrics
 
