@@ -2,6 +2,7 @@ from argparse import ArgumentParser
 from pathlib import Path
 
 import pytorch_lightning as pl
+from pytorch_lightning.plugins import DDPPlugin
 import torch
 import os
 import wandb
@@ -47,6 +48,10 @@ def get_args():
     parser.add_argument('--gpus', default=1, type=int)
     parser.add_argument('--accelerator', default=None, type=str)  # Param of Trainer
     parser.add_argument('--sync_batchnorm', type=str2bool, default=False)  # Param of Trainer
+    # See
+    # https://pytorch-lightning.readthedocs.io/en/stable/benchmarking/performance.html#when-using-ddp-set-find-unused-parameters-false
+    # Use this is a note occurs about no unused parameters found.
+    parser.add_argument('--disable_ddp_unused_check', type=str2bool, default=False)
 
     temp_args, _ = parser.parse_known_args()
     # Add the correct model specific args
@@ -173,6 +178,14 @@ def cli():
               f"PLEASE NOTE that if the network includes layers that need larger batch sizes such as BatchNorm "
               f"they are still computed for each forward pass.")
 
+    plugins = None
+    if args.disable_ddp_unused_check:
+        if not args.accelerator == "ddp":
+            print("FATAL: DDP unused checks can only be disabled when DDP is used as accelerator!")
+            exit(1)
+        print("Disabling unused parameter check for DDP")
+        plugins = DDPPlugin(find_unused_parameters=False)
+
     # Max epochs can be configured here to, early stopping is also configurable.
     # Some things are definable as callback from pytorch_lightning.callback
     trainer = pl.Trainer.from_argparse_args(args,
@@ -181,7 +194,8 @@ def cli():
                                             gpus=args.gpus if torch.cuda.is_available() else 0,  # -1 means "all GPUs"
                                             logger=logger,
                                             accumulate_grad_batches=gradient_batch_acc,
-                                            log_every_n_steps=5
+                                            log_every_n_steps=5,
+                                            plugins=plugins
                                             )  # Add Trainer hparams if desired
     # The actual train loop
     trainer.fit(model, waymo_data_module)
