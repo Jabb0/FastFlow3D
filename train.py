@@ -71,7 +71,7 @@ def cli():
     args = get_args()
 
     if args.use_sparse_lookup and not args.fast_dev_run:
-        print(f"ERROR: Sparse model is not implemented completely. No full run allowed")
+        print("ERROR: Sparse model is not implemented completely. No full run allowed")
         exit(1)
 
     if args.use_group_norm:
