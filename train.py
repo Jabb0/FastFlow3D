@@ -38,12 +38,15 @@ def get_args():
     parser.add_argument('--use_sparse_lookup', type=str2bool, nargs='?', const=True, default=False)
     parser.add_argument('--architecture', default='FastFlowNet', type=str)
     parser.add_argument('--resume_from_checkpoint', type=str)
-    parser.add_argument('--n_samples', default=2, type=int)
+    parser.add_argument('--n_samples', default=2, type=int)  # TODO: Move to FastFlow custom parameters
     parser.add_argument('--max_time', type=str)
     parser.add_argument('--n_points', default=None, type=int)
     # This parameters are for restoring from a checkpoint, from weights and biases
-    parser.add_argument('--run_path', default=None, type=str)  # Id of the run
-    parser.add_argument('--checkpoint', default=None, type=str)  # Path of the checkpoint
+    parser.add_argument('--run_path', default=None, type=str)  # Id of the run  TODO: What is this?
+    # Parameters for multi gpu training
+    parser.add_argument('--gpus', default=1, type=int)
+    parser.add_argument('--accelerator', default=None, type=str)  # Param of Trainer
+    parser.add_argument('--sync_batchnorm', type=str2bool, default=False)  # Param of Trainer
 
     temp_args, _ = parser.parse_known_args()
     # Add the correct model specific args
@@ -131,24 +134,15 @@ def cli():
             exit(1)
 
         wandb.login(key=wandb_api_key)
-        
-        #print("Loading checkpoint...")
-        #weights_file = wandb.restore("epoch=3-step=7699.ckpt", run_path="dllab21fastflow3d/fastflow3d-prod/a3vvg9pi")
-        #run_path = "dllab21fastflow3d/fastflow3d-prod/runs/a3vvg9pi/files/fastflow3d-prod/a3vvg9pi/checkpoint"
-        #run_path = "dllab21fastflow3d/fastflow3d-prod/a3vvg9pi/checkpoints"
-        #run_path = "dllab21fastflow3d/fastflow3d-prod/a3vvg9pi/fastflow3d-prod/a3vvg9pi/checkpoints"
-        #run_path = "dllab21fastflow3d/fastflow3d-prod/a3vvg9pi"
-        #file_name = "fastflow3d-prod/a3vvg9pi/checkpoints/epoch=3-step=7699.ckpt"
-        #print("RUN PATH: " + run_path)
-        #weights_file = wandb.restore(file_name, run_path=run_path)
-        #model.load_from_checkpoint(weights_file.name)
+
         run_id = None
         if args.run_path is not None:
             run_id = os.path.basename(os.path.normpath(args.run_path))
             print("Continuing run " + args.run_path)
             print("Run id: " + run_id)
 
-        logger = WandbLogger(name=args.experiment_name, project=args.wandb_project, entity=args.wandb_entity, log_model=True, id=run_id)
+        logger = WandbLogger(name=args.experiment_name, project=args.wandb_project, entity=args.wandb_entity,
+                             log_model=True, id=run_id)
         additional_hyperparameters = {'grid_cell_size': grid_cell_size,
                                       'x_min': args.x_min,
                                       'x_max': args.x_max,
@@ -184,11 +178,10 @@ def cli():
     trainer = pl.Trainer.from_argparse_args(args,
                                             precision=32,  # Precision 16 does not seem to work with batchNorm1D
                                             progress_bar_refresh_rate=25,  # Prevents Google Colab crashes
-                                            gpus=1 if torch.cuda.is_available() else 0,  # -1 means "all GPUs"
+                                            gpus=args.gpus if torch.cuda.is_available() else 0,  # -1 means "all GPUs"
                                             logger=logger,
                                             accumulate_grad_batches=gradient_batch_acc,
-                                            log_every_n_steps=5,
-                                            resume_from_checkpoint=args.checkpoint
+                                            log_every_n_steps=5
                                             )  # Add Trainer hparams if desired
     # The actual train loop
     trainer.fit(model, waymo_data_module)
