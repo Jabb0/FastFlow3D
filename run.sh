@@ -7,6 +7,8 @@ then
         exit 1
 fi
 
+echo "Make sure to log to the correct wandb project!"
+
 # Run a training run
 # Batch size is PER GPU
 # Num workers is likely PER GPU and each gpu has another process as well
