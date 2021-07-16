@@ -30,29 +30,28 @@ class FlyingThings3DDataset(Dataset):
         A point cloud has a shape of [N, F], being N the number of points and the
         F to the number of features, which is [x, y, z, intensity, elongation]
         """
-        current_frame, previous_frame, flows = self.read_point_cloud_pair_and_flow(index)
+        current_frame, previous_frame, flows, mask = self.read_point_cloud_pair_and_flow(index)
 
         if self._n_points is not None:
-            current_frame, previous_frame, flows = self.subsample_points(current_frame, previous_frame, flows)
+            current_frame, previous_frame, flows, mask = self.subsample_points(
+                current_frame, previous_frame, flows, mask)
 
-        # Drop invalid points according to the method supplied
-        if self._drop_invalid_point_function is not None:
-            current_frame, flows = self._drop_invalid_point_function(current_frame, flows)
-            previous_frame, _ = self._drop_invalid_point_function(previous_frame, None)
         previous_frame = (torch.as_tensor(previous_frame), )
-        current_frame = (torch.as_tensor(current_frame), )
+        # FIXME do not use mask twice, but otherwise the format does not fit
+        current_frame = (torch.as_tensor(current_frame), mask, mask)
         return (previous_frame, current_frame), flows
 
-    def subsample_points(self, current_frame, previous_frame, flows):
+    def subsample_points(self, current_frame, previous_frame, flows, mask):
         # current_frame.shape[0] == flows.shape[0]
         if current_frame.shape[0] > self._n_points:
             indexes_current_frame = np.linspace(0, current_frame.shape[0]-1, num=self._n_points).astype(int)
             current_frame = current_frame[indexes_current_frame, :]
             flows = flows[indexes_current_frame, :]
+            mask = mask[indexes_current_frame]
         if previous_frame.shape[0] > self._n_points:
             indexes_previous_frame = np.linspace(0, previous_frame.shape[0]-1, num=self._n_points).astype(int)
             previous_frame = previous_frame[indexes_previous_frame, :]
-        return current_frame, previous_frame, flows
+        return current_frame, previous_frame, flows, mask
 
     def set_drop_invalid_point_function(self, drop_invalid_point_function):
         self._drop_invalid_point_function = drop_invalid_point_function
@@ -62,4 +61,4 @@ class FlyingThings3DDataset(Dataset):
         Read from disk the frame of the given an index
         """
         frame = np.load(os.path.join(self.data_path, 'frame_{}.npz'.format(index)))
-        return frame['points2'], frame['points1'], frame['flow']
+        return frame['points2'], frame['points1'], frame['flow'], frame['mask']

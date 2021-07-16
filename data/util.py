@@ -528,7 +528,7 @@ def get_3d_pos_xy(y_prime, x_prime, depth, focal_length=1050., w=960, h=540):
 
 
 def generate_flying_things_point_cloud(fname_disparity, fname_disparity_next_frame, fname_disparity_change,
-                                       fname_optical_flow, max_cut=35, focal_length=1050.):
+                                       fname_optical_flow, max_cut=35, focal_length=1050., add_label=True):
     # generate needed data
     disparity_np, _ = load_pfm(fname_disparity)
     disparity_next_frame_np, _ = load_pfm(fname_disparity_next_frame)
@@ -538,6 +538,8 @@ def generate_flying_things_point_cloud(fname_disparity, fname_disparity_next_fra
     depth_np = focal_length / disparity_np
     depth_next_frame_np = focal_length / disparity_next_frame_np
     future_depth_np = focal_length / (disparity_np + disparity_change_np)
+    h, w = disparity_np.shape
+
     try:
         depth_requirement = depth_np < max_cut
     except:
@@ -576,7 +578,7 @@ def generate_flying_things_point_cloud(fname_disparity, fname_disparity_next_fra
                                            depth_next_frame_np[int(sampled_pix2_y[i]), int(sampled_pix2_x[i])]) for i in
                              range(n_2)])
 
-    # TODO Check if this is correct
+    # TODO Check if this is correct (i would say it is correct, because we use backward optical flow instead of forward)
     sampled_optical_flow_x = np.array(
         [optical_flow_np[int(sampled_pix2_y[i]), int(sampled_pix2_x[i])][0] for i in range(n_2)])
     sampled_optical_flow_y = np.array(
@@ -588,7 +590,26 @@ def generate_flying_things_point_cloud(fname_disparity, fname_disparity_next_fra
                             range(n_2)])
     flow = future_pos2 - current_pos2
 
-    return current_pos1, current_pos2, flow
+    # mask, judge whether point move out of fov or occluded by other object after motion
+    future_pos2_depth = future_depth_np[sampled_pix2_y, sampled_pix2_x]
+    future_pos2_foreground_depth = np.zeros_like(future_pos2_depth)
+    valid_mask_fov2 = np.ones_like(future_pos2_depth, dtype=bool)
+    for i in range(future_pos2_depth.shape[0]):
+        if 0 < future_pix2_y[i] < h and 0 < future_pix2_x[i] < w:
+            future_pos2_foreground_depth[i] = bilinear_interp_val(depth_next_frame_np, future_pix2_y[i], future_pix2_x[i])
+        else:
+            valid_mask_fov2[i] = False
+    valid_mask_occ2 = (future_pos2_foreground_depth - future_pos2_depth) > -5e-1
+
+    mask2 = valid_mask_occ2 & valid_mask_fov2
+
+    # Add redundant zero labels for each flow in order to fit the shape
+    if add_label:
+        labelled_flow = np.ones(shape=(flow.shape[0], flow.shape[1] + 1))
+        labelled_flow[:, :-1] = flow
+        flow = labelled_flow
+
+    return current_pos1, current_pos2, flow, mask2
 
 
 def get_all_flying_things_frames(input_dir, disp_dir, opt_dir, disp_change_dir):

@@ -64,7 +64,8 @@ def preprocess_flying_things(input_dir, output_dir, view='right'):
         disparity_change = all_files_disparity_change[i]
         optical_flow = all_files_opt_flow[i]
         d = generate_flying_things_point_cloud(disparity, disparity_next_frame, disparity_change, optical_flow)
-        np.savez_compressed(os.path.join(output_dir, 'frame_{}.npz'.format(i)), points1=d[0], points2=d[1], flow=d[2])
+        np.savez_compressed(
+            os.path.join(output_dir, 'frame_{}.npz'.format(i)), points1=d[0], points2=d[1], flow=d[2], mask=d[3])
 
 
 # https://github.com/tqdm/tqdm/issues/484
