@@ -136,7 +136,7 @@ class BaseModel(pl.LightningModule):
         y_flow = y_flow[mask]
         labels = labels[mask]
 
-        loss, metrics = self.compute_metrics(y_hat.detach(), y_hat, labels)
+        loss, metrics = self.compute_metrics(y_flow, y_hat, labels)
 
         return loss, metrics
 
