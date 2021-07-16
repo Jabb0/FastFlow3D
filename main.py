@@ -2,7 +2,7 @@ import tensorflow as tf
 import time
 
 from utils.plot import visualize_point_cloud, plot_pillars, plot_2d_point_cloud
-from data.util import convert_range_image_to_point_cloud, parse_range_image_and_camera_projection
+from data.preprocess import convert_range_image_to_point_cloud, parse_range_image_and_camera_projection
 from utils.pillars import create_pillars_matrix
 from networks.encoder import PillarFeatureNet
 from data.WaymoDataset import WaymoDataset

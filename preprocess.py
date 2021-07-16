@@ -2,7 +2,7 @@ import time
 from pathlib import Path
 from argparse import ArgumentParser
 
-from data.util import preprocess, merge_metadata
+from data.preprocess import preprocess, merge_metadata
 import os
 import glob
 import multiprocessing as mp
