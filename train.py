@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytorch_lightning as pl
 from pytorch_lightning.plugins import DDPPlugin
+from pytorch_lightning.callbacks import ModelCheckpoint
 import torch
 import os
 import wandb
@@ -186,16 +187,19 @@ def cli():
         print("Disabling unused parameter check for DDP")
         plugins = DDPPlugin(find_unused_parameters=False)
 
+    # Add a callback for checkpointing after each epoch and the model with best validation loss
+    checkpoint_callback = ModelCheckpoint(monitor="val/loss", mode="min", save_last=True)
+
     # Max epochs can be configured here to, early stopping is also configurable.
     # Some things are definable as callback from pytorch_lightning.callback
     trainer = pl.Trainer.from_argparse_args(args,
                                             precision=32,  # Precision 16 does not seem to work with batchNorm1D
-                                            progress_bar_refresh_rate=25,  # Prevents Google Colab crashes
                                             gpus=args.gpus if torch.cuda.is_available() else 0,  # -1 means "all GPUs"
                                             logger=logger,
                                             accumulate_grad_batches=gradient_batch_acc,
                                             log_every_n_steps=5,
-                                            plugins=plugins
+                                            plugins=plugins,
+                                            callbacks=[checkpoint_callback]
                                             )  # Add Trainer hparams if desired
     # The actual train loop
     trainer.fit(model, waymo_data_module)
