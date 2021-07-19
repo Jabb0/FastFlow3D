@@ -18,7 +18,8 @@ class WaymoDataset(Dataset):
     def __init__(self, data_path,
                  drop_invalid_point_function=None,
                  point_cloud_transform=None,
-                 n_points=None):
+                 n_points=None,
+                 apply_pillarization=True):
         """
         Args:
             data_path (string): Folder with the compressed data.
@@ -39,7 +40,7 @@ class WaymoDataset(Dataset):
         # This parameter is useful when visualizing, since we need to pass
         # the pillarized point cloud to the model for infer but we would
         # like to display the points without pillarizing them
-        self._apply_pillarization = True
+        self._apply_pillarization = apply_pillarization
 
         try:
             with open(metadata_path, 'rb') as metadata_file:
@@ -86,6 +87,10 @@ class WaymoDataset(Dataset):
         if self._point_cloud_transform is not None and self._apply_pillarization:
             current_frame = self._point_cloud_transform(current_frame)
             previous_frame = self._point_cloud_transform(previous_frame)
+        else:
+            # output must be a tuple
+            previous_frame = (previous_frame, None)
+            current_frame = (current_frame, None)
         # This returns a tuple of augmented pointcloud and grid indices
 
         return (previous_frame, current_frame), flows

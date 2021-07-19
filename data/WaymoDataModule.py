@@ -21,13 +21,15 @@ class WaymoDataModule(pl.LightningDataModule):
                  has_test=False,
                  num_workers=1,
                  scatter_collate=True,
-                 n_points=None):
+                 n_points=None,
+                 apply_pillarization=True):
         super(WaymoDataModule, self).__init__()
         self._dataset_directory = Path(dataset_directory)
         self._batch_size = batch_size
         self._train_ = None
         self._val_ = None
         self._test_ = None
+        self.apply_pillarization = apply_pillarization
 
         self._pillarization_transform = ApplyPillarization(grid_cell_size=grid_cell_size, x_min=x_min,
                                                                y_min=y_min, z_min=z_min, z_max=z_max,
@@ -66,16 +68,17 @@ class WaymoDataModule(pl.LightningDataModule):
         self._train_ = WaymoDataset(self._dataset_directory.joinpath("train"),
                                     point_cloud_transform=self._pillarization_transform,
                                     drop_invalid_point_function=self._drop_points_function,
-                                    n_points=self._n_points)
+                                    n_points=self._n_points, apply_pillarization=self.apply_pillarization)
         self._val_ = WaymoDataset(self._dataset_directory.joinpath("valid"),
                                   point_cloud_transform=self._pillarization_transform,
                                   drop_invalid_point_function=self._drop_points_function,
-                                  n_points=self._n_points)
+                                  apply_pillarization=self.apply_pillarization)
         if self._has_test:
             self._test_ = WaymoDataset(self._dataset_directory.joinpath("test"),
                                        point_cloud_transform=self._pillarization_transform,
                                        drop_invalid_point_function=self._drop_points_function,
-                                       n_points=self._n_points)
+                                       apply_pillarization=self.apply_pillarization
+                                       )
 
     def train_dataloader(self) -> Union[DataLoader, List[DataLoader], Dict[str, DataLoader]]:
         """
