@@ -44,14 +44,19 @@ class Flow3DModel(BaseModel):
                  adam_beta_1=0.9,
                  adam_beta_2=0.999,
                  in_channels=5,
-                 n_samples=2):
+                 n_samples_set_conv=16,
+                 n_samples_flow_emb=64,
+                 n_samples_set_up_conv=8
+                 ):
         super(Flow3DModel, self).__init__()
-        self._n_samples = n_samples
+        self._n_samples_set_conv = n_samples_set_conv
+        self._n_samples_flow_emb = n_samples_flow_emb
+        self._n_samples_set_up_conv = n_samples_set_up_conv
         self.save_hyperparameters()  # Store the constructor parameters into self.hparams
 
-        self._point_feature_net = PointFeatureNet(in_channels=in_channels, n_samples=self._n_samples)
-        self._point_mixture = PointMixtureNet(n_samples=self._n_samples)
-        self._flow_refinement = FlowRefinementNet(in_channels=512, n_samples=self._n_samples)
+        self._point_feature_net = PointFeatureNet(in_channels=in_channels, n_samples=self._n_samples_set_conv)
+        self._point_mixture = PointMixtureNet(n_samples=self._n_samples_flow_emb)
+        self._flow_refinement = FlowRefinementNet(in_channels=512, n_samples=self._n_samples_set_up_conv)
         self._fc = torch.nn.Linear(in_features=128, out_features=3)
 
     def forward(self, x):

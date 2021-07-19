@@ -41,7 +41,10 @@ def get_args():
     parser.add_argument('--use_sparse_lookup', type=str2bool, nargs='?', const=True, default=False)
     parser.add_argument('--architecture', default='FastFlowNet', type=str)
     parser.add_argument('--resume_from_checkpoint', type=str)
-    parser.add_argument('--n_samples', default=2, type=int)  # TODO: Move to FastFlow custom parameters
+    parser.add_argument('--dataset', default='waymo', type=str)
+    parser.add_argument('--n_samples_set_conv', default=16, type=int)  # TODO: Move to FastFlow custom parameters
+    parser.add_argument('--n_samples_flow_emb', default=64, type=int)  # TODO: Move to FastFlow custom parameters
+    parser.add_argument('--n_samples_set_up_conv', default=8, type=int)  # TODO: Move to FastFlow custom parameters
     parser.add_argument('--max_time', type=str)
     parser.add_argument('--n_points', default=None, type=int)
     # This parameters are for restoring from a checkpoint, from weights and biases
@@ -117,7 +120,9 @@ def cli():
     elif args.architecture == 'FlowNet':  # baseline
         from models.Flow3DModel import Flow3DModel
         in_channels = 3 if args.dataset == 'flying_things' else 5  # TODO create cfg file?
-        model = Flow3DModel(learning_rate=args.learning_rate, n_samples=args.n_samples, in_channels=in_channels)
+        model = Flow3DModel(learning_rate=args.learning_rate, n_samples_set_up_conv=args.n_samples_set_up_conv,
+                            n_samples_set_conv=args.n_samples_set_conv, n_samples_flow_emb=args.n_samples_flow_emb,
+                            in_channels=in_channels)
     else:
         raise ValueError("no architecture {0} implemented".format(args.architecture))
     if args.dataset == 'waymo':
