@@ -60,5 +60,7 @@ class FlyingThings3DDataset(Dataset):
         """
         Read from disk the frame of the given an index
         """
-        frame = np.load(os.path.join(self.data_path, 'frame_{}.npz'.format(index)))
+        frame_list = glob.glob(os.path.join(self.data_path, '*.npz'))
+        frame_fname = frame_list[index]
+        frame = np.load(frame_fname)
         return frame['points2'], frame['points1'], frame['flow'], frame['mask']
