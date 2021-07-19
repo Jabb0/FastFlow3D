@@ -19,6 +19,8 @@ class ConvEncoder(torch.nn.Module):
         padding = (1, 1)
         super(ConvEncoder, self).__init__()
         # Input is a 512x512x64 image. Output is a 256x256x64 image.
+        # (512input - 3kernel + 2 * 1pad) / 2stride + 1 = 256.5 = 256
+        # The correct output is only achieved with padding. This yields for all the conv layers.
         self._block_1 = torch.nn.Sequential(
             # C: (1, 64, 256, 256)
             torch.nn.Conv2d(in_channels, 64, kernel_size=(3, 3), stride=(2, 2), padding_mode='zeros', padding=padding),

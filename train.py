@@ -2,6 +2,8 @@ from argparse import ArgumentParser
 from pathlib import Path
 
 import pytorch_lightning as pl
+from pytorch_lightning.plugins import DDPPlugin
+from pytorch_lightning.callbacks import ModelCheckpoint
 import torch
 import os
 import wandb
@@ -39,14 +41,19 @@ def get_args():
     parser.add_argument('--use_sparse_lookup', type=str2bool, nargs='?', const=True, default=False)
     parser.add_argument('--architecture', default='FastFlowNet', type=str)
     parser.add_argument('--resume_from_checkpoint', type=str)
-    parser.add_argument('--n_samples', default=2, type=int)
+    parser.add_argument('--n_samples', default=2, type=int)  # TODO: Move to FastFlow custom parameters
     parser.add_argument('--max_time', type=str)
     parser.add_argument('--n_points', default=None, type=int)
     # This parameters are for restoring from a checkpoint, from weights and biases
-    parser.add_argument('--run_path', default=None, type=str)  # Id of the run
-    parser.add_argument('--checkpoint', default=None, type=str)  # Path of the checkpoint
-    parser.add_argument('--dataset', default='waymo', type=str)  # Dataset, waymo or flying_things
-    parser.add_argument('--apply_pillarization', default=True, type=str2bool)  # False for baseline, true for fastflownet
+    parser.add_argument('--run_path', default=None, type=str)  # Id of the run  TODO: What is this?
+    # Parameters for multi gpu training
+    parser.add_argument('--gpus', default=1, type=int)
+    parser.add_argument('--accelerator', default=None, type=str)  # Param of Trainer
+    parser.add_argument('--sync_batchnorm', type=str2bool, default=False)  # Param of Trainer
+    # See
+    # https://pytorch-lightning.readthedocs.io/en/stable/benchmarking/performance.html#when-using-ddp-set-find-unused-parameters-false
+    # Use this is a note occurs about no unused parameters found.
+    parser.add_argument('--disable_ddp_unused_check', type=str2bool, default=False)
 
     temp_args, _ = parser.parse_known_args()
     # Add the correct model specific args
@@ -71,7 +78,7 @@ def cli():
     args = get_args()
 
     if args.use_sparse_lookup and not args.fast_dev_run:
-        print(f"ERROR: Sparse model is not implemented completely. No full run allowed")
+        print("ERROR: Sparse model is not implemented completely. No full run allowed")
         exit(1)
 
     if args.use_group_norm:
@@ -145,16 +152,6 @@ def cli():
 
         wandb.login(key=wandb_api_key)
 
-        # print("Loading checkpoint...")
-        # weights_file = wandb.restore("epoch=3-step=7699.ckpt", run_path="dllab21fastflow3d/fastflow3d-prod/a3vvg9pi")
-        # run_path = "dllab21fastflow3d/fastflow3d-prod/runs/a3vvg9pi/files/fastflow3d-prod/a3vvg9pi/checkpoint"
-        # run_path = "dllab21fastflow3d/fastflow3d-prod/a3vvg9pi/checkpoints"
-        # run_path = "dllab21fastflow3d/fastflow3d-prod/a3vvg9pi/fastflow3d-prod/a3vvg9pi/checkpoints"
-        # run_path = "dllab21fastflow3d/fastflow3d-prod/a3vvg9pi"
-        # file_name = "fastflow3d-prod/a3vvg9pi/checkpoints/epoch=3-step=7699.ckpt"
-        # print("RUN PATH: " + run_path)
-        # weights_file = wandb.restore(file_name, run_path=run_path)
-        # model.load_from_checkpoint(weights_file.name)
         run_id = None
         if args.run_path is not None:
             run_id = os.path.basename(os.path.normpath(args.run_path))
@@ -194,16 +191,27 @@ def cli():
               f"PLEASE NOTE that if the network includes layers that need larger batch sizes such as BatchNorm "
               f"they are still computed for each forward pass.")
 
+    plugins = None
+    if args.disable_ddp_unused_check:
+        if not args.accelerator == "ddp":
+            print("FATAL: DDP unused checks can only be disabled when DDP is used as accelerator!")
+            exit(1)
+        print("Disabling unused parameter check for DDP")
+        plugins = DDPPlugin(find_unused_parameters=False)
+
+    # Add a callback for checkpointing after each epoch and the model with best validation loss
+    checkpoint_callback = ModelCheckpoint(monitor="val/loss", mode="min", save_last=True)
+
     # Max epochs can be configured here to, early stopping is also configurable.
     # Some things are definable as callback from pytorch_lightning.callback
     trainer = pl.Trainer.from_argparse_args(args,
                                             precision=32,  # Precision 16 does not seem to work with batchNorm1D
-                                            progress_bar_refresh_rate=25,  # Prevents Google Colab crashes
-                                            gpus=1 if torch.cuda.is_available() else 0,  # -1 means "all GPUs"
+                                            gpus=args.gpus if torch.cuda.is_available() else 0,  # -1 means "all GPUs"
                                             logger=logger,
                                             accumulate_grad_batches=gradient_batch_acc,
                                             log_every_n_steps=5,
-                                            resume_from_checkpoint=args.checkpoint
+                                            plugins=plugins,
+                                            callbacks=[checkpoint_callback]
                                             )  # Add Trainer hparams if desired
     # The actual train loop
     trainer.fit(model, data_module)
