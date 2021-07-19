@@ -153,7 +153,7 @@ def save_point_cloud(compressed_frame, file_path):
     frame = get_uncompressed_frame(compressed_frame)
     points, flows = compute_features(frame)
     point_cloud = np.hstack((points, flows))
-    np.save(file_path, point_cloud)
+    np.savez_compressed(file_path, frame=point_cloud)
     transform = list(frame.pose.transform)
     return points, flows, transform
 
@@ -187,7 +187,7 @@ def preprocess(tfrecord_file, output_path, frames_per_segment = None):
     min_vz_global, max_vz_global = np.inf, -np.inf
 
     for j, frame in enumerate(loaded_file):
-        output_file_name = f"pointCloud_file_{tfrecord_filename}_frame_{j}.npy"
+        output_file_name = f"pointCloud_file_{tfrecord_filename}_frame_{j}.npz"
         point_cloud_path = os.path.join(output_path, output_file_name)
         # Process frame and store point clouds into disk
         _, flows, pose_transform = save_point_cloud(frame, point_cloud_path)
