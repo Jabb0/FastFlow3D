@@ -94,6 +94,7 @@ class LaserScanVis:
         return rgb
 
     def update_scan(self):
+        self.dataset.pillarize(False)
         (previous_frame, current_frame), flows = self.dataset[self.offset]
         gt_flows = flows[:, :-1]  # Remove the label
         raw_point_cloud = current_frame[0][:, 0:3]  # NOTE: Select the point cloud not the grid indices
