@@ -1,6 +1,7 @@
 import glob
 import os
 import pickle
+import re
 
 import numpy as np
 import tensorflow as tf
@@ -299,3 +300,155 @@ def merge_metadata(input_path):
                 'flows_information': flows_info}
     with open(os.path.join(input_path, "metadata"), 'wb') as metadata_file:
         pickle.dump(metadata, metadata_file)
+
+
+def load_pfm(filename):
+    file = open(filename, 'r', newline='', encoding='latin-1')
+
+    header = file.readline().rstrip()
+    if header == 'PF':
+        color = True
+    elif header == 'Pf':
+        color = False
+    else:
+        raise Exception('Not a PFM file.')
+
+    dim_match = re.match(r'^(\d+)\s(\d+)\s$', file.readline())
+    if dim_match:
+        width, height = map(int, dim_match.groups())
+    else:
+        raise Exception('Malformed PFM header.')
+
+    scale = float(file.readline().rstrip())
+    if scale < 0:  # little-endian
+        endian = '<'
+        scale = -scale
+    else:
+        endian = '>'  # big-endian
+
+    data = np.fromfile(file, endian + 'f')
+    shape = (height, width, 3) if color else (height, width)
+
+    file.close()
+
+    return np.reshape(data, shape), scale
+
+
+def bilinear_interp_val(vmap, y, x):
+    """
+    bilinear interpolation on a 2D map
+    """
+    h, w = vmap.shape
+    x1 = int(x)
+    x2 = x1 + 1
+    x2 = w - 1 if x2 > (w - 1) else x2
+    y1 = int(y)
+    y2 = y1 + 1
+    y2 = h - 1 if y2 > (h - 1) else y2
+    Q11 = vmap[y1, x1]
+    Q21 = vmap[y1, x2]
+    Q12 = vmap[y2, x1]
+    Q22 = vmap[y2, x2]
+    return Q11 * (x2 - x) * (y2 - y) + Q21 * (x - x1) * (y2 - y) + Q12 * (x2 - x) * (y - y1) + Q22 * (x - x1) * (y - y1)
+
+
+def get_3d_pos_xy(y_prime, x_prime, depth, focal_length=1050., w=960, h=540):
+    """ depth pop up """
+    y = (y_prime - h / 2.) * depth / focal_length
+    x = (x_prime - w / 2.) * depth / focal_length
+    return [x, y, depth]
+
+
+def generate_flying_things_point_cloud(fname_disparity, fname_disparity_next_frame, fname_disparity_change,
+                                       fname_optical_flow, max_cut=35, focal_length=1050., add_label=True):
+    # generate needed data
+    disparity_np, _ = load_pfm(fname_disparity)
+    disparity_next_frame_np, _ = load_pfm(fname_disparity_next_frame)
+    disparity_change_np, _ = load_pfm(fname_disparity_change)
+    optical_flow_np, _ = load_pfm(fname_optical_flow)
+
+    depth_np = focal_length / disparity_np
+    depth_next_frame_np = focal_length / disparity_next_frame_np
+    future_depth_np = focal_length / (disparity_np + disparity_change_np)
+    h, w = disparity_np.shape
+
+    try:
+        depth_requirement = depth_np < max_cut
+    except:
+        return None
+
+    satisfy_pix1 = np.column_stack(np.where(depth_requirement))
+    sampled_pix1_x = satisfy_pix1[:, 1]
+    sampled_pix1_y = satisfy_pix1[:, 0]
+    n_1 = sampled_pix1_x.shape[0]
+    current_pos1 = np.array([get_3d_pos_xy(sampled_pix1_y[i], sampled_pix1_x[i],
+                                           depth_np[int(sampled_pix1_y[i]),
+                                                    int(sampled_pix1_x[i])]) for i in range(n_1)])
+
+    # sampled_optical_flow_x = np.array(
+    #     [optical_flow_np[int(sampled_pix1_y[i]), int(sampled_pix1_x[i])][0] for i in range(n_1)])
+    # sampled_optical_flow_y = np.array(
+    #     [optical_flow_np[int(sampled_pix1_y[i]), int(sampled_pix1_x[i])][1] for i in range(n_1)])
+    # future_pix1_x = sampled_pix1_x + sampled_optical_flow_x
+    # future_pix1_y = sampled_pix1_y - sampled_optical_flow_y
+    # future_pos1 = np.array([get_3d_pos_xy(future_pix1_y[i], future_pix1_x[i],
+    #                                       future_depth_np[int(sampled_pix1_y[i]), int(sampled_pix1_x[i])]) for i in
+    #                         range(n_1)])
+    # flow = future_pos1 - current_pos1
+
+    try:
+        depth_requirement = depth_next_frame_np < max_cut
+    except:
+        return None
+
+    satisfy_pix2 = np.column_stack(np.where(depth_next_frame_np < max_cut))
+    sampled_pix2_x = satisfy_pix2[:, 1]
+    sampled_pix2_y = satisfy_pix2[:, 0]
+    n_2 = sampled_pix2_x.shape[0]
+
+    current_pos2 = np.array([get_3d_pos_xy(sampled_pix2_y[i], sampled_pix2_x[i],
+                                           depth_next_frame_np[int(sampled_pix2_y[i]), int(sampled_pix2_x[i])]) for i in
+                             range(n_2)])
+
+    # TODO Check if this is correct (i would say it is correct, because we use backward optical flow instead of forward)
+    sampled_optical_flow_x = np.array(
+        [optical_flow_np[int(sampled_pix2_y[i]), int(sampled_pix2_x[i])][0] for i in range(n_2)])
+    sampled_optical_flow_y = np.array(
+        [optical_flow_np[int(sampled_pix2_y[i]), int(sampled_pix2_x[i])][1] for i in range(n_2)])
+    future_pix2_x = sampled_pix2_x + sampled_optical_flow_x
+    future_pix2_y = sampled_pix2_y - sampled_optical_flow_y
+    future_pos2 = np.array([get_3d_pos_xy(future_pix2_y[i], future_pix2_x[i],
+                                          future_depth_np[int(sampled_pix2_y[i]), int(sampled_pix2_x[i])]) for i in
+                            range(n_2)])
+    flow = future_pos2 - current_pos2
+
+    # mask, judge whether point move out of fov or occluded by other object after motion
+    future_pos2_depth = future_depth_np[sampled_pix2_y, sampled_pix2_x]
+    future_pos2_foreground_depth = np.zeros_like(future_pos2_depth)
+    valid_mask_fov2 = np.ones_like(future_pos2_depth, dtype=bool)
+    for i in range(future_pos2_depth.shape[0]):
+        if 0 < future_pix2_y[i] < h and 0 < future_pix2_x[i] < w:
+            future_pos2_foreground_depth[i] = bilinear_interp_val(depth_next_frame_np, future_pix2_y[i], future_pix2_x[i])
+        else:
+            valid_mask_fov2[i] = False
+    valid_mask_occ2 = (future_pos2_foreground_depth - future_pos2_depth) > -5e-1
+
+    mask2 = valid_mask_occ2 & valid_mask_fov2
+
+    # Add redundant zero labels for each flow in order to fit the shape
+    if add_label:
+        labelled_flow = np.ones(shape=(flow.shape[0], flow.shape[1] + 1))
+        labelled_flow[:, :-1] = flow
+        flow = labelled_flow
+
+    return current_pos1, current_pos2, flow, mask2
+
+
+def get_all_flying_things_frames(input_dir, disp_dir, opt_dir, disp_change_dir):
+    all_files_disparity = glob.glob(os.path.join(input_dir, '{0}/*.pfm'.format(disp_dir)))
+    all_files_disparity_change = glob.glob(os.path.join(input_dir, '{0}/*.pfm'.format(disp_change_dir)))
+    all_files_opt_flow = glob.glob(os.path.join(input_dir, '{0}/*.pfm'.format(opt_dir)))
+
+    assert len(all_files_disparity) == len(all_files_opt_flow) == len(all_files_disparity_change)
+
+    return all_files_disparity, all_files_disparity_change, all_files_opt_flow

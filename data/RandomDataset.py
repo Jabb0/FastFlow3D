@@ -1,7 +1,5 @@
-from torch.utils.data import Dataset
 import numpy as np
-
-from utils.pillars import remove_out_of_bounds_points
+from torch.utils.data import Dataset
 
 
 class RandomDataset(Dataset):

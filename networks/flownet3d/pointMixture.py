@@ -1,5 +1,7 @@
-import torch
 from typing import Tuple
+
+import torch
+
 from networks.flownet3d.layers import SetConvLayer, FlowEmbeddingLayer
 
 

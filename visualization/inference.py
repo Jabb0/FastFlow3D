@@ -1,17 +1,15 @@
 from argparse import ArgumentParser
 
-import open3d.visualization
-
-from models import FastFlow3DModel
-from data.WaymoDataset import WaymoDataset
-import open3d as o3d
 import ffmpeg
-import time
 import numpy as np
-from utils.plot import visualize_point_cloud
-import yaml
-from data.util import ApplyPillarization, drop_points_function
+import open3d as o3d
 import torch
+import yaml
+
+from data.WaymoDataset import WaymoDataset
+from data.util import ApplyPillarization, drop_points_function
+from models import FastFlow3DModelScatter
+from utils.plot import visualize_point_cloud
 
 # Open3D info
 # http://open3d.org/html/tutorial/Basic/visualization.html
@@ -48,7 +46,7 @@ if __name__ == '__main__':
 
     if args.model_path is not None:
         # We assume 512x512 pillars grid and 8 features per point
-        model = FastFlow3DModel.load_from_checkpoint(args.model_path)
+        model = FastFlow3DModelScatter.load_from_checkpoint(args.model_path)
         model.eval()
         print("DISPLAYING PREDICTED DATA")
     else:

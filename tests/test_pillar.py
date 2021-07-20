@@ -1,5 +1,6 @@
-from utils.pillars import create_pillars_matrix
 import numpy as np
+
+from utils.pillars import create_pillars_matrix
 
 
 def test_create_pillars():

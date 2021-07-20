@@ -1,8 +1,8 @@
 import torch
 
+from models.BaseModel import BaseModel
 from networks import PillarFeatureNetScatter, ConvEncoder, ConvDecoder, UnpillarNetworkScatter, PointFeatureNet
 from .utils import init_weights
-from models.BaseModel import BaseModel
 
 
 class FastFlow3DModelScatter(BaseModel):
@@ -40,8 +40,7 @@ class FastFlow3DModelScatter(BaseModel):
         mask_flattened = mask.flatten(0, 1)
         # Init the result tensor for our data. This is necessary because the point net
         # has a batch norm and this needs to ignore the masked points
-        batch_pc_embedding = torch.zeros((pc_flattened.size(0), 64),
-                                                  device=pc.device, dtype=pc.dtype)
+        batch_pc_embedding = torch.zeros((pc_flattened.size(0), 64), device=pc.device, dtype=pc.dtype)
         # Flatten the first two dimensions to get the points as batch dimension
         batch_pc_embedding[mask_flattened] = self._point_feature_net(pc_flattened[mask_flattened])
         # This allows backprop towards the MLP: Checked with backward hooks. Gradient is present.

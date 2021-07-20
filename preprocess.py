@@ -1,14 +1,15 @@
-import time
-from pathlib import Path
-from argparse import ArgumentParser
-
-from data.preprocess import preprocess, merge_metadata
-from data.util import generate_flying_things_point_cloud, get_all_flying_things_frames
-import os
 import glob
-import numpy as np
 import multiprocessing as mp
+import os
+import time
+from argparse import ArgumentParser
+from pathlib import Path
+
+import numpy as np
 from tqdm import tqdm
+
+from data.preprocess import generate_flying_things_point_cloud, get_all_flying_things_frames
+from data.preprocess import preprocess, merge_metadata
 
 global output_directory
 
@@ -52,9 +53,6 @@ def preprocess_flying_things(input_dir, output_dir, view='right'):
                    left
                    right
     """
-    # INPUT_DIR = "./data/flyingthings3d"
-    # OUTPUT_DIR = "./data/flyingthings3d_preprocessed"
-
     all_files_disparity, all_files_disparity_change, all_files_opt_flow = get_all_flying_things_frames(
         input_dir=input_dir, disp_dir='disparity/train/{}'.format(view),
         opt_dir='optical_flow/train/backward/{}'.format(view), disp_change_dir='disparity_change/train/{}'.format(view))

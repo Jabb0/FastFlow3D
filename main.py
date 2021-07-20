@@ -1,14 +1,14 @@
-import tensorflow as tf
+import os
 import time
 
-from utils.plot import visualize_point_cloud, plot_pillars, plot_2d_point_cloud
-from data.preprocess import convert_range_image_to_point_cloud, parse_range_image_and_camera_projection
-from utils.pillars import create_pillars_matrix
-from networks.encoder import PillarFeatureNet
-from data.WaymoDataset import WaymoDataset
-import os
-
+import tensorflow as tf
 from waymo_open_dataset import dataset_pb2 as open_dataset
+
+from data.WaymoDataset import WaymoDataset
+from data.preprocess import convert_range_image_to_point_cloud, parse_range_image_and_camera_projection
+from networks.encoder import PillarFeatureNet
+from utils.pillars import create_pillars_matrix
+from utils.plot import visualize_point_cloud
 
 
 def disable_gpu():

@@ -1,8 +1,9 @@
+import warnings
+from typing import *
+
 import torch
 import torch.nn as nn
-import warnings
 from torch.autograd import Function
-from typing import *
 
 try:
     import _ext as _ext

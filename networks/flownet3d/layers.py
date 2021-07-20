@@ -3,8 +3,9 @@ from typing import List, Optional, Tuple
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from networks.flownet3d.utils.pointnet2_utils import QueryAndGroup, GroupAll, gather_operation, furthest_point_sample
+
 from networks.flownet3d.util import build_shared_mlp
+from networks.flownet3d.utils.pointnet2_utils import QueryAndGroup, GroupAll, gather_operation, furthest_point_sample
 
 
 class SetConvLayer(nn.Module):

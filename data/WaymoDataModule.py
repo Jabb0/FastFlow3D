@@ -5,7 +5,7 @@ import pytorch_lightning as pl
 from torch.utils.data import DataLoader
 
 from .WaymoDataset import WaymoDataset
-from .util import ApplyPillarization, drop_points_function, custom_collate, custom_collate_batch
+from .util import ApplyPillarization, drop_points_function, custom_collate_batch
 
 
 class WaymoDataModule(pl.LightningDataModule):

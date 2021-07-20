@@ -1,15 +1,13 @@
 from argparse import ArgumentParser
 
-from data.WaymoDataset import WaymoDataset
-from data.WaymoDataModule import WaymoDataModule
-
 import yaml
-from data.util import ApplyPillarization, drop_points_function
-from laserscanvis import LaserScanVis
-from models.FastFlow3DModelScatter import FastFlow3DModelScatter
-from util import predict_and_store_flows
-from utils import str2bool
 
+from data.WaymoDataset import WaymoDataset
+from data.util import ApplyPillarization, drop_points_function
+from models.FastFlow3DModelScatter import FastFlow3DModelScatter
+from utils import str2bool
+from visualization.laserscanvis import LaserScanVis
+from visualization.util import predict_and_store_flows
 
 # vispy
 # if error vispy:

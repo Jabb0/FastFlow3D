@@ -1,9 +1,8 @@
+from pathlib import Path
+from typing import Optional, Union, List, Dict
+
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader
-
-from pathlib import Path
-
-from typing import Optional, Union, List, Dict
 
 from .FlyingThings3DDataset import FlyingThings3DDataset
 

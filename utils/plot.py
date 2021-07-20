@@ -1,7 +1,8 @@
-import matplotlib.pyplot as plt
-import open3d as o3d
-import numpy as np
 import math
+
+import matplotlib.pyplot as plt
+import numpy as np
+import open3d as o3d
 
 
 def plot_pillars(indices, x_max, x_min, y_max, y_min, grid_cell_size):

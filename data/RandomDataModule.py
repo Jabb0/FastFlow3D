@@ -1,13 +1,11 @@
-import torchvision
-import pytorch_lightning as pl
-from torch.utils.data import DataLoader, random_split
-
 from pathlib import Path
-
 from typing import Optional, Union, List, Dict
 
+import pytorch_lightning as pl
+from torch.utils.data import DataLoader
+
 from .RandomDataset import RandomDataset
-from .util import ApplyPillarization, drop_points_function, custom_collate
+from .util import ApplyPillarization, drop_points_function
 
 
 class RandomDataModule(pl.LightningDataModule):

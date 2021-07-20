@@ -1,11 +1,9 @@
 from argparse import ArgumentParser
-from data.WaymoDataset import WaymoDataset
-from utils.plot import visualize_point_cloud
-import open3d as o3d
-import time
-import ffmpeg
-import numpy as np
 
+import ffmpeg
+import open3d as o3d
+
+from data.WaymoDataset import WaymoDataset
 
 # https://github.com/intel-isl/Open3D/issues/1110
 if __name__ == '__main__':

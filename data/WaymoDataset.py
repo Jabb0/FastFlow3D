@@ -1,7 +1,8 @@
-from torch.utils.data import Dataset
 import os
-import numpy as np
 import pickle
+
+import numpy as np
+from torch.utils.data import Dataset
 
 from data.util import get_coordinates_and_features
 

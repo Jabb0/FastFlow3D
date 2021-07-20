@@ -1,8 +1,10 @@
-import torch
-from data.util import custom_collate_batch
 import os
+
 import numpy as np
+import torch
 from tqdm import tqdm
+
+from data.util import custom_collate_batch
 
 
 def predict_flows(model, dataset, offset):

@@ -1,7 +1,9 @@
-import pytorch_lightning as pl
-import torch
 from argparse import ArgumentParser
 from collections import defaultdict
+
+import pytorch_lightning as pl
+import torch
+
 from utils import str2bool
 
 

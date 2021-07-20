@@ -2,13 +2,12 @@
 # This file is covered by the LICENSE file in the root of this project.
 # https://github.com/PRBonn/lidar-bonnetal/blob/5a5f4b180117b08879ec97a3a05a3838bce6bb0f/train/common/laserscanvis.py
 
+import cv2
+import numpy as np
 import vispy
 from vispy.scene import visuals, SceneCanvas
-import numpy as np
-import torch
-from data.util import custom_collate_batch
-import cv2
-from util import get_flows, predict_flows
+
+from visualization.util import get_flows, predict_flows
 
 
 class LaserScanVis:

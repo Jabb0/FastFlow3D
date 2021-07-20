@@ -1,10 +1,11 @@
+from argparse import ArgumentParser
+
 import torch
 
 from models.BaseModel import BaseModel
-
+from networks.flownet3d.flowRefinement import FlowRefinementNet
 from networks.flownet3d.pointFeatureNet import PointFeatureNet
 from networks.flownet3d.pointMixture import PointMixtureNet
-from networks.flownet3d.flowRefinement import FlowRefinementNet
 
 
 class Flow3DModel(BaseModel):
@@ -92,3 +93,19 @@ class Flow3DModel(BaseModel):
         x = self._fc(features)
         return x
 
+    @staticmethod
+    def add_model_specific_args(parent_parser):
+        """
+        Method to add all command line arguments specific to this module.
+        Used to dynamically add the correct arguments required.
+        :param parent_parser: The current argparser to add the options to
+        :return: the new argparser with the new options
+        """
+        # Add parameters of all models
+        parser = BaseModel.add_model_specific_args(parent_parser)
+
+        parser = ArgumentParser(parents=[parser], add_help=False)
+        parser.add_argument('--n_samples_set_conv', default=16, type=int, help="FlowNet3D specific")
+        parser.add_argument('--n_samples_flow_emb', default=64, type=int, help="FlowNet3D specific")
+        parser.add_argument('--n_samples_set_up_conv', default=8, type=int, help="FlowNet3D specific")
+        return parser

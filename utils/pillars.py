@@ -1,5 +1,4 @@
 import numpy as np
-import math
 
 
 def remove_out_of_bounds_points(pc, y, x_min, x_max, y_min, y_max, z_min, z_max):

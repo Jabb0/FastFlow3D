@@ -6,7 +6,6 @@ setup(
     description='Implementation of the FastFlowNet3D',
     author='',
     author_email='',
-    # REPLACE WITH YOUR OWN GITHUB PROJECT LINK
     url='https://github.com/jabb0/fastflownet3d',
     install_requires=['pytorch-lightning'],
     packages=find_packages(),
