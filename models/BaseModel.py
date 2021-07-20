@@ -220,8 +220,9 @@ class BaseModel(pl.LightningModule):
         :param parent_parser: The current argparser to add the options to
         :return: the new argparser with the new options
         """
-        parser = ArgumentParser(parents=[parent_parser], add_help=False)
+        parent_parser = ArgumentParser(parents=[parent_parser], add_help=False)
+        parser = parent_parser.add_argument_group("General Model Params")
         parser.add_argument('--learning_rate', type=float, default=1e-6)
         parser.add_argument('--use_group_norm', type=str2bool, nargs='?', const=True, default=False)
         parser.add_argument('--background_weight', default=0.1, type=float)
-        return parser
+        return parent_parser

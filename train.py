@@ -11,7 +11,7 @@ from pytorch_lightning.plugins import DDPPlugin
 
 from data import WaymoDataModule
 from data.FlyingThings3DDataModule import FlyingThings3DDataModule
-from models import FastFlow3DModelScatter
+from models import FastFlow3DModelScatter, Flow3DModel
 from utils import str2bool
 
 
@@ -77,18 +77,19 @@ def get_args():
                              "See https://pytorch-lightning.readthedocs.io/en/stable/benchmarking/"
                              "performance.html#when-using-ddp-set-find-unused-parameters-false")
 
+    # NOTE: Readd this to see all parameters of the trainer
+    # parser = pl.Trainer.add_argparse_args(parser)  # Add arguments for the trainer
+
+    # TODO: This does not show the arguments in --help properly.
     temp_args, _ = parser.parse_known_args()
     # Add the correct model specific args
     if temp_args.architecture == 'FastFlowNet':
         parser = FastFlow3DModelScatter.add_model_specific_args(parser)
     elif temp_args.architecture == 'FlowNet':  # baseline
-        from models.Flow3DModel import Flow3DModel
         parser = Flow3DModel.add_model_specific_args(parser)
     else:
         raise ValueError("no architecture {0} implemented".format(temp_args.architecture))
 
-    # NOTE: Readd this to see all parameters of the trainer
-    # parser = pl.Trainer.add_argparse_args(parser)  # Add arguments for the trainer
     return parser.parse_args()
 
 
@@ -126,7 +127,6 @@ def cli():
                                        use_group_norm=args.use_group_norm)
     elif args.architecture == 'FlowNet':  # baseline
         apply_pillarization = False  # FlowNet does not use pillarization
-        from models.Flow3DModel import Flow3DModel
         in_channels = 3 if args.dataset == 'flying_things' else 5  # TODO create cfg file?
         model = Flow3DModel(learning_rate=args.learning_rate, n_samples_set_up_conv=args.n_samples_set_up_conv,
                             n_samples_set_conv=args.n_samples_set_conv, n_samples_flow_emb=args.n_samples_flow_emb,

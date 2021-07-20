@@ -102,10 +102,11 @@ class Flow3DModel(BaseModel):
         :return: the new argparser with the new options
         """
         # Add parameters of all models
-        parser = BaseModel.add_model_specific_args(parent_parser)
+        parent_parser = ArgumentParser(parents=[parent_parser], add_help=False)
+        parent_parser = BaseModel.add_model_specific_args(parent_parser)
 
-        parser = ArgumentParser(parents=[parser], add_help=False)
+        parser = parent_parser.add_argument_group("FlowNet3D")
         parser.add_argument('--n_samples_set_conv', default=16, type=int, help="FlowNet3D specific")
         parser.add_argument('--n_samples_flow_emb', default=64, type=int, help="FlowNet3D specific")
         parser.add_argument('--n_samples_set_up_conv', default=8, type=int, help="FlowNet3D specific")
-        return parser
+        return parent_parser
