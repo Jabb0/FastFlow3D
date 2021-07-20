@@ -95,10 +95,6 @@ def get_args():
 def cli():
     args = get_args()
 
-    if args.use_sparse_lookup and not args.fast_dev_run:
-        print("ERROR: Sparse model is not implemented completely. No full run allowed")
-        exit(1)
-
     if args.use_group_norm:
         print("INFO: Using group norm instead of batch norm!")
 
@@ -129,7 +125,7 @@ def cli():
                                        learning_rate=args.learning_rate,
                                        use_group_norm=args.use_group_norm)
     elif args.architecture == 'FlowNet':  # baseline
-        apply_pillarization = False
+        apply_pillarization = False  # FlowNet does not use pillarization
         from models.Flow3DModel import Flow3DModel
         in_channels = 3 if args.dataset == 'flying_things' else 5  # TODO create cfg file?
         model = Flow3DModel(learning_rate=args.learning_rate, n_samples_set_up_conv=args.n_samples_set_up_conv,
@@ -145,7 +141,6 @@ def cli():
                                       batch_size=args.batch_size,
                                       has_test=args.test_data_available,
                                       num_workers=args.num_workers,
-                                      scatter_collate=True,
                                       n_pillars_x=n_pillars_x,
                                       n_points=args.n_points, apply_pillarization=apply_pillarization)
     elif args.dataset == 'flying_things':

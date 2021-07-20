@@ -1,9 +1,8 @@
+from pathlib import Path
+from typing import Optional, Union, List, Dict
+
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader
-
-from pathlib import Path
-
-from typing import Optional, Union, List, Dict
 
 from .WaymoDataset import WaymoDataset
 from .util import ApplyPillarization, drop_points_function, custom_collate, custom_collate_batch
@@ -20,7 +19,6 @@ class WaymoDataModule(pl.LightningDataModule):
                  batch_size: int = 32,
                  has_test=False,
                  num_workers=1,
-                 scatter_collate=True,
                  n_points=None,
                  apply_pillarization=True):
         super(WaymoDataModule, self).__init__()
@@ -32,8 +30,8 @@ class WaymoDataModule(pl.LightningDataModule):
         self.apply_pillarization = apply_pillarization
 
         self._pillarization_transform = ApplyPillarization(grid_cell_size=grid_cell_size, x_min=x_min,
-                                                               y_min=y_min, z_min=z_min, z_max=z_max,
-                                                               n_pillars_x=n_pillars_x)
+                                                           y_min=y_min, z_min=z_min, z_max=z_max,
+                                                           n_pillars_x=n_pillars_x)
 
         # This returns a function that removes points that should not be included in the pillarization.
         # It also removes the labels if given.
@@ -43,7 +41,7 @@ class WaymoDataModule(pl.LightningDataModule):
         self._has_test = has_test
         self._num_workers = num_workers
 
-        self._collate_fn = custom_collate_batch if scatter_collate else custom_collate
+        self._collate_fn = custom_collate_batch
         self._n_points = n_points
 
     def prepare_data(self) -> None:
