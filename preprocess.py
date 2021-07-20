@@ -2,7 +2,8 @@ import time
 from pathlib import Path
 from argparse import ArgumentParser
 
-from data.util import preprocess, merge_metadata, generate_flying_things_point_cloud, get_all_flying_things_frames
+from data.preprocess import preprocess, merge_metadata
+from data.util import generate_flying_things_point_cloud, get_all_flying_things_frames
 import os
 import glob
 import numpy as np
