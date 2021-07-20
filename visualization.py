@@ -67,7 +67,8 @@ if __name__ == '__main__':
 
             if "n_points" in config_info.keys():
                 n_points = config_info['n_points']['value']
-                waymo_dataset.set_n_points(n_points)
+                if n_points is not None and n_points != 'None':
+                    waymo_dataset.set_n_points(n_points)
 
             if "architecture" in config_info.keys():
                 architecture = config_info['architecture']['value']

@@ -94,12 +94,10 @@ class LaserScanVis:
         return rgb
 
     def update_scan(self):
-        # first open data
-        self.dataset.pillarize(False)
         (previous_frame, current_frame), flows = self.dataset[self.offset]
         gt_flows = flows[:, :-1]  # Remove the label
-        raw_point_cloud = current_frame[:, 0:3]
-        raw_point_cloud_previous = previous_frame[:, 0:3]
+        raw_point_cloud = current_frame[0][:, 0:3]  # NOTE: Select the point cloud not the grid indices
+        raw_point_cloud_previous = previous_frame[0][:, 0:3]  # NOTE: Select the point cloud not the grid indices
         # raw_point_cloud = current_frame[0][:, 0:3]
         if self.model is not None:  # Display predicted values
             if self.online:
