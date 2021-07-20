@@ -145,7 +145,7 @@ def cli():
                                       batch_size=args.batch_size,
                                       has_test=args.test_data_available,
                                       num_workers=args.num_workers,
-                                      scatter_collate=not args.use_sparse_lookup,
+                                      scatter_collate=True,
                                       n_pillars_x=n_pillars_x,
                                       n_points=args.n_points, apply_pillarization=apply_pillarization)
     elif args.dataset == 'flying_things':
