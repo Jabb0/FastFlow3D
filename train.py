@@ -1,17 +1,17 @@
-from argparse import ArgumentParser
+import os
+from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 from pathlib import Path
 
 import pytorch_lightning as pl
-from pytorch_lightning.plugins import DDPPlugin
-from pytorch_lightning.callbacks import ModelCheckpoint
 import torch
-import os
 import wandb
+from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
+from pytorch_lightning.plugins import DDPPlugin
 
 from data import WaymoDataModule
 from data.FlyingThings3DDataModule import FlyingThings3DDataModule
-from models import FastFlow3DModel, FastFlow3DModelScatter
+from models import FastFlow3DModelScatter
 from utils import str2bool
 
 
@@ -20,51 +20,67 @@ def get_args():
     Setup all arguments and parse them from commandline.
     :return: The ArgParser args object with everything parsed.
     """
-    parser = ArgumentParser()
-    parser.add_argument('data_directory', type=str)
-    parser.add_argument('experiment_name', type=str)
-    parser.add_argument('--batch_size', default=2, type=int)
-    parser.add_argument('--full_batch_size', default=None, type=int)
-    parser.add_argument('--x_max', default=85, type=float)
-    parser.add_argument('--x_min', default=-85, type=float)
-    parser.add_argument('--y_max', default=85, type=float)
-    parser.add_argument('--y_min', default=-85, type=float)
-    parser.add_argument('--z_max', default=3, type=float)
-    parser.add_argument('--z_min', default=-3, type=float)
-    parser.add_argument('--grid_size', default=512, type=int)
-    parser.add_argument('--test_data_available', type=str2bool, nargs='?', const=True, default=False)
-    parser.add_argument('--fast_dev_run', type=str2bool, nargs='?', const=True, default=False)
-    parser.add_argument('--num_workers', default=4, type=int)
+    parser = ArgumentParser(description="Training script for FastFlowNet and FlowNet3D "
+                                        "based on Waymo or flying thing dataset",
+                            formatter_class=ArgumentDefaultsHelpFormatter)
+    # Required arguments
+    parser.add_argument('data_directory', type=str, help="Path to the data directory. "
+                                                         "Needs to have preprocessed directories "
+                                                         "train and valid inside.")
+    parser.add_argument('experiment_name', type=str, help="Name of the experiment for logging purposes.")
+    # Model related arguments
+    parser.add_argument('--architecture',
+                        default='FastFlowNet',
+                        choices=['FastFlowNet', 'FlowNet'],
+                        help="The model architecture to use")
+    parser.add_argument('--resume_from_checkpoint', type=str,
+                        help="Path to ckpt file to resume from. Parameter from PytorchLightning Trainer.")
+    # Data related arguments
+    parser.add_argument('--dataset', default='waymo',
+                        choices=["waymo", 'flying_things'],
+                        help="Dataset Type to train on.")
+    parser.add_argument('--x_max', default=85, type=float, help="x boundary in positive direction")
+    parser.add_argument('--x_min', default=-85, type=float, help="x boundary in negative direction")
+    parser.add_argument('--y_max', default=85, type=float, help="y boundary in positive direction")
+    parser.add_argument('--y_min', default=-85, type=float, help="y boundary in negative direction")
+    parser.add_argument('--z_max', default=3, type=float, help="z boundary in positive direction")
+    parser.add_argument('--z_min', default=-3, type=float, help="z boundary in negative direction")
+    parser.add_argument('--grid_size', default=512, type=int, help="")
+    parser.add_argument('--n_points', default=None, type=int,
+                        help="Number of Points to use from each point cloud. Forces downsampling.")
+    parser.add_argument('--test_data_available', type=str2bool, nargs='?', const=True, default=False,
+                        help="If dataset path also has test directory and to use it.")
+    # Global training parameters
+    parser.add_argument('--batch_size', default=2, type=int, help="Batch size each GPU trains on.")
+    parser.add_argument('--full_batch_size', default=None, type=int,
+                        help="Batch size for each GPU after which the gradient update should happen.")
+    # Logging related parameters
     parser.add_argument('--wandb_enable', type=str2bool, nargs='?', const=True, default=False)
     parser.add_argument('--wandb_project', default="fastflow3d", type=str)
     parser.add_argument('--wandb_entity', default='dllab21fastflow3d', type=str)
-    parser.add_argument('--use_sparse_lookup', type=str2bool, nargs='?', const=True, default=False)
-    parser.add_argument('--architecture', default='FastFlowNet', type=str)
-    parser.add_argument('--resume_from_checkpoint', type=str)
-    parser.add_argument('--dataset', default='waymo', type=str)
-    parser.add_argument('--n_samples_set_conv', default=16, type=int)  # TODO: Move to FastFlow custom parameters
-    parser.add_argument('--n_samples_flow_emb', default=64, type=int)  # TODO: Move to FastFlow custom parameters
-    parser.add_argument('--n_samples_set_up_conv', default=8, type=int)  # TODO: Move to FastFlow custom parameters
-    parser.add_argument('--max_time', type=str)
-    parser.add_argument('--n_points', default=None, type=int)
-    # This parameters are for restoring from a checkpoint, from weights and biases
-    parser.add_argument('--run_path', default=None, type=str)  # Id of the run  TODO: What is this?
+    parser.add_argument('--wandb_run_id', default=None, type=str,
+                        help="Id of an existing WnB run that should be resumed.")  # Id of the run
+    # Dev parameters
+    parser.add_argument('--fast_dev_run', type=str2bool, nargs='?', const=True, default=False)
+    # Training machine related parameters
+    parser.add_argument('--num_workers', default=4, type=int)
+    parser.add_argument('--max_time', type=str, help="Max time after which to stop training.")
     # Parameters for multi gpu training
-    parser.add_argument('--gpus', default=1, type=int)
-    parser.add_argument('--accelerator', default=None, type=str)  # Param of Trainer
-    parser.add_argument('--sync_batchnorm', type=str2bool, default=False)  # Param of Trainer
-    # See
-    # https://pytorch-lightning.readthedocs.io/en/stable/benchmarking/performance.html#when-using-ddp-set-find-unused-parameters-false
-    # Use this is a note occurs about no unused parameters found.
-    parser.add_argument('--disable_ddp_unused_check', type=str2bool, default=False)
+    parser.add_argument('--gpus', default=1, type=int, help="GPU parameter of PL Trainer class.")
+    parser.add_argument('--accelerator', default=None, type=str,
+                        help="Accelerator to use. Set to ddp for multi GPU training.")  # Param of Trainer
+    parser.add_argument('--sync_batchnorm', type=str2bool, default=False, nargs='?', const=True,
+                        help="Whether to use sync batchnorm in multi GPU training. "
+                             "Defaults to False but recommended to turn on if batch_size is too small.")
+    parser.add_argument('--disable_ddp_unused_check', type=str2bool, default=False, nargs='?', const=True,
+                        help="Disable unused parameter check for ddp to improve speed. "
+                             "See https://pytorch-lightning.readthedocs.io/en/stable/benchmarking/"
+                             "performance.html#when-using-ddp-set-find-unused-parameters-false")
 
     temp_args, _ = parser.parse_known_args()
     # Add the correct model specific args
     if temp_args.architecture == 'FastFlowNet':
-        if temp_args.use_sparse_lookup:
-            parser = FastFlow3DModel.add_model_specific_args(parser)
-        else:
-            parser = FastFlow3DModelScatter.add_model_specific_args(parser)
+        parser = FastFlow3DModelScatter.add_model_specific_args(parser)
     elif temp_args.architecture == 'FlowNet':  # baseline
         from models.Flow3DModel import Flow3DModel
         parser = Flow3DModel.add_model_specific_args(parser)
@@ -73,7 +89,6 @@ def get_args():
 
     # NOTE: Readd this to see all parameters of the trainer
     # parser = pl.Trainer.add_argparse_args(parser)  # Add arguments for the trainer
-    # Add model specific arguments here
     return parser.parse_args()
 
 
@@ -105,19 +120,16 @@ def cli():
     n_pillars_x = args.grid_size
     n_pillars_y = args.grid_size
 
-    if args.architecture == 'FastFlowNet':
-        if args.use_sparse_lookup:
-            # Tested GPU memory increase from batch size 1 to 2 is 2350MiB
-            model = FastFlow3DModel(n_pillars_x=n_pillars_x, n_pillars_y=n_pillars_y, point_features=8,
-                                    learning_rate=args.learning_rate)
-        else:
-            # Tested GPU memory increase from batch size 1 to 2 is 1824MiB
-            model = FastFlow3DModelScatter(n_pillars_x=n_pillars_x, n_pillars_y=n_pillars_y,
-                                           background_weight=args.background_weight, point_features=8,
-                                           learning_rate=args.learning_rate,
-                                           use_group_norm=args.use_group_norm)
+    apply_pillarization = True
 
+    if args.architecture == 'FastFlowNet':
+        # Tested GPU memory increase from batch size 1 to 2 is 1824MiB
+        model = FastFlow3DModelScatter(n_pillars_x=n_pillars_x, n_pillars_y=n_pillars_y,
+                                       background_weight=args.background_weight, point_features=8,
+                                       learning_rate=args.learning_rate,
+                                       use_group_norm=args.use_group_norm)
     elif args.architecture == 'FlowNet':  # baseline
+        apply_pillarization = False
         from models.Flow3DModel import Flow3DModel
         in_channels = 3 if args.dataset == 'flying_things' else 5  # TODO create cfg file?
         model = Flow3DModel(learning_rate=args.learning_rate, n_samples_set_up_conv=args.n_samples_set_up_conv,
@@ -125,6 +137,7 @@ def cli():
                             in_channels=in_channels)
     else:
         raise ValueError("no architecture {0} implemented".format(args.architecture))
+
     if args.dataset == 'waymo':
         data_module = WaymoDataModule(dataset_path, grid_cell_size=grid_cell_size, x_min=args.x_min,
                                       x_max=args.x_max, y_min=args.y_min,
@@ -134,7 +147,7 @@ def cli():
                                       num_workers=args.num_workers,
                                       scatter_collate=not args.use_sparse_lookup,
                                       n_pillars_x=n_pillars_x,
-                                      n_points=args.n_points, apply_pillarization=args.apply_pillarization)
+                                      n_points=args.n_points, apply_pillarization=apply_pillarization)
     elif args.dataset == 'flying_things':
         data_module = FlyingThings3DDataModule(dataset_path,
                                                batch_size=args.batch_size,
@@ -157,14 +170,11 @@ def cli():
 
         wandb.login(key=wandb_api_key)
 
-        run_id = None
-        if args.run_path is not None:
-            run_id = os.path.basename(os.path.normpath(args.run_path))
-            print("Continuing run " + args.run_path)
-            print("Run id: " + run_id)
+        if args.wandb_run_id is not None:
+            print(f"Resuming with Weights and Biases run {args.wandb_run_id}")
 
         logger = WandbLogger(name=args.experiment_name, project=args.wandb_project, entity=args.wandb_entity,
-                             log_model=True, id=run_id)
+                             log_model=True, id=args.wandb_run_id)
         additional_hyperparameters = {'grid_cell_size': grid_cell_size,
                                       'x_min': args.x_min,
                                       'x_max': args.x_max,
