@@ -14,21 +14,18 @@ class PillarFeatureNetScatter(torch.nn.Module):
        PointPillars: Fast Encoders for Object Detection from Point Clouds
        https://arxiv.org/pdf/1812.05784.pdf
     """
-    def __init__(self, n_pillars_x, n_pillars_y, out_features=64):
+    def __init__(self, n_pillars_x, n_pillars_y):
         super().__init__()
         self.n_pillars_x = n_pillars_x
         self.n_pillars_y = n_pillars_y
 
-        self.out_features = out_features
-
     def forward(self, x, indices):
         # pc input is (batch_size, N_points, 64) with 64 being the embedding dimension of each point
-        # in indices we have (batch_size, N_points, 2) with the 2D coordinates in the grid
+        # in indices we have (batch_size, N_points) which contains the index in the grid
         # We want to scatter into a n_pillars_x and n_pillars_y grid
         # Thus we should allocate a tensor of the desired shape (batch_size, n_pillars_x, n_pillars_y, 64)
 
         # Init the matrix to only zeros
-        # Now indices are (batch_size, N_points, features)
         # Construct the desired tensor
         grid = torch.zeros((x.size(0), self.n_pillars_x * self.n_pillars_y, x.size(2)), device=x.device, dtype=x.dtype)
         # And now perform the infamous scatter_add_ that changes the grid in place

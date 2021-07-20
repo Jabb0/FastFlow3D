@@ -1,52 +1,72 @@
-import numpy as np
+import torch
+from networks.pillarFeatureNetScatter import PillarFeatureNetScatter
 
-from utils.pillars import create_pillars_matrix
 
+def test_scatter_grid_representation():
+    n_points = 5
+    batch_size = 1
+    n_features = 64
+    n_pillars_x = 3
+    n_pillars_y = 3
+    x = torch.ones(size=(batch_size, n_points, n_features))
+    indices = torch.tensor([[0, 0, 0, 0, 0]])  # tensor of shape (batch_size, n_points)
+    indices = indices.unsqueeze(-1).expand(-1, -1, n_features)
+    pfns = PillarFeatureNetScatter(n_pillars_x=n_pillars_x, n_pillars_y=n_pillars_y)
+    output = pfns(x=x, indices=indices)
 
-def test_create_pillars():
-    grid_cell_size = 1
+    true_output = torch.zeros(size=(batch_size, n_features, n_pillars_x, n_pillars_y))
+    # all points are at (0, 0), so all point features are added at this position
+    true_output[0, :, 0, 0] = torch.full(size=(n_features, ), fill_value=5)
 
-    # create points in range of (0, 0) and (3, 3)
-    points = np.array([
-        [0, 0, 1, 2, 2],
-        [0, 0.1, 2, 2, 2],
-        [0, 1, 1, 2, 2],
-        [2.9, 2.9, 3, 2, 2],
-        [2.9, 2.9, 3, 2, 2],
-        [1, 2, 1, 2, 2]
-    ])
+    assert output.shape == torch.Size((batch_size, n_features, 3, 3))
+    assert torch.allclose(output, true_output)
 
-    y = np.array([
-        [0, 0, 1],
-        [0, 0.1, 2],
-        [0, 1, 1],
-        [2.9, 2.9, 3],
-        [2.9, 2.9, 3],
-        [1, 2, 1]
-    ])
+    n_points = 10
+    batch_size = 2
+    n_features = 64
+    n_pillars_x = 5
+    n_pillars_y = 5
+    x = torch.ones(size=(batch_size, n_points, n_features))
+    indices = torch.tensor([[1, 2, 3, 3, 1]])  # tensor of shape (batch_size, n_points)
+    indices = indices.unsqueeze(-1).expand(-1, -1, n_features)
+    pfns = PillarFeatureNetScatter(n_pillars_x=n_pillars_x, n_pillars_y=n_pillars_y)
+    output = pfns(x=x, indices=indices)
 
-    x_max = 4
-    x_min = 0
+    true_output = torch.zeros(size=(batch_size, n_features, n_pillars_x, n_pillars_y))
+    # all points are at (0, 0), so all point features are added at this position
+    true_output[0, :, 0, 1] = torch.full(size=(n_features, ), fill_value=2)
+    true_output[0, :, 0, 2] = torch.full(size=(n_features, ), fill_value=1)
+    true_output[0, :, 0, 3] = torch.full(size=(n_features, ), fill_value=2)
 
-    y_max = 4
-    y_min = 0
+    assert output.shape == torch.Size((batch_size, n_features, 5, 5))
+    assert torch.allclose(output, true_output)
 
-    z_max = 4
-    z_min = -4
+    n_points = 10
+    batch_size = 2
+    n_features = 64
+    n_pillars_x = 5
+    n_pillars_y = 5
+    x = torch.ones(size=(batch_size, n_points, n_features))
+    indices = torch.tensor([[1, 2, 3, 3, 1],
+                            [1, 2, 6, 3, 1]])  # tensor of shape (batch_size, n_points)
+    indices = indices.unsqueeze(-1).expand(-1, -1, n_features)
+    pfns = PillarFeatureNetScatter(n_pillars_x=n_pillars_x, n_pillars_y=n_pillars_y)
+    output = pfns(x=x, indices=indices)
 
-    points, indices, _ = create_pillars_matrix(pc=points, y=y, grid_cell_size=grid_cell_size, x_min=x_min, x_max=x_max,
-                                               y_min=y_min, y_max=y_max, z_min=z_min, z_max=z_max)
+    true_output = torch.zeros(size=(batch_size, n_features, n_pillars_x, n_pillars_y))
+    # all points are at (0, 0), so all point features are added at this position
+    true_output[0, :, 0, 1] = torch.full(size=(n_features, ), fill_value=2)
+    true_output[0, :, 0, 2] = torch.full(size=(n_features, ), fill_value=1)
+    true_output[0, :, 0, 3] = torch.full(size=(n_features, ), fill_value=2)
 
-    true_indices = np.array([[0, 0],
-                             [0, 0],
-                             [0, 1],
-                             [2, 2],
-                             [2, 2],
-                             [1, 2]]
-                            )
+    true_output[1, :, 0, 1] = torch.full(size=(n_features, ), fill_value=2)
+    true_output[1, :, 0, 2] = torch.full(size=(n_features, ), fill_value=1)
+    true_output[1, :, 0, 3] = torch.full(size=(n_features, ), fill_value=1)
+    true_output[1, :, 1, 1] = torch.full(size=(n_features, ), fill_value=1)
 
-    assert np.all(indices == true_indices)
+    assert output.shape == torch.Size((batch_size, n_features, 5, 5))
+    assert torch.allclose(output, true_output)
 
 
 if __name__ == '__main__':
-    test_create_pillars()
+    test_scatter_grid_representation()

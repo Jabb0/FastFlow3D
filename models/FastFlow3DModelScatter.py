@@ -19,8 +19,7 @@ class FastFlow3DModelScatter(BaseModel):
         self._point_feature_net = PointFeatureNet(in_features=point_features, out_features=64)
         self._point_feature_net.apply(init_weights)
 
-        self._pillar_feature_net = PillarFeatureNetScatter(n_pillars_x=n_pillars_x, n_pillars_y=n_pillars_y,
-                                                           out_features=64)
+        self._pillar_feature_net = PillarFeatureNetScatter(n_pillars_x=n_pillars_x, n_pillars_y=n_pillars_y)
         self._pillar_feature_net.apply(init_weights)
 
         self._conv_encoder_net = ConvEncoder(in_channels=64, out_channels=256, use_group_norm=use_group_norm)
