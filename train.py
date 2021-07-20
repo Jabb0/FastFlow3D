@@ -188,7 +188,6 @@ def cli():
                                       'full_batch_size': args.full_batch_size,
                                       'has_test': args.test_data_available,
                                       'num_workers': args.num_workers,
-                                      'scatter_collate': args.use_sparse_lookup,
                                       'architecture': args.architecture,
                                       'n_points': args.n_points,
                                       'dataset': args.dataset
