@@ -8,11 +8,19 @@ from data.util import custom_collate_batch
 
 
 def predict_flows(model, dataset, offset):
-    dataset.pillarize(True)
+    cuda = torch.device('cuda')
+    dataset.pillarize(False)
     (previous_frame, current_frame), flows = dataset[offset]
+    #previous_frame = [torch.tensor(previous_frame[0], device=cuda)]
+    #current_frame = [torch.tensor(current_frame[0], device=cuda)]
+    #flows = torch.tensor(flows, device=cuda)
     # We set batchsize of 1 for predictions
     batch = custom_collate_batch([((previous_frame, current_frame), flows)])
     with torch.no_grad():
+        # FlowNet only works on GPU
+        #print(batch[0].size)
+        #batch = torch.tensor(batch[0]).cuda()
+        #output = model((batch[0][0][0].cuda(), batch[1][0][0].cuda()))
         output = model(batch[0])
     predicted_flows = output[0].data.cpu().numpy()
     return predicted_flows
@@ -37,7 +45,7 @@ def predict_and_store_flows(model, dataset):
     else:
         print(f"Flows already exist, please remove {flows_folder} to process again the flows")
         print("Using already predicted flows...")
-        return
+        #return
 
     for i in tqdm(range(0, len(dataset)), desc="Predicting flows..."):
         predicted_flows = predict_flows(model, dataset, i)

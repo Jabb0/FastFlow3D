@@ -1,0 +1,1180 @@
+wandb_version: 1
+
+_wandb:
+  desc: null
+  value:
+    cli_version: 0.10.32
+    framework: lightning
+    is_jupyter_run: false
+    is_kaggle_kernel: false
+    m:
+    - 1: trainer/global_step
+      6:
+      - 3
+    - 1: train/loss_step
+      5: 1
+      6:
+      - 1
+    - 1: train/mean/all/vehicle_step
+      5: 1
+      6:
+      - 1
+    - 1: train/mean/moving/vehicle_step
+      5: 1
+      6:
+      - 1
+    - 1: train/mean/stationary/vehicle_step
+      5: 1
+      6:
+      - 1
+    - 1: train/1_1/all/vehicle_step
+      5: 1
+      6:
+      - 1
+    - 1: train/1_1/stationary/vehicle_step
+      5: 1
+      6:
+      - 1
+    - 1: train/1_1/moving/vehicle_step
+      5: 1
+      6:
+      - 1
+    - 1: train/1_10/all/vehicle_step
+      5: 1
+      6:
+      - 1
+    - 1: train/1_10/stationary/vehicle_step
+      5: 1
+      6:
+      - 1
+    - 1: train/1_10/moving/vehicle_step
+      5: 1
+      6:
+      - 1
+    - 1: epoch
+      5: 1
+      6:
+      - 1
+    - 1: train/loss_epoch
+      5: 1
+      6:
+      - 1
+    - 1: train/mean/all/vehicle_epoch
+      5: 1
+      6:
+      - 1
+    - 1: train/mean/moving/vehicle_epoch
+      5: 1
+      6:
+      - 1
+    - 1: train/mean/stationary/vehicle_epoch
+      5: 1
+      6:
+      - 1
+    - 1: train/1_1/all/vehicle_epoch
+      5: 1
+      6:
+      - 1
+    - 1: train/1_1/stationary/vehicle_epoch
+      5: 1
+      6:
+      - 1
+    - 1: train/1_1/moving/vehicle_epoch
+      5: 1
+      6:
+      - 1
+    - 1: train/1_10/all/vehicle_epoch
+      5: 1
+      6:
+      - 1
+    - 1: train/1_10/stationary/vehicle_epoch
+      5: 1
+      6:
+      - 1
+    - 1: train/1_10/moving/vehicle_epoch
+      5: 1
+      6:
+      - 1
+    - 1: val/loss_step/epoch_0
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/all/vehicle_step/epoch_0
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/moving/vehicle_step/epoch_0
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/stationary/vehicle_step/epoch_0
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/all/vehicle_step/epoch_0
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/stationary/vehicle_step/epoch_0
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/moving/vehicle_step/epoch_0
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/all/vehicle_step/epoch_0
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/stationary/vehicle_step/epoch_0
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/moving/vehicle_step/epoch_0
+      5: 1
+      6:
+      - 1
+    - 1: val/loss_epoch
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/all/vehicle_epoch
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/moving/vehicle_epoch
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/stationary/vehicle_epoch
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/all/vehicle_epoch
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/stationary/vehicle_epoch
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/moving/vehicle_epoch
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/all/vehicle_epoch
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/stationary/vehicle_epoch
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/moving/vehicle_epoch
+      5: 1
+      6:
+      - 1
+    - 1: val/loss_step/epoch_1
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/all/vehicle_step/epoch_1
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/moving/vehicle_step/epoch_1
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/stationary/vehicle_step/epoch_1
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/all/vehicle_step/epoch_1
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/stationary/vehicle_step/epoch_1
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/moving/vehicle_step/epoch_1
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/all/vehicle_step/epoch_1
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/stationary/vehicle_step/epoch_1
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/moving/vehicle_step/epoch_1
+      5: 1
+      6:
+      - 1
+    - 1: val/loss_step/epoch_2
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/all/vehicle_step/epoch_2
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/moving/vehicle_step/epoch_2
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/stationary/vehicle_step/epoch_2
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/all/vehicle_step/epoch_2
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/stationary/vehicle_step/epoch_2
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/moving/vehicle_step/epoch_2
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/all/vehicle_step/epoch_2
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/stationary/vehicle_step/epoch_2
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/moving/vehicle_step/epoch_2
+      5: 1
+      6:
+      - 1
+    - 1: val/loss_step/epoch_3
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/all/vehicle_step/epoch_3
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/moving/vehicle_step/epoch_3
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/stationary/vehicle_step/epoch_3
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/all/vehicle_step/epoch_3
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/stationary/vehicle_step/epoch_3
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/moving/vehicle_step/epoch_3
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/all/vehicle_step/epoch_3
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/stationary/vehicle_step/epoch_3
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/moving/vehicle_step/epoch_3
+      5: 1
+      6:
+      - 1
+    - 1: val/loss_step/epoch_4
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/all/vehicle_step/epoch_4
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/moving/vehicle_step/epoch_4
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/stationary/vehicle_step/epoch_4
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/all/vehicle_step/epoch_4
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/stationary/vehicle_step/epoch_4
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/moving/vehicle_step/epoch_4
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/all/vehicle_step/epoch_4
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/stationary/vehicle_step/epoch_4
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/moving/vehicle_step/epoch_4
+      5: 1
+      6:
+      - 1
+    - 1: val/loss_step/epoch_5
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/all/vehicle_step/epoch_5
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/moving/vehicle_step/epoch_5
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/stationary/vehicle_step/epoch_5
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/all/vehicle_step/epoch_5
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/stationary/vehicle_step/epoch_5
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/moving/vehicle_step/epoch_5
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/all/vehicle_step/epoch_5
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/stationary/vehicle_step/epoch_5
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/moving/vehicle_step/epoch_5
+      5: 1
+      6:
+      - 1
+    - 1: val/loss_step/epoch_6
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/all/vehicle_step/epoch_6
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/moving/vehicle_step/epoch_6
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/stationary/vehicle_step/epoch_6
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/all/vehicle_step/epoch_6
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/stationary/vehicle_step/epoch_6
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/moving/vehicle_step/epoch_6
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/all/vehicle_step/epoch_6
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/stationary/vehicle_step/epoch_6
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/moving/vehicle_step/epoch_6
+      5: 1
+      6:
+      - 1
+    - 1: val/loss_step/epoch_7
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/all/vehicle_step/epoch_7
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/moving/vehicle_step/epoch_7
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/stationary/vehicle_step/epoch_7
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/all/vehicle_step/epoch_7
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/stationary/vehicle_step/epoch_7
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/moving/vehicle_step/epoch_7
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/all/vehicle_step/epoch_7
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/stationary/vehicle_step/epoch_7
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/moving/vehicle_step/epoch_7
+      5: 1
+      6:
+      - 1
+    - 1: val/loss_step/epoch_8
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/all/vehicle_step/epoch_8
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/moving/vehicle_step/epoch_8
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/stationary/vehicle_step/epoch_8
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/all/vehicle_step/epoch_8
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/stationary/vehicle_step/epoch_8
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/moving/vehicle_step/epoch_8
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/all/vehicle_step/epoch_8
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/stationary/vehicle_step/epoch_8
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/moving/vehicle_step/epoch_8
+      5: 1
+      6:
+      - 1
+    - 1: val/loss_step/epoch_9
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/all/vehicle_step/epoch_9
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/moving/vehicle_step/epoch_9
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/stationary/vehicle_step/epoch_9
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/all/vehicle_step/epoch_9
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/stationary/vehicle_step/epoch_9
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/moving/vehicle_step/epoch_9
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/all/vehicle_step/epoch_9
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/stationary/vehicle_step/epoch_9
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/moving/vehicle_step/epoch_9
+      5: 1
+      6:
+      - 1
+    - 1: val/loss_step/epoch_10
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/all/vehicle_step/epoch_10
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/moving/vehicle_step/epoch_10
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/stationary/vehicle_step/epoch_10
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/all/vehicle_step/epoch_10
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/stationary/vehicle_step/epoch_10
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/moving/vehicle_step/epoch_10
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/all/vehicle_step/epoch_10
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/stationary/vehicle_step/epoch_10
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/moving/vehicle_step/epoch_10
+      5: 1
+      6:
+      - 1
+    - 1: val/loss_step/epoch_11
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/all/vehicle_step/epoch_11
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/moving/vehicle_step/epoch_11
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/stationary/vehicle_step/epoch_11
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/all/vehicle_step/epoch_11
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/stationary/vehicle_step/epoch_11
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/moving/vehicle_step/epoch_11
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/all/vehicle_step/epoch_11
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/stationary/vehicle_step/epoch_11
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/moving/vehicle_step/epoch_11
+      5: 1
+      6:
+      - 1
+    - 1: val/loss_step/epoch_12
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/all/vehicle_step/epoch_12
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/moving/vehicle_step/epoch_12
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/stationary/vehicle_step/epoch_12
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/all/vehicle_step/epoch_12
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/stationary/vehicle_step/epoch_12
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/moving/vehicle_step/epoch_12
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/all/vehicle_step/epoch_12
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/stationary/vehicle_step/epoch_12
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/moving/vehicle_step/epoch_12
+      5: 1
+      6:
+      - 1
+    - 1: val/loss_step/epoch_13
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/all/vehicle_step/epoch_13
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/moving/vehicle_step/epoch_13
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/stationary/vehicle_step/epoch_13
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/all/vehicle_step/epoch_13
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/stationary/vehicle_step/epoch_13
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/moving/vehicle_step/epoch_13
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/all/vehicle_step/epoch_13
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/stationary/vehicle_step/epoch_13
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/moving/vehicle_step/epoch_13
+      5: 1
+      6:
+      - 1
+    - 1: val/loss_step/epoch_14
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/all/vehicle_step/epoch_14
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/moving/vehicle_step/epoch_14
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/stationary/vehicle_step/epoch_14
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/all/vehicle_step/epoch_14
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/stationary/vehicle_step/epoch_14
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/moving/vehicle_step/epoch_14
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/all/vehicle_step/epoch_14
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/stationary/vehicle_step/epoch_14
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/moving/vehicle_step/epoch_14
+      5: 1
+      6:
+      - 1
+    - 1: val/loss_step/epoch_15
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/all/vehicle_step/epoch_15
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/moving/vehicle_step/epoch_15
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/stationary/vehicle_step/epoch_15
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/all/vehicle_step/epoch_15
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/stationary/vehicle_step/epoch_15
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/moving/vehicle_step/epoch_15
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/all/vehicle_step/epoch_15
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/stationary/vehicle_step/epoch_15
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/moving/vehicle_step/epoch_15
+      5: 1
+      6:
+      - 1
+    - 1: val/loss_step/epoch_16
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/all/vehicle_step/epoch_16
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/moving/vehicle_step/epoch_16
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/stationary/vehicle_step/epoch_16
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/all/vehicle_step/epoch_16
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/stationary/vehicle_step/epoch_16
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/moving/vehicle_step/epoch_16
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/all/vehicle_step/epoch_16
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/stationary/vehicle_step/epoch_16
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/moving/vehicle_step/epoch_16
+      5: 1
+      6:
+      - 1
+    - 1: val/loss_step/epoch_17
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/all/vehicle_step/epoch_17
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/moving/vehicle_step/epoch_17
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/stationary/vehicle_step/epoch_17
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/all/vehicle_step/epoch_17
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/stationary/vehicle_step/epoch_17
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/moving/vehicle_step/epoch_17
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/all/vehicle_step/epoch_17
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/stationary/vehicle_step/epoch_17
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/moving/vehicle_step/epoch_17
+      5: 1
+      6:
+      - 1
+    - 1: val/loss_step/epoch_18
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/all/vehicle_step/epoch_18
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/moving/vehicle_step/epoch_18
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/stationary/vehicle_step/epoch_18
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/all/vehicle_step/epoch_18
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/stationary/vehicle_step/epoch_18
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/moving/vehicle_step/epoch_18
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/all/vehicle_step/epoch_18
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/stationary/vehicle_step/epoch_18
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/moving/vehicle_step/epoch_18
+      5: 1
+      6:
+      - 1
+    - 1: val/loss_step/epoch_19
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/all/vehicle_step/epoch_19
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/moving/vehicle_step/epoch_19
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/stationary/vehicle_step/epoch_19
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/all/vehicle_step/epoch_19
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/stationary/vehicle_step/epoch_19
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/moving/vehicle_step/epoch_19
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/all/vehicle_step/epoch_19
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/stationary/vehicle_step/epoch_19
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/moving/vehicle_step/epoch_19
+      5: 1
+      6:
+      - 1
+    - 1: val/loss_step/epoch_20
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/all/vehicle_step/epoch_20
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/moving/vehicle_step/epoch_20
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/stationary/vehicle_step/epoch_20
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/all/vehicle_step/epoch_20
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/stationary/vehicle_step/epoch_20
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/moving/vehicle_step/epoch_20
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/all/vehicle_step/epoch_20
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/stationary/vehicle_step/epoch_20
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/moving/vehicle_step/epoch_20
+      5: 1
+      6:
+      - 1
+    - 1: val/loss_step/epoch_21
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/all/vehicle_step/epoch_21
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/moving/vehicle_step/epoch_21
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/stationary/vehicle_step/epoch_21
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/all/vehicle_step/epoch_21
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/stationary/vehicle_step/epoch_21
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/moving/vehicle_step/epoch_21
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/all/vehicle_step/epoch_21
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/stationary/vehicle_step/epoch_21
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/moving/vehicle_step/epoch_21
+      5: 1
+      6:
+      - 1
+    - 1: val/loss_step/epoch_22
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/all/vehicle_step/epoch_22
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/moving/vehicle_step/epoch_22
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/stationary/vehicle_step/epoch_22
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/all/vehicle_step/epoch_22
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/stationary/vehicle_step/epoch_22
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/moving/vehicle_step/epoch_22
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/all/vehicle_step/epoch_22
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/stationary/vehicle_step/epoch_22
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/moving/vehicle_step/epoch_22
+      5: 1
+      6:
+      - 1
+    - 1: val/loss_step/epoch_23
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/all/vehicle_step/epoch_23
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/moving/vehicle_step/epoch_23
+      5: 1
+      6:
+      - 1
+    - 1: val/mean/stationary/vehicle_step/epoch_23
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/all/vehicle_step/epoch_23
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/stationary/vehicle_step/epoch_23
+      5: 1
+      6:
+      - 1
+    - 1: val/1_1/moving/vehicle_step/epoch_23
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/all/vehicle_step/epoch_23
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/stationary/vehicle_step/epoch_23
+      5: 1
+      6:
+      - 1
+    - 1: val/1_10/moving/vehicle_step/epoch_23
+      5: 1
+      6:
+      - 1
+    python_version: 3.7.2
+    t:
+      1:
+      - 1
+      - 9
+      2:
+      - 1
+      - 9
+      3:
+      - 7
+      4: 3.7.2
+      5: 0.10.32
+      8:
+      - 5
+adam_beta_1:
+  desc: null
+  value: 0.9
+adam_beta_2:
+  desc: null
+  value: 0.999
+architecture:
+  desc: null
+  value: FlowNet
+batch_size:
+  desc: null
+  value: 4
+dataset:
+  desc: null
+  value: flying_things
+full_batch_size:
+  desc: null
+  value: None
+grid_cell_size:
+  desc: null
+  value: 0.33203125
+has_test:
+  desc: null
+  value: false
+in_channels:
+  desc: null
+  value: 3
+learning_rate:
+  desc: null
+  value: 0.001
+n_pillars_x:
+  desc: null
+  value: 512
+n_pillars_y:
+  desc: null
+  value: 512
+n_points:
+  desc: null
+  value: None
+n_samples_flow_emb:
+  desc: null
+  value: 64
+n_samples_set_conv:
+  desc: null
+  value: 16
+n_samples_set_up_conv:
+  desc: null
+  value: 8
+num_workers:
+  desc: null
+  value: 4
+x_max:
+  desc: null
+  value: 85
+x_min:
+  desc: null
+  value: -85
+y_max:
+  desc: null
+  value: 85
+y_min:
+  desc: null
+  value: -85
+z_max:
+  desc: null
+  value: 3
+z_min:
+  desc: null
+  value: -3

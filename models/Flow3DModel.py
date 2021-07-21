@@ -73,11 +73,21 @@ class Flow3DModel(BaseModel):
         previous_batch_pc = previous_batch[0]
         current_batch_pc = current_batch[0]
 
+        
+        cuda = torch.device('cuda')
+        previous_batch_pc = previous_batch_pc.cuda()
+        current_batch_pc = current_batch_pc.cuda()
+        previous_batch_pc = previous_batch_pc[:, :, :3]
+        current_batch_pc = current_batch_pc[:, :, :3]
+        print(previous_batch_pc.shape)
+
         batch_size, n_points_prev, _ = previous_batch_pc.shape
         batch_size, n_points_cur, _ = current_batch_pc.shape
 
         # All outputs of the following layers are tuples of (pos, features)
         # --- Point Feature Part ---
+
+
         _, _, pf_prev_3 = self._point_feature_net(previous_batch_pc.float())
         pf_curr_1, pf_curr_2, pf_curr_3 = self._point_feature_net(current_batch_pc.float())
 

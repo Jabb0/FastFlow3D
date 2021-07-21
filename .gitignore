@@ -4,4 +4,5 @@ venv
 wandb
 checkpoints
 data/waymo_dataset
+data/flyingthings3d_preprocessed
 *.pyc
