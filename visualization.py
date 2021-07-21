@@ -4,10 +4,10 @@ import yaml
 
 from data.WaymoDataset import WaymoDataset
 from data.util import ApplyPillarization, drop_points_function
-from models.FastFlow3DModelScatter import FastFlow3DModelScatter
 from utils import str2bool
 from visualization.laserscanvis import LaserScanVis
 from visualization.util import predict_and_store_flows
+from models.FastFlow3DModelScatter import FastFlow3DModelScatter
 
 # vispy
 # if error vispy:
@@ -29,6 +29,10 @@ if __name__ == '__main__':
     # If you want online prediction or first predict, store the flows and predict them
     # This is suitable for slow systems since it reads the flows then from disk
     parser.add_argument('--online', type=str2bool, nargs='?', const=False, default=True)
+
+    #  If you want to create an automatic video of the visualization
+    # --video {gt, model}, gt if you want a video of the ground truth or model if you want a video of the model
+    parser.add_argument('--video', default=None, type=str)
 
     args = parser.parse_args()
     waymo_dataset = WaymoDataset(args.data_directory)
@@ -104,7 +108,8 @@ if __name__ == '__main__':
                        end_frame=args.end_frame,
                        model=model,
                        vis_previous_current=args.vis_previous_current,
-                       online=args.online)
+                       online=args.online,
+                       video=args.video)
     vis.run()
 
 
