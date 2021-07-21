@@ -10,8 +10,8 @@ from vispy.scene import visuals, SceneCanvas
 from vispy.gloo.util import _screenshot
 from vispy.io import imsave
 from vispy.scene.cameras import TurntableCamera
-from pynput.keyboard import Key, Controller
-from vispy.util.event import Event
+from pynput.keyboard import Controller
+from datetime import datetime
 from vispy.app import KeyEvent
 
 from visualization.util import get_flows, predict_flows
@@ -31,7 +31,18 @@ class LaserScanVis:
         self.online = online  # True if predicting flows in real time, false it reads from disk the flows
         self.video = video
         if self.video is not None:
-            self.video_path = "video"
+            video_folder_name = "video_" + self.video
+            self.video_folder = video_folder_name
+            check_existing_folder = os.path.isdir(video_folder_name)
+
+            # If folder doesn't exist, then create it.
+            if not check_existing_folder:
+                os.makedirs(video_folder_name)
+                print("created folder : ", video_folder_name)
+
+            else:
+                print("Warning: There are existing frames in the video folder")
+
         self.first_frame = start_frame # To select the viewpoint
         if model is not None:
             self.model.eval()
@@ -76,7 +87,7 @@ class LaserScanVis:
 
         if self.video is None or self.video == "model":
             # --- Canvas por prediction ---
-            self.predicted_canvas = SceneCanvas(keys='interactive', show=True)
+            self.predicted_canvas = SceneCanvas(keys='interactive', show=True, bgcolor='white')
             # interface (n next, b back, q quit, very simple)
             self.predicted_canvas.events.key_press.connect(self.key_press)
             self.predicted_canvas.events.draw.connect(self.draw)
@@ -162,47 +173,54 @@ class LaserScanVis:
                                        edge_color=rgb_flow_predicted,
                                        size=1)
 
-            self.gt_vis.set_data(raw_point_cloud,
-                                   face_color=rgb_flow,
-                                   edge_color=rgb_flow,
-                                   size=1)
+            if self.video is None or self.video == "gt":
+                self.gt_vis.set_data(raw_point_cloud,
+                                       face_color=rgb_flow,
+                                       edge_color=rgb_flow,
+                                       size=1)
 
         if self.video is None or self.video == "model":
             self.predicted_vis.update()
+            if self.video == "model":
+                self.save_screenshot(self.predicted_canvas)
+                if self.offset != self.first_frame:
+                    self.press_n()
+                camera = self.predicted_view.camera
         if self.video is None or self.video == "gt":
             self.gt_vis.update()
             if self.video == "gt":
                 self.save_screenshot(self.gt_canvas)
                 if self.offset != self.first_frame:
-                    #event = KeyEvent('key_press')
-                    keyboard = Controller()
-                    key = "n"
-                    keyboard.press(key)
-                    keyboard.release(key)
+                    self.press_n()
+                camera = self.gt_view.camera
 
         if self.video is not None:
             with open('camera_properties.pkl', 'wb') as output:
-                camera = {'fov': self.gt_view.camera.fov,
-                          'elevation': self.gt_view.camera.elevation,
-                          'azimuth': self.gt_view.camera.azimuth,
-                          'roll': self.gt_view.camera.roll,
-                          'distance': self.gt_view.camera.distance}
+                camera = {'fov': camera.fov,
+                          'elevation': camera.elevation,
+                          'azimuth': camera.azimuth,
+                          'roll': camera.roll,
+                          'distance': camera.distance}
                 pickle.dump(camera, output)
 
 
-
+    def compute_video(self):
+        # https://hamelot.io/visualization/using-ffmpeg-to-convert-a-set-of-images-into-a-video/
+        date = datetime.now().strftime("%Y_%m_%d-%I:%M:%S_%p")
+        os.system(f"ffmpeg -r 10 -i {self.video_folder}/img_%d.png -crf 25 -vcodec mpeg4 -y {self.video_folder}_{date}.mp4")
 
     def save_screenshot(self, canvas):
-        frame_name = self.video + "_" + str(self.offset) + ".png"
-        frame_path = os.path.join(self.video_path, frame_name)
+        frame_name = "img_" + str(self.offset) + ".png"
+        frame_path = os.path.join(self.video_folder, frame_name)
         im = _screenshot((0, 0, canvas.size[0], canvas.size[1]))
         imsave(frame_path, im)
 
-    def next_frame(self):
-        if self.offset < (self.end_frame - 1) and self.offset < len(self.dataset) - 1:
-            self.offset += 1
-        else:
-            print("Maximum frame reached")
+
+    def press_n(self):
+        keyboard = Controller()
+        key = "n"
+        keyboard.press(key)
+        keyboard.release(key)
 
     # interface
     def key_press(self, event):
@@ -211,7 +229,13 @@ class LaserScanVis:
         if self.video is None or self.video == "gt":
             self.gt_canvas.events.key_press.block()
         if event.key == 'N':
-            self.next_frame()
+            if self.offset < (self.end_frame - 1) and self.offset < len(self.dataset) - 1:
+                self.offset += 1
+            else:
+                print("Maximum frame reached")
+                self.compute_video()
+                self.destroy()
+                return  # Exit
             self.update_scan()
         elif event.key == 'B':
             self.offset -= 1
@@ -229,8 +253,10 @@ class LaserScanVis:
 
     def destroy(self):
         # destroy the visualization
-        self.predicted_canvas.close()
-        self.gt_canvas.close()
+        if self.video is None or self.video == "model":
+            self.predicted_canvas.close()
+        if self.video is None or self.video == "gt":
+            self.gt_canvas.close()
         vispy.app.quit()
 
     def run(self):
