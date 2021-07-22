@@ -5,7 +5,6 @@ import yaml
 from data.WaymoDataset import WaymoDataset
 from data.util import ApplyPillarization, drop_points_function
 from utils import str2bool
-from visualization.laserscanvis import LaserScanVis
 from visualization.util import predict_and_store_flows, flows_exist
 from models.FastFlow3DModelScatter import FastFlow3DModelScatter
 
@@ -84,8 +83,8 @@ if __name__ == '__main__':
                     model.eval()
                     print("DISPLAYING PREDICTED DATA WITH FASTFLOWNET")
                 elif architecture == "FlowNet":
-                    from models.Flow3DModel import Flow3DModelV2
-                    model = Flow3DModelV2.load_from_checkpoint(args.model_path)
+                    from models.Flow3DModel import Flow3DModel
+                    model = Flow3DModel.load_from_checkpoint(args.model_path)
                     model.cuda()
                     model.eval()
                     print("DISPLAYING PREDICTED DATA WITH FLOWNET (baseline)")
@@ -104,6 +103,7 @@ if __name__ == '__main__':
         print(f"Predicting and storing {len(waymo_dataset)} frames...")
         predict_and_store_flows(model, waymo_dataset, architecture=architecture)
 
+    from visualization.laserscanvis import LaserScanVis
     vis = LaserScanVis(dataset=waymo_dataset,
                        start_frame=args.start_frame,
                        end_frame=args.end_frame,
