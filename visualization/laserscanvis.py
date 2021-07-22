@@ -13,6 +13,7 @@ from vispy.scene.cameras import TurntableCamera
 from pynput.keyboard import Controller
 from datetime import datetime
 from vispy.app import KeyEvent
+from vispy.color import Color
 
 from visualization.util import get_flows, predict_flows
 import pickle
@@ -31,7 +32,8 @@ class LaserScanVis:
         self.online = online  # True if predicting flows in real time, false it reads from disk the flows
         self.video = video
         if self.video is not None:
-            video_folder_name = "video_" + self.video
+            date = datetime.now().strftime("%Y_%m_%d-%I:%M:%S_%p")
+            video_folder_name = "video_" + self.video + "_" + str(date)
             self.video_folder = video_folder_name
             check_existing_folder = os.path.isdir(video_folder_name)
 
@@ -60,7 +62,7 @@ class LaserScanVis:
 
         if self.video is None or self.video == "gt":
             # --- Canvas for ground truth ---
-            self.gt_canvas = SceneCanvas(keys='interactive', show=True, bgcolor='white')#bgcolor=Color([1, 1, 1]))
+            self.gt_canvas = SceneCanvas(keys='interactive', show=True, bgcolor=Color([0.6, 0.6, 0.6]))
             # interface (n next, b back, q quit, very simple)
             self.gt_canvas.events.key_press.connect(self.key_press)
             self.gt_canvas.events.draw.connect(self.draw)
@@ -87,7 +89,7 @@ class LaserScanVis:
 
         if self.video is None or self.video == "model":
             # --- Canvas por prediction ---
-            self.predicted_canvas = SceneCanvas(keys='interactive', show=True, bgcolor='white')
+            self.predicted_canvas = SceneCanvas(keys='interactive', show=True, bgcolor=Color([0.6, 0.6, 0.6]))
             # interface (n next, b back, q quit, very simple)
             self.predicted_canvas.events.key_press.connect(self.key_press)
             self.predicted_canvas.events.draw.connect(self.draw)
@@ -206,7 +208,9 @@ class LaserScanVis:
     def compute_video(self):
         # https://hamelot.io/visualization/using-ffmpeg-to-convert-a-set-of-images-into-a-video/
         date = datetime.now().strftime("%Y_%m_%d-%I:%M:%S_%p")
-        os.system(f"ffmpeg -r 10 -i {self.video_folder}/img_%d.png -crf 25 -vcodec mpeg4 -y {self.video_folder}_{date}.mp4")
+        # ffmpeg -r 10 -i img_%d.png -qscale 0 -y movie.mp4
+        #os.system(f"ffmpeg -r 10 -i {self.video_folder}/img_%d.png -crf 25 -vcodec mpeg4 -y {self.video_folder}_{date}.mp4")
+        os.system(f"ffmpeg -r 10 -i {self.video_folder}/img_%d.png -qscale 0 -y {self.video_folder}_{date}.mp4")
 
     def save_screenshot(self, canvas):
         frame_name = "img_" + str(self.offset) + ".png"
