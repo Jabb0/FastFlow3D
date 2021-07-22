@@ -70,7 +70,8 @@ class WaymoDataModule(pl.LightningDataModule):
         self._val_ = WaymoDataset(self._dataset_directory.joinpath("valid"),
                                   point_cloud_transform=self._pillarization_transform,
                                   drop_invalid_point_function=self._drop_points_function,
-                                  apply_pillarization=self.apply_pillarization)
+                                  apply_pillarization=self.apply_pillarization,
+                                  n_points=self._n_points)
         if self._has_test:
             self._test_ = WaymoDataset(self._dataset_directory.joinpath("test"),
                                        point_cloud_transform=self._pillarization_transform,
