@@ -141,11 +141,10 @@ class LaserScanVis:
         raw_point_cloud = current_frame[0][:, 0:3]  # NOTE: Select the point cloud not the grid indices
         raw_point_cloud_previous = previous_frame[0][:, 0:3]  # NOTE: Select the point cloud not the grid indices
         # raw_point_cloud = current_frame[0][:, 0:3]
-        if self.model is not None:  # Display predicted values
-            if self.online:
-                predicted_flows = predict_flows(self.model, self.dataset, self.offset)
-            else:
-                predicted_flows = get_flows(self.dataset, self.offset)
+        if self.model is not None:
+            predicted_flows = predict_flows(self.model, self.dataset, self.offset)
+        elif not self.online:
+            predicted_flows = get_flows(self.dataset, self.offset)  # Display predicted values
 
         # then change names
         if self.video is None or self.video == "model":
@@ -166,7 +165,7 @@ class LaserScanVis:
                                    size=1)
 
         else:
-            if self.model is not None:
+            if self.model is not None or not self.online:
                 rgb_flow_predicted = self.flow_to_rgb(predicted_flows)
                 self.predicted_vis.set_data(raw_point_cloud,
                                        face_color=rgb_flow_predicted,
