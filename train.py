@@ -11,7 +11,7 @@ from pytorch_lightning.plugins import DDPPlugin
 
 from data import WaymoDataModule
 from data.FlyingThings3DDataModule import FlyingThings3DDataModule
-from models import FastFlow3DModelScatter, Flow3DModel
+from models import FastFlow3DModelScatter
 from utils import str2bool
 
 
@@ -86,6 +86,7 @@ def get_args():
     if temp_args.architecture == 'FastFlowNet':
         parser = FastFlow3DModelScatter.add_model_specific_args(parser)
     elif temp_args.architecture == 'FlowNet':  # baseline
+        from models.Flow3DModel import Flow3DModel
         parser = Flow3DModel.add_model_specific_args(parser)
     else:
         raise ValueError("no architecture {0} implemented".format(temp_args.architecture))
@@ -128,6 +129,7 @@ def cli():
     elif args.architecture == 'FlowNet':  # baseline
         apply_pillarization = False  # FlowNet does not use pillarization
         in_channels = 3 if args.dataset == 'flying_things' else 5  # TODO create cfg file?
+        from models.Flow3DModel import Flow3DModel
         model = Flow3DModel(learning_rate=args.learning_rate, n_samples_set_up_conv=args.n_samples_set_up_conv,
                             n_samples_set_conv=args.n_samples_set_conv, n_samples_flow_emb=args.n_samples_flow_emb,
                             in_channels=in_channels)
