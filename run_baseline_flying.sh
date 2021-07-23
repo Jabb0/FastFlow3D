@@ -16,7 +16,7 @@ python train.py \
 ../data/flyingthings/flyingthings3d_preprocessed \
 FlowNet3D_batchSize_16_lr_0.001_BN_flying \
 --architecture FlowNet \
---dataset flying_thngs \
+--dataset flying_things \
 --n_points 16000 \
 --accelerator ddp \
 --sync_batchnorm True \
