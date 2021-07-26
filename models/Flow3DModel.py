@@ -70,22 +70,22 @@ class Flow3DModel(BaseModel):
         :return:
         """
         previous_batch, current_batch = x
-        previous_batch_pc = previous_batch[0]
-        current_batch_pc = current_batch[0]
+        previous_batch_pc, previous_batch_f = previous_batch[0], previous_batch[1]
+        current_batch_pc, current_batch_f = current_batch[0], current_batch[1]
 
         batch_size, n_points_prev, _ = previous_batch_pc.shape
         batch_size, n_points_cur, _ = current_batch_pc.shape
 
         # All outputs of the following layers are tuples of (pos, features)
         # --- Point Feature Part ---
-        _, _, pf_prev_3 = self._point_feature_net(previous_batch_pc.float())
-        pf_curr_1, pf_curr_2, pf_curr_3 = self._point_feature_net(current_batch_pc.float())
+        pf_prev_1, pf_prev_2, pf_prev_3 = self._point_feature_net(previous_batch_pc.float(), previous_batch_f.float())
+        pf_curr_1, pf_curr_2, pf_curr_3 = self._point_feature_net(current_batch_pc.float(), current_batch_f.float())
 
         # --- Flow Embedding / Point Mixture Part ---
-        _, fe_2, fe_3 = self._point_mixture(x1=pf_prev_3, x2=pf_curr_3)
+        _, fe_2, fe_3 = self._point_mixture(x1=pf_curr_3, x2=pf_prev_3)
 
         # --- Flow Refinement Part ---
-        x = self._flow_refinement(pf_curr_1=pf_curr_1, pf_curr_2=pf_curr_2, pf_curr_3=pf_curr_3, fe_2=fe_2, fe_3=fe_3)
+        x = self._flow_refinement(pf_curr_1=pf_prev_1, pf_curr_2=pf_prev_2, pf_curr_3=pf_prev_3, fe_2=fe_2, fe_3=fe_3)
 
         # --- Final fully connected layer ---
         pos, features = x
@@ -110,3 +110,62 @@ class Flow3DModel(BaseModel):
         parser.add_argument('--n_samples_flow_emb', default=64, type=int, help="FlowNet3D specific")
         parser.add_argument('--n_samples_set_up_conv', default=8, type=int, help="FlowNet3D specific")
         return parent_parser
+
+
+import torch.nn as nn
+import torch
+import torch.nn.functional as F
+from networks.flownet3d.util_v2 import PointNetSetAbstraction, PointNetFeaturePropogation, FlowEmbedding, \
+    PointNetSetUpConv
+
+
+class FlowNet3D(BaseModel):
+    def __init__(self, learning_rate=1e-6,
+                 adam_beta_1=0.9,
+                 adam_beta_2=0.999):
+        super(FlowNet3D, self).__init__()
+        self.save_hyperparameters()  # Store the constructor parameters into self.hparams
+
+        self.sa1 = PointNetSetAbstraction(npoint=1024, radius=0.5, nsample=16, in_channel=3, mlp=[32, 32, 64],
+                                          group_all=False)
+        self.sa2 = PointNetSetAbstraction(npoint=256, radius=1.0, nsample=16, in_channel=64, mlp=[64, 64, 128],
+                                          group_all=False)
+        self.sa3 = PointNetSetAbstraction(npoint=64, radius=2.0, nsample=8, in_channel=128, mlp=[128, 128, 256],
+                                          group_all=False)
+        self.sa4 = PointNetSetAbstraction(npoint=16, radius=4.0, nsample=8, in_channel=256, mlp=[256, 256, 512],
+                                          group_all=False)
+
+        self.fe_layer = FlowEmbedding(radius=10.0, nsample=64, in_channel=128, mlp=[128, 128, 128], pooling='max',
+                                      corr_func='concat')
+
+        self.su1 = PointNetSetUpConv(nsample=8, radius=2.4, f1_channel=256, f2_channel=512, mlp=[], mlp2=[256, 256])
+        self.su2 = PointNetSetUpConv(nsample=8, radius=1.2, f1_channel=128 + 128, f2_channel=256, mlp=[128, 128, 256],
+                                     mlp2=[256])
+        self.su3 = PointNetSetUpConv(nsample=8, radius=0.6, f1_channel=64, f2_channel=256, mlp=[128, 128, 256],
+                                     mlp2=[256])
+        self.fp = PointNetFeaturePropogation(in_channel=256 + 3, mlp=[256, 256])
+
+        self.conv1 = nn.Conv1d(256, 128, kernel_size=1, bias=False)
+        self.bn1 = nn.BatchNorm1d(128)
+        self.conv2 = nn.Conv1d(128, 3, kernel_size=1, bias=True)
+
+    def forward(self, pc1, pc2, feature1, feature2):
+        l1_pc1, l1_feature1 = self.sa1(pc1, feature1)
+        l2_pc1, l2_feature1 = self.sa2(l1_pc1, l1_feature1)
+
+        l1_pc2, l1_feature2 = self.sa1(pc2, feature2)
+        l2_pc2, l2_feature2 = self.sa2(l1_pc2, l1_feature2)
+
+        _, l2_feature1_new = self.fe_layer(l2_pc1, l2_pc2, l2_feature1, l2_feature2)
+
+        l3_pc1, l3_feature1 = self.sa3(l2_pc1, l2_feature1_new)
+        l4_pc1, l4_feature1 = self.sa4(l3_pc1, l3_feature1)
+
+        l3_fnew1 = self.su1(l3_pc1, l4_pc1, l3_feature1, l4_feature1)
+        l2_fnew1 = self.su2(l2_pc1, l3_pc1, torch.cat([l2_feature1, l2_feature1_new], dim=1), l3_fnew1)
+        l1_fnew1 = self.su3(l1_pc1, l2_pc1, l1_feature1, l2_fnew1)
+        l0_fnew1 = self.fp(pc1, l1_pc1, feature1, l1_fnew1)
+
+        x = F.relu(self.bn1(self.conv1(l0_fnew1)))
+        sf = self.conv2(x)
+        return sf

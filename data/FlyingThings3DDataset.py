@@ -31,15 +31,14 @@ class FlyingThings3DDataset(Dataset):
         A point cloud has a shape of [N, F], being N the number of points and the
         F to the number of features, which is [x, y, z, intensity, elongation]
         """
-        current_frame, previous_frame, flows, mask = self.read_point_cloud_pair_and_flow(index)
+        current_frame, previous_frame, c2, c1, flows, mask = self.read_point_cloud_pair_and_flow(index)
 
         if self._n_points is not None:
             current_frame, previous_frame, flows, mask = self.subsample_points(
                 current_frame, previous_frame, flows, mask)
 
-        previous_frame = (torch.as_tensor(previous_frame), )
-        # FIXME do not use mask twice, but otherwise the format does not fit
-        current_frame = (torch.as_tensor(current_frame), mask, mask)
+        previous_frame = (torch.as_tensor(previous_frame), torch.as_tensor(c1))
+        current_frame = (torch.as_tensor(current_frame), torch.as_tensor(c2), mask)
         return (previous_frame, current_frame), flows
 
     def subsample_points(self, current_frame, previous_frame, flows, mask):
@@ -64,4 +63,4 @@ class FlyingThings3DDataset(Dataset):
         frame_list = glob.glob(os.path.join(self.data_path, '*.npz'))
         frame_fname = frame_list[index]
         frame = np.load(frame_fname)
-        return frame['points2'], frame['points1'], frame['flow'], frame['mask']
+        return frame['points2'], frame['points1'], frame['color2'], frame['color1'], frame['flow'], frame['valid_mask1']

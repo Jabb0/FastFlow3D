@@ -32,16 +32,14 @@ class PointFeatureNet(torch.nn.Module):
             use_xyz=True,
         )
 
-    def forward(self, x: torch.tensor) -> torch.tensor:
+    def forward(self, x: torch.tensor, features) -> torch.tensor:
         """
         Input is a point cloud of shape (batch_size, n_points, n_features),
         where the first three features are the x,y,z coordinate of the point.
         """
         batch_size, n_points, _ = x.shape  # (batch_size, n_points, n_features)
 
-        # TODO move this to forward of Flow3DModel (could be faster)
         # get features
-        features = x[:, :, 3:]
         features = features.permute(0, 2, 1).contiguous()
 
         # get pos

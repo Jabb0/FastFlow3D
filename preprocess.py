@@ -4,7 +4,7 @@ import os
 import time
 from argparse import ArgumentParser
 from pathlib import Path
-
+import tensorflow as tf
 import numpy as np
 from tqdm import tqdm
 
@@ -54,9 +54,8 @@ def preprocess_flying_things(input_dir, output_dir, view='right'):
                    right
     """
     all_files_disparity, all_files_disparity_change, all_files_opt_flow = get_all_flying_things_frames(
-        input_dir=input_dir, disp_dir='disparity/train/{}'.format(view),
-        opt_dir='optical_flow/train/backward/{}'.format(view), disp_change_dir='disparity_change/train/{}'.format(view))
-
+        input_dir=input_dir, disp_dir='disparity/train/disparity/{}'.format(view),
+        opt_dir='flow/train/{}/into_past'.format(view), disp_change_dir='disparity_change/train/disparity_change/{}/into_past'.format(view))
     for i in range(len(all_files_disparity) - 1):
         disparity = all_files_disparity[i]
         disparity_next_frame = all_files_disparity[i + 1]
@@ -69,6 +68,10 @@ def preprocess_flying_things(input_dir, output_dir, view='right'):
 
 # https://github.com/tqdm/tqdm/issues/484
 if __name__ == '__main__':
+    tf.config.set_visible_devices([], 'GPU')
+    visible_devices = tf.config.get_visible_devices()
+    for device in visible_devices:
+        assert device.device_type != 'GPU'
     parser = ArgumentParser()
     parser.add_argument('input_directory', type=str)
     parser.add_argument('output_directory', type=str)

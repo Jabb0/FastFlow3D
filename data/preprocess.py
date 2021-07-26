@@ -359,13 +359,27 @@ def get_3d_pos_xy(y_prime, x_prime, depth, focal_length=1050., w=960, h=540):
     return [x, y, depth]
 
 
+def readFlow(name):
+    f = open(name, 'rb')
+
+    header = f.read(4)
+    if header.decode("utf-8") != 'PIEH':
+        raise Exception('Flow file header does not contain PIEH')
+
+    width = np.fromfile(f, np.int32, 1).squeeze()
+    height = np.fromfile(f, np.int32, 1).squeeze()
+
+    flow = np.fromfile(f, np.float32, width * height * 2).reshape((height, width, 2))
+
+    return flow.astype(np.float32)
+
 def generate_flying_things_point_cloud(fname_disparity, fname_disparity_next_frame, fname_disparity_change,
-                                       fname_optical_flow, max_cut=35, focal_length=1050., add_label=True):
+                                       fname_optical_flow, max_cut=35, focal_length=1050., n = 16000, add_label=True):
     # generate needed data
     disparity_np, _ = load_pfm(fname_disparity)
     disparity_next_frame_np, _ = load_pfm(fname_disparity_next_frame)
     disparity_change_np, _ = load_pfm(fname_disparity_change)
-    optical_flow_np, _ = load_pfm(fname_optical_flow)
+    optical_flow_np = readFlow(fname_optical_flow)
 
     depth_np = focal_length / disparity_np
     depth_next_frame_np = focal_length / disparity_next_frame_np
@@ -378,8 +392,11 @@ def generate_flying_things_point_cloud(fname_disparity, fname_disparity_next_fra
         return None
 
     satisfy_pix1 = np.column_stack(np.where(depth_requirement))
-    sampled_pix1_x = satisfy_pix1[:, 1]
-    sampled_pix1_y = satisfy_pix1[:, 0]
+    if satisfy_pix1.shape[0] < n:
+        return None
+    sample_choice1 = np.random.choice(satisfy_pix1.shape[0], size=n, replace=False)
+    sampled_pix1_x = satisfy_pix1[sample_choice1, 1]
+    sampled_pix1_y = satisfy_pix1[sample_choice1, 0]
     n_1 = sampled_pix1_x.shape[0]
     current_pos1 = np.array([get_3d_pos_xy(sampled_pix1_y[i], sampled_pix1_x[i],
                                            depth_np[int(sampled_pix1_y[i]),
@@ -402,8 +419,11 @@ def generate_flying_things_point_cloud(fname_disparity, fname_disparity_next_fra
         return None
 
     satisfy_pix2 = np.column_stack(np.where(depth_next_frame_np < max_cut))
-    sampled_pix2_x = satisfy_pix2[:, 1]
-    sampled_pix2_y = satisfy_pix2[:, 0]
+    if satisfy_pix2.shape[0] < n:
+        return None
+    sample_choice2 = np.random.choice(satisfy_pix2.shape[0], size=n, replace=False)
+    sampled_pix2_x = satisfy_pix2[sample_choice2, 1]
+    sampled_pix2_y = satisfy_pix2[sample_choice2, 0]
     n_2 = sampled_pix2_x.shape[0]
 
     current_pos2 = np.array([get_3d_pos_xy(sampled_pix2_y[i], sampled_pix2_x[i],
@@ -447,8 +467,6 @@ def generate_flying_things_point_cloud(fname_disparity, fname_disparity_next_fra
 def get_all_flying_things_frames(input_dir, disp_dir, opt_dir, disp_change_dir):
     all_files_disparity = glob.glob(os.path.join(input_dir, '{0}/*.pfm'.format(disp_dir)))
     all_files_disparity_change = glob.glob(os.path.join(input_dir, '{0}/*.pfm'.format(disp_change_dir)))
-    all_files_opt_flow = glob.glob(os.path.join(input_dir, '{0}/*.pfm'.format(opt_dir)))
-
-    assert len(all_files_disparity) == len(all_files_opt_flow) == len(all_files_disparity_change)
+    all_files_opt_flow = glob.glob(os.path.join(input_dir, '{0}/*.flo'.format(opt_dir)))
 
     return all_files_disparity, all_files_disparity_change, all_files_opt_flow
