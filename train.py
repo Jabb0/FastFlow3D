@@ -31,7 +31,7 @@ def get_args():
     # Model related arguments
     parser.add_argument('--architecture',
                         default='FastFlowNet',
-                        choices=['FastFlowNet', 'FlowNet'],
+                        choices=['FastFlowNet', 'FlowNet', 'FlowNetV2'],
                         help="The model architecture to use")
     parser.add_argument('--resume_from_checkpoint', type=str,
                         help="Path to ckpt file to resume from. Parameter from PytorchLightning Trainer.")
