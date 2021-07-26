@@ -88,6 +88,9 @@ def get_args():
     elif temp_args.architecture == 'FlowNet':  # baseline
         from models.Flow3DModel import Flow3DModel
         parser = Flow3DModel.add_model_specific_args(parser)
+    elif temp_args.architecture == 'FlowNetV2':  # baseline
+        from models.Flow3DModel import Flow3DModelV2
+        parser = Flow3DModelV2.add_model_specific_args(parser)
     else:
         raise ValueError("no architecture {0} implemented".format(temp_args.architecture))
 
@@ -133,6 +136,10 @@ def cli():
         model = Flow3DModel(learning_rate=args.learning_rate, n_samples_set_up_conv=args.n_samples_set_up_conv,
                             n_samples_set_conv=args.n_samples_set_conv, n_samples_flow_emb=args.n_samples_flow_emb,
                             in_channels=in_channels)
+    elif args.architecture == 'FlowNetV2':  # baseline
+        apply_pillarization = False  # FlowNet does not use pillarization
+        from models.Flow3DModel import Flow3DModelV2
+        model = Flow3DModelV2(learning_rate=args.learning_rate)
     else:
         raise ValueError("no architecture {0} implemented".format(args.architecture))
 

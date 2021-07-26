@@ -2,7 +2,7 @@ from typing import Tuple
 
 import torch
 
-from networks.flownet3d.layers import SetConvLayer, FlowEmbeddingLayer, SetConvLayerV2, FlowEmbeddingLayerV2
+from networks.flownet3d.layers import SetConvLayer, FlowEmbeddingLayer
 
 
 class PointMixtureNet(torch.nn.Module):

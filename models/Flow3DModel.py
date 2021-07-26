@@ -119,11 +119,11 @@ from networks.flownet3d.util_v2 import PointNetSetAbstraction, PointNetFeaturePr
     PointNetSetUpConv
 
 
-class FlowNet3D(BaseModel):
+class Flow3DModelV2(BaseModel):
     def __init__(self, learning_rate=1e-6,
                  adam_beta_1=0.9,
                  adam_beta_2=0.999):
-        super(FlowNet3D, self).__init__()
+        super(Flow3DModelV2, self).__init__()
         self.save_hyperparameters()  # Store the constructor parameters into self.hparams
 
         self.sa1 = PointNetSetAbstraction(npoint=1024, radius=0.5, nsample=16, in_channel=3, mlp=[32, 32, 64],
@@ -169,3 +169,16 @@ class FlowNet3D(BaseModel):
         x = F.relu(self.bn1(self.conv1(l0_fnew1)))
         sf = self.conv2(x)
         return sf
+
+    @staticmethod
+    def add_model_specific_args(parent_parser):
+        """
+        Method to add all command line arguments specific to this module.
+        Used to dynamically add the correct arguments required.
+        :param parent_parser: The current argparser to add the options to
+        :return: the new argparser with the new options
+        """
+        # Add parameters of all models
+        parent_parser = ArgumentParser(parents=[parent_parser], add_help=False)
+        parent_parser = BaseModel.add_model_specific_args(parent_parser)
+        return parent_parser
