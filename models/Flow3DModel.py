@@ -155,6 +155,10 @@ class Flow3DModelV2(BaseModel):
         pc1, feature1 = previous_batch[0], previous_batch[1]
         pc2, feature2 = current_batch[0], current_batch[1]
 
+        pc1, feature1 = pc1.float(), feature1.float()
+        pc2, feature2 = pc2.float(), feature2.float()
+
+
         l1_pc1, l1_feature1 = self.sa1(pc1, feature1)
         l2_pc1, l2_feature1 = self.sa2(l1_pc1, l1_feature1)
 
