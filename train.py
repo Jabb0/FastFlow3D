@@ -131,7 +131,7 @@ def cli():
                                        use_group_norm=args.use_group_norm)
     elif args.architecture == 'FlowNet':  # baseline
         apply_pillarization = False  # FlowNet does not use pillarization
-        in_channels = 3 if args.dataset == 'flying_things' else 5  # TODO create cfg file?
+        in_channels = 6 if args.dataset == 'flying_things' else 5  # TODO create cfg file?
         from models.Flow3DModel import Flow3DModel
         model = Flow3DModel(learning_rate=args.learning_rate, n_samples_set_up_conv=args.n_samples_set_up_conv,
                             n_samples_set_conv=args.n_samples_set_conv, n_samples_flow_emb=args.n_samples_flow_emb,
