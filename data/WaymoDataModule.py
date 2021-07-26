@@ -20,13 +20,15 @@ class WaymoDataModule(pl.LightningDataModule):
                  has_test=False,
                  num_workers=1,
                  n_points=None,
-                 apply_pillarization=True):
+                 apply_pillarization=True,
+                 shuffle_train=True):
         super(WaymoDataModule, self).__init__()
         self._dataset_directory = Path(dataset_directory)
         self._batch_size = batch_size
         self._train_ = None
         self._val_ = None
         self._test_ = None
+        self._shuffle_train = shuffle_train
         self.apply_pillarization = apply_pillarization
 
         self._pillarization_transform = ApplyPillarization(grid_cell_size=grid_cell_size, x_min=x_min,
@@ -85,6 +87,7 @@ class WaymoDataModule(pl.LightningDataModule):
         :return: the dataloader to use
         """
         return DataLoader(self._train_, self._batch_size, num_workers=self._num_workers,
+                          shuffle=self._shuffle_train,
                           collate_fn=self._collate_fn)
 
     def val_dataloader(self) -> Union[DataLoader, List[DataLoader], Dict[str, DataLoader]]:

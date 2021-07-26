@@ -42,7 +42,8 @@ def main():
                                   has_test=False,
                                   num_workers=args.num_workers,
                                   n_pillars_x=n_pillars_x,
-                                  n_points=args.n_points, apply_pillarization=True)
+                                  n_points=args.n_points, apply_pillarization=True,
+                                  shuffle_train=False)  # Do not shuffle train for this
     data_module.setup()
     train_dataloader = data_module.train_dataloader()
 
