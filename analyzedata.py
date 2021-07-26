@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 
 from argparse import ArgumentParser
 from pathlib import Path
@@ -46,7 +47,8 @@ def main():
     train_dataloader = data_module.train_dataloader()
 
     total_samples = 0
-    total_counts = torch.zeros((5, ))
+    # We have six possible labels from -1 to 4
+    total_counts = torch.zeros((6, ))
 
     for i, batch in enumerate(train_dataloader):
         _, y = batch
@@ -55,6 +57,11 @@ def main():
         idx, counts = labels.unique(return_counts=True)
         # Idx is from -1 to 4
         total_counts[idx.long() + 1] += counts.int()
+
+        if i % 100 == 0:
+            print(f"Batch {i}")
+
+    np.set_printoptions(precision=3, suppress=True)
 
     print(f"Total samples {total_samples}")
     print(f"Total counts {total_counts.numpy()}")
