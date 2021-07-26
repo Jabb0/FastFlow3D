@@ -149,7 +149,12 @@ class Flow3DModelV2(BaseModel):
         self.bn1 = nn.BatchNorm1d(128)
         self.conv2 = nn.Conv1d(128, 3, kernel_size=1, bias=True)
 
-    def forward(self, pc1, pc2, feature1, feature2):
+    def forward(self, x):
+
+        previous_batch, current_batch = x
+        pc1, feature1 = previous_batch[0], previous_batch[1]
+        pc2, feature2 = current_batch[0], current_batch[1]
+
         l1_pc1, l1_feature1 = self.sa1(pc1, feature1)
         l2_pc1, l2_feature1 = self.sa2(l1_pc1, l1_feature1)
 
