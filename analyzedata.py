@@ -7,6 +7,30 @@ from pathlib import Path
 from data import WaymoDataModule
 
 
+def get_data(loader):
+    total_samples = 0
+    # We have six possible labels from -1 to 4
+    total_counts = torch.zeros((6,))
+
+    for i, batch in enumerate(loader):
+        _, y = batch
+        total_samples += y.size(0)
+        labels = y[:, :, 3]
+        idx, counts = labels.unique(return_counts=True)
+        # Idx is from -1 to 4
+        total_counts[idx.long() + 1] += counts.int()
+
+        if i % 100 == 0:
+            print(f"Batch {i}")
+
+    np.set_printoptions(precision=3, suppress=True)
+
+    print(f"Total samples {total_samples}")
+    print(f"Total counts {total_counts.numpy()}")
+    print(f"Total points {total_counts.sum()}")
+    print(f"Percentages {((total_counts / total_counts.sum()) * 100).numpy()}")
+
+
 def main():
     parser = ArgumentParser(description="Training script for FastFlowNet and FlowNet3D "
                                         "based on Waymo or flying thing dataset")
@@ -46,28 +70,13 @@ def main():
                                   shuffle_train=False)  # Do not shuffle train for this
     data_module.setup()
     train_dataloader = data_module.train_dataloader()
+    print("Train")
+    get_data(train_dataloader)
 
-    total_samples = 0
-    # We have six possible labels from -1 to 4
-    total_counts = torch.zeros((6, ))
-
-    for i, batch in enumerate(train_dataloader):
-        _, y = batch
-        total_samples += y.size(0)
-        labels = y[:, :, 3]
-        idx, counts = labels.unique(return_counts=True)
-        # Idx is from -1 to 4
-        total_counts[idx.long() + 1] += counts.int()
-
-        if i % 100 == 0:
-            print(f"Batch {i}")
-
-    np.set_printoptions(precision=3, suppress=True)
-
-    print(f"Total samples {total_samples}")
-    print(f"Total counts {total_counts.numpy()}")
-    print(f"Total points {total_counts.sum()}")
-    print(f"Percentages {((total_counts / total_counts.sum()) * 100).numpy()}")
+    print()
+    print("Val")
+    val_dataloader = data_module.val_dataloader()
+    get_data(val_dataloader)
 
 
 if __name__ == '__main__':
