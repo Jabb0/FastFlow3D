@@ -177,7 +177,7 @@ class Flow3DModelV2(BaseModel):
 
         x = F.relu(self.bn1(self.conv1(l0_fnew1)))
         sf = self.conv2(x)
-        return sf
+        return sf.transpose(1, 2)
 
     @staticmethod
     def add_model_specific_args(parent_parser):
