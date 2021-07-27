@@ -65,4 +65,6 @@ class FlyingThings3DDataset(Dataset):
         frame_list = glob.glob(os.path.join(self.data_path, '*.npz'))
         frame_fname = frame_list[index]
         frame = np.load(frame_fname)
-        return frame['points2'], frame['points1'], frame['color2'], frame['color1'], frame['flow'], frame['valid_mask1']
+        return frame['points2'].astype('float32'), frame['points1'].astype('float32'),\
+               frame['color2'].astype('float32'), frame['color1'].astype('float32'), frame['flow'].astype('float32'),\
+               frame['valid_mask1']
