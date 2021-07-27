@@ -34,24 +34,26 @@ class FlyingThings3DDataset(Dataset):
         current_frame, previous_frame, c2, c1, flows, mask = self.read_point_cloud_pair_and_flow(index)
 
         if self._n_points is not None:
-            current_frame, previous_frame, flows, mask = self.subsample_points(
-                current_frame, previous_frame, flows, mask)
+            current_frame, previous_frame, c2, c1, flows, mask = self.subsample_points(
+                current_frame, previous_frame, c2, c1, flows, mask)
 
         previous_frame = (torch.as_tensor(previous_frame), torch.as_tensor(c1))
         current_frame = (torch.as_tensor(current_frame), torch.as_tensor(c2), mask)
         return (previous_frame, current_frame), flows
 
-    def subsample_points(self, current_frame, previous_frame, flows, mask):
+    def subsample_points(self, current_frame, previous_frame, c2, c1, flows, mask):
         # current_frame.shape[0] == flows.shape[0]
         if current_frame.shape[0] > self._n_points:
             indexes_current_frame = np.linspace(0, current_frame.shape[0]-1, num=self._n_points).astype(int)
             current_frame = current_frame[indexes_current_frame, :]
             flows = flows[indexes_current_frame, :]
             mask = mask[indexes_current_frame]
+            c2 = c2[indexes_current_frame, :]
         if previous_frame.shape[0] > self._n_points:
             indexes_previous_frame = np.linspace(0, previous_frame.shape[0]-1, num=self._n_points).astype(int)
             previous_frame = previous_frame[indexes_previous_frame, :]
-        return current_frame, previous_frame, flows, mask
+            c1 = c1[indexes_previous_frame, :]
+        return current_frame, previous_frame, c1, c2, flows, mask
 
     def set_drop_invalid_point_function(self, drop_invalid_point_function):
         self._drop_invalid_point_function = drop_invalid_point_function
