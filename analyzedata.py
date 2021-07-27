@@ -45,7 +45,7 @@ def main():
     parser.add_argument('--z_max', default=3, type=float, help="z boundary in positive direction")
     parser.add_argument('--z_min', default=-3, type=float, help="z boundary in negative direction")
     parser.add_argument('--grid_size', default=512, type=int, help="")
-    parser.add_argument('--batch_size', default=2, type=int, help="Batch size each GPU trains on.")
+    parser.add_argument('--batch_size', default=16, type=int, help="Batch size each GPU trains on.")
     parser.add_argument('--n_points', default=None, type=int,
                         help="Number of Points to use from each point cloud. Forces downsampling.")
     parser.add_argument('--num_workers', default=4, type=int)
