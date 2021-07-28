@@ -129,17 +129,21 @@ class BaseModel(pl.LightningModule):
         # The first 3 dimensions are the actual flow. The last dimension is the class id.
         y = y[:, :, :3]
         # Loss computation
-        loss = torch.mean(current_frame_masks * torch.sum((y_hat - y) * (y_hat - y), -1) / 2.0)
-        y = y[current_frame_masks]
-        y_hat = y_hat[current_frame_masks]
-        labels = y[:, -1].int()  # Labels are actually integers so lets convert them
-        mask = labels != -1
-        y_hat = y_hat[mask]
-        y_flow = y[mask]
-        labels = labels[mask]
-        _, metrics = self.compute_metrics(y_flow, y_hat, labels)
+        labels = y[:, :, -1].int()
+        weights = torch.ones(size=y.shape, device=y.device)
+        weights[labels == 0] = self._background_weight
+        k = weights * ((y_hat - y) * (y_hat - y))
+        loss = torch.mean(current_frame_masks * torch.sum(k, -1) / 2.0)
+        # y = y[current_frame_masks]
+        # y_hat = y_hat[current_frame_masks]
+        # labels = y[:, -1].int()  # Labels are actually integers so lets convert them
+        # mask = labels != -1
+        # y_hat = y_hat[mask]
+        # y_flow = y[mask]
+        # labels = labels[mask]
+        # _, metrics = self.compute_metrics(y_flow, y_hat, labels)
 
-        return loss, metrics
+        return loss, []
 
     def log_metrics(self, loss, metrics, phase):
         # phase should be training, validation or test
