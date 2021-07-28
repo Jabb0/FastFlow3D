@@ -123,25 +123,32 @@ class BaseModel(pl.LightningModule):
         # It is True for all points that just are NOT padded and of size (batch_size, max_points)
         current_frame_masks = x[1][2]
         # Remove all points that are padded
-
+        print(current_frame_masks.shape)
         # This will yield a (n_real_points, 3) tensor with the batch size being included already
 
         # The first 3 dimensions are the actual flow. The last dimension is the class id.
-        y = y[:, :, :3]
+        y_flow = y[:, :, :3]
         # Loss computation
         labels = y[:, :, -1].int()
-        weights = torch.ones(size=y.shape, device=y.device)
+        weights = torch.ones(size=(y.shape[0], y.shape[1], 1), device=y.device)
         weights[labels == 0] = self._background_weight
-        k = weights * ((y_hat - y) * (y_hat - y))
+        k = weights * ((y_hat - y_flow) * (y_hat - y_flow))
         loss = torch.mean(current_frame_masks * torch.sum(k, -1) / 2.0)
-        # y = y[current_frame_masks]
-        # y_hat = y_hat[current_frame_masks]
-        # labels = y[:, -1].int()  # Labels are actually integers so lets convert them
-        # mask = labels != -1
-        # y_hat = y_hat[mask]
-        # y_flow = y[mask]
-        # labels = labels[mask]
-        # _, metrics = self.compute_metrics(y_flow, y_hat, labels)
+
+        y = y[current_frame_masks]
+        y_hat = y_hat[current_frame_masks]
+        # This will yield a (n_real_points, 3) tensor with the batch size being included already
+
+        # The first 3 dimensions are the actual flow. The last dimension is the class id.
+        y_flow = y[:, :3]
+        # Loss computation
+        labels = y[:, -1].int()  # Labels are actually integers so lets convert them
+        # Remove datapoints with no flow assigned (class -1)
+        mask = labels != -1
+        y_hat = y_hat[mask]
+        y_flow = y_flow[mask]
+        labels = labels[mask]
+        _, metrics = self.compute_metrics(y_flow, y_hat, labels)
 
         return loss, []
 
