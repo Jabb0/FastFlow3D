@@ -122,23 +122,22 @@ class BaseModel(pl.LightningModule):
         # Therefore we need the mast of the current frame as batch tensor
         # It is True for all points that just are NOT padded and of size (batch_size, max_points)
         current_frame_masks = x[1][2]
-
         # Remove all points that are padded
-        y = y[current_frame_masks]
-        y_hat = y_hat[current_frame_masks]
+
         # This will yield a (n_real_points, 3) tensor with the batch size being included already
 
         # The first 3 dimensions are the actual flow. The last dimension is the class id.
-        y_flow = y[:, :3]
+        y = y[:, :, :3]
         # Loss computation
+        loss = torch.mean(current_frame_masks * torch.sum((y_hat - y) * (y_hat - y), -1) / 2.0)
+        y = y[current_frame_masks]
+        y_hat = y_hat[current_frame_masks]
         labels = y[:, -1].int()  # Labels are actually integers so lets convert them
-        # Remove datapoints with no flow assigned (class -1)
         mask = labels != -1
         y_hat = y_hat[mask]
-        y_flow = y_flow[mask]
+        y_flow = y[mask]
         labels = labels[mask]
-
-        loss, metrics = self.compute_metrics(y_flow, y_hat, labels)
+        _, metrics = self.compute_metrics(y_flow, y_hat, labels)
 
         return loss, metrics
 
