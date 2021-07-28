@@ -123,7 +123,6 @@ class BaseModel(pl.LightningModule):
         # It is True for all points that just are NOT padded and of size (batch_size, max_points)
         current_frame_masks = x[1][2]
         # Remove all points that are padded
-        print(current_frame_masks.shape)
         # This will yield a (n_real_points, 3) tensor with the batch size being included already
 
         # The first 3 dimensions are the actual flow. The last dimension is the class id.

@@ -449,12 +449,12 @@ def generate_flying_things_point_cloud(fname_disparity, fname_disparity_next_fra
         [optical_flow_np[int(sampled_pix2_y[i]), int(sampled_pix2_x[i])][0] for i in range(n_2)])
     sampled_optical_flow_y = np.array(
         [optical_flow_np[int(sampled_pix2_y[i]), int(sampled_pix2_x[i])][1] for i in range(n_2)])
-    future_pix2_x = sampled_pix2_x - sampled_optical_flow_x
-    future_pix2_y = sampled_pix2_y + sampled_optical_flow_y
+    future_pix2_x = sampled_pix2_x + sampled_optical_flow_x
+    future_pix2_y = sampled_pix2_y - sampled_optical_flow_y
     future_pos2 = np.array([get_3d_pos_xy(future_pix2_y[i], future_pix2_x[i],
                                           future_depth_np[int(sampled_pix2_y[i]), int(sampled_pix2_x[i])]) for i in
                             range(n_2)])
-    flow = current_pos2 - future_pos2
+    flow = future_pos2 - current_pos2
 
     # mask, judge whether point move out of fov or occluded by other object after motion
     future_pos2_depth = future_depth_np[sampled_pix2_y, sampled_pix2_x]
