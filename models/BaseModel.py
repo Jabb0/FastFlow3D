@@ -150,7 +150,7 @@ class BaseModel(pl.LightningModule):
         labels = labels[mask]
         _, metrics = self.compute_metrics(y_flow, y_hat, labels)
 
-        return loss, []
+        return loss, metrics
 
     def log_metrics(self, loss, metrics, phase):
         # phase should be training, validation or test
