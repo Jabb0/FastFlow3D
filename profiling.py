@@ -18,7 +18,7 @@ def create_random_data(n_points, n_features):
 
 def run():
     import time
-    points = [2000, 30000, 500000, 1000000]
+    points = [10000, 50000, 100000, 250000, 1000000]
     architectures = ['FastFlowNet', 'FlowNet']
     n_forward_passes = 100
 
@@ -26,6 +26,7 @@ def run():
     for arch in architectures:
         s = "Time measurement for architecture {}:".format(arch)
         for n_points in points:
+            print("starting profiling of {} with {} points".format(arch, n_points))
             if arch == 'FastFlowNet':
                 model = FastFlow3DModelScatter(n_pillars_x=512, n_pillars_y=512).eval().cuda()
                 n_features = 5
@@ -41,9 +42,10 @@ def run():
                     prev_pc = create_random_data(n_points, n_features=n_features)
                     cur_pc = create_random_data(n_points, n_features=n_features)
                     x = (prev_pc, cur_pc)
-                    t = time.time()
                     torch.cuda.synchronize()
-                    model(x)
+                    t = time.time()
+                    with torch.no_grad():
+                        model(x)
                     torch.cuda.synchronize()
                     elapsed_time = time.time() - t
                     if i > 9:
