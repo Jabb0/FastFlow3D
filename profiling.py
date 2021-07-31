@@ -42,7 +42,9 @@ def run():
                     cur_pc = create_random_data(n_points, n_features=n_features)
                     x = (prev_pc, cur_pc)
                     t = time.time()
+                    torch.cuda.synchronize()
                     model(x)
+                    torch.cuda.synchronize()
                     elapsed_time = time.time() - t
                     if i > 9:
                         times.append(elapsed_time * 1000)  # convert sec to ms
