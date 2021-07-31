@@ -20,7 +20,7 @@ def run():
     import time
     points = [2000, 30000, 500000, 1000000]
     architectures = ['FastFlowNet', 'FlowNet']
-    n_forward_passes = 10
+    n_forward_passes = 100
 
     f = open('timing.txt', 'w')
     for arch in architectures:
@@ -44,7 +44,8 @@ def run():
                     t = time.time()
                     model(x)
                     elapsed_time = time.time() - t
-                    times.append(elapsed_time * 1000)  # convert sec to ms
+                    if i > 9:
+                        times.append(elapsed_time * 1000)  # convert sec to ms
                 mean_time = np.mean(np.array(times))
                 s += "\n\t{}: ".format(n_points) + "{:.2f}ms".format((float(mean_time)))
             except RuntimeError:
