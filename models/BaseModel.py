@@ -4,15 +4,18 @@ from collections import defaultdict
 import pytorch_lightning as pl
 import torch
 
+from torch_geometric.nn import knn_interpolate
 from utils import str2bool
 
 
 class BaseModel(pl.LightningModule):
     def __init__(self,
+                 architecture,
                  learning_rate=1e-6,
                  adam_beta_1=0.9,
                  adam_beta_2=0.999,
-                 background_weight=0.1):
+                 background_weight=0.1,
+                 interpolate=False):
         super(BaseModel, self).__init__()
         self._background_weight = background_weight
         # ----- Metrics information -----
@@ -20,6 +23,8 @@ class BaseModel(pl.LightningModule):
         self._classes = [(0, 'background'), (1, 'vehicle'), (2, 'pedestrian'), (3, 'sign'), (4, 'cyclist')]
         self._thresholds = [(1, '1_1'), (0.1, '1_10')]  # 1/1 = 1, 1/10 = 0.1
         self._min_velocity = 0.5  # If velocity higher than 0.5 then it is considered as the object is moving
+        self.interpolate = interpolate
+        self.architecture = architecture
 
     def compute_metrics(self, y, y_hat, labels):
         """
@@ -30,15 +35,6 @@ class BaseModel(pl.LightningModule):
         :return:
         """
         squared_root_difference = torch.sqrt(torch.sum((y - y_hat) ** 2, dim=1))
-        # We compute the weighting vector for background_points
-        # weights is a mask which background_weight value for backgrounds and 1 for no backgrounds, in order to
-        # downweight the background points
-        weights = torch.ones((squared_root_difference.shape[0]),
-                             device=squared_root_difference.device,
-                             dtype=squared_root_difference.dtype)  # weights -> (batch_size * N)
-        weights[labels == 0] = self._background_weight
-
-        loss = torch.sum(weights * squared_root_difference) / torch.sum(weights)
         # ---------------- Computing rest of metrics (Paper Table 3)-----------------
 
         # We compute a dictionary with 3 different metrics:
@@ -105,7 +101,51 @@ class BaseModel(pl.LightningModule):
 
         metrics = {'mean': L2_mean}
         metrics.update(L2_thresholds)
-        return loss, metrics
+        return metrics
+
+    @staticmethod
+    def _interpolate_prediction(orig_current_frame, down_sampled_curr_frame, y_hat):
+        batch_size = orig_current_frame.shape[0]
+        orig_points = orig_current_frame.shape[1]
+        n_points = y_hat.shape[1]
+
+        batch_y = torch.arange(batch_size, device=orig_current_frame.device)
+        batch_y = batch_y.repeat_interleave(orig_points)
+
+        batch_x = torch.arange(batch_size, device=orig_current_frame.device)
+        batch_x = batch_x.repeat_interleave(n_points)
+
+        orig_current_frame_flatten = orig_current_frame.flatten(0, 1)
+        down_sampled_curr_frame_flatten = down_sampled_curr_frame.flatten(0, 1)
+
+        y_hat_flatten = y_hat.flatten(0, 1)
+        y_hat_interpolated_flatten = knn_interpolate(
+            x=y_hat_flatten, pos_x=down_sampled_curr_frame_flatten, pos_y=orig_current_frame_flatten, k=3,
+            batch_x=batch_x, batch_y=batch_y)
+
+        y_hat_interpolated = torch.reshape(y_hat_interpolated_flatten, (batch_size, orig_points, 3))
+
+        return y_hat_interpolated
+
+    def compute_loss(self, y_flow, y_hat, labels):
+        # We compute the weighting vector for background_points
+        # weights is a mask which background_weight value for backgrounds and 1 for no backgrounds, in order to
+        # down weight the background points
+        # weights = torch.ones(size=(y_flow.shape[0], y_flow.shape[1], 1), device=y_flow.device)
+        if self.architecture == 'FastFlowNet':
+            squared_root_difference = torch.sqrt(torch.sum((y_flow - y_hat) ** 2, dim=1))
+            weights = torch.ones((squared_root_difference.shape[0]),
+                                 device=squared_root_difference.device,
+                                 dtype=squared_root_difference.dtype)  # weights -> (batch_size * N)
+            weights[labels == 0] = self._background_weight
+            loss = torch.sum(weights * squared_root_difference) / torch.sum(weights)
+            return loss
+        elif self.architecture == 'FlowNet':
+            weights = torch.ones(size=(y_flow.shape[0], 1), device=y_flow.device)
+            weights[labels == 0] = self._background_weight
+            difference = weights * ((y_hat - y_flow) * (y_hat - y_flow))
+            loss = torch.mean(torch.sum(difference, -1) / 2.0)
+            return loss
 
     def general_step(self, batch, batch_idx, mode):
         """
@@ -115,39 +155,44 @@ class BaseModel(pl.LightningModule):
         :param mode: str of "train", "val", "test". Useful if specific things are required.
         :return:
         """
-        x, y = batch
-        y_hat = self(x)
         # x is a list of input batches with the necessary data
+        x, y, orig_current_frame = batch
+        y_hat = self(x)
+
+        # Interpolate
+        if self.interpolate:
+            y_hat = self._interpolate_prediction(
+                orig_current_frame=orig_current_frame[0], down_sampled_curr_frame=x[1][0], y_hat=y_hat
+            )
+
         # For loss calculation we need to know which elements are actually present and not padding
         # Therefore we need the mast of the current frame as batch tensor
         # It is True for all points that just are NOT padded and of size (batch_size, max_points)
-        current_frame_masks = x[1][2]
         # Remove all points that are padded
         # This will yield a (n_real_points, 3) tensor with the batch size being included already
+        if not self.interpolate:
+            current_frame_masks = x[1][2]
+            y = y[current_frame_masks]
+            y_hat = y_hat[current_frame_masks]
+            # The first 3 dimensions are the actual flow. The last dimension is the class id.
+            y_flow = y[:, :3]
 
-        # The first 3 dimensions are the actual flow. The last dimension is the class id.
-        y_flow = y[:, :, :3]
-        # Loss computation
-        labels = y[:, :, -1].int()
-        weights = torch.ones(size=(y.shape[0], y.shape[1], 1), device=y.device)
-        weights[labels == 0] = self._background_weight
-        k = weights * ((y_hat - y_flow) * (y_hat - y_flow))
-        loss = torch.mean(current_frame_masks * torch.sum(k, -1) / 2.0)
-
-        y = y[current_frame_masks]
-        y_hat = y_hat[current_frame_masks]
+            labels = y[:, -1].int()
+        else:
+            # The first 3 dimensions are the actual flow. The last dimension is the class id.
+            y_flow = y[:, :, :3]
+            # Loss computation
+            labels = y[:, :, -1].int()
         # This will yield a (n_real_points, 3) tensor with the batch size being included already
-
-        # The first 3 dimensions are the actual flow. The last dimension is the class id.
-        y_flow = y[:, :3]
-        # Loss computation
-        labels = y[:, -1].int()  # Labels are actually integers so lets convert them
         # Remove datapoints with no flow assigned (class -1)
         mask = labels != -1
         y_hat = y_hat[mask]
         y_flow = y_flow[mask]
         labels = labels[mask]
-        _, metrics = self.compute_metrics(y_flow, y_hat, labels)
+
+        # Loss computation
+        loss = self.compute_loss(y_hat=y_hat, y_flow=y_flow, labels=labels)
+        metrics = self.compute_metrics(y_flow, y_hat, labels)
 
         return loss, metrics
 

@@ -120,6 +120,11 @@ def custom_collate_batch(batch):
     ]
     batch_current = _pad_batch(batch_current)
 
+    batch_orig_current = [
+        entry[2] for entry in batch
+    ]
+    batch_orig_current = _pad_batch(batch_orig_current)
+
     # For the targets we can only transform each entry to a tensor and not stack them
     batch_targets = [
         entry[1] for entry in batch
@@ -129,6 +134,7 @@ def custom_collate_batch(batch):
     # Call the default collate to stack everything
     batch_previous = default_collate(batch_previous)
     batch_current = default_collate(batch_current)
+    batch_orig_current = default_collate(batch_orig_current)
     batch_targets = default_collate(batch_targets)
 
     # Return a tensor that consists of
@@ -141,5 +147,4 @@ def custom_collate_batch(batch):
 
     # The targets consist of
     #   (batch_size, max_n_points, target_features). should by 4D x,y,z flow and class id
-
-    return (batch_previous, batch_current), batch_targets
+    return (batch_previous, batch_current), batch_targets, batch_orig_current

@@ -7,13 +7,14 @@ from .utils import init_weights
 
 class FastFlow3DModelScatter(BaseModel):
     def __init__(self, n_pillars_x, n_pillars_y,
+                 interpolate=False,
                  background_weight=0.1,
                  point_features=8,
                  use_group_norm=False,
                  learning_rate=1e-6,
                  adam_beta_1=0.9,
                  adam_beta_2=0.999):
-        super(FastFlow3DModelScatter, self).__init__()
+        super(FastFlow3DModelScatter, self).__init__(architecture='FastFlowNet', interpolate=interpolate)
         self.save_hyperparameters()  # Store the constructor parameters into self.hparams
 
         self._point_feature_net = PointFeatureNet(in_features=point_features, out_features=64)

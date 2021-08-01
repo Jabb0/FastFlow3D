@@ -41,15 +41,17 @@ class Flow3DModel(BaseModel):
        https://arxiv.org/pdf/1806.01411.pdf
     """
     def __init__(self,
+                 interpolate=False,
                  learning_rate=1e-6,
                  adam_beta_1=0.9,
                  adam_beta_2=0.999,
                  in_channels=5,
                  n_samples_set_conv=16,
                  n_samples_flow_emb=64,
-                 n_samples_set_up_conv=8
+                 n_samples_set_up_conv=8,
+
                  ):
-        super(Flow3DModel, self).__init__()
+        super(Flow3DModel, self).__init__(architecture='FlowNet', interpolate=interpolate)
         self._n_samples_set_conv = n_samples_set_conv
         self._n_samples_flow_emb = n_samples_flow_emb
         self._n_samples_set_up_conv = n_samples_set_up_conv
@@ -70,9 +72,10 @@ class Flow3DModel(BaseModel):
         :return:
         """
         previous_batch, current_batch = x
-        previous_batch_pc, previous_batch_f = previous_batch[0], previous_batch[1]
-        current_batch_pc, current_batch_f = current_batch[0], current_batch[1]
+        previous_batch_pc, _ = previous_batch[0], previous_batch[1]
+        current_batch_pc, _ = current_batch[0], current_batch[1]
 
+        ''' Comment for flying things '''
         f1 = previous_batch_pc[:, :, 3:]
         pc1 = previous_batch_pc[:, :, :3]
 

@@ -1,6 +1,6 @@
 import os
 import pickle
-
+import torch
 import numpy as np
 from torch.utils.data import Dataset
 
@@ -66,8 +66,7 @@ class WaymoDataset(Dataset):
         current_frame_pose, previous_frame_pose = self.get_pose_transform(index)
         flows = self.get_flows(current_frame)
 
-        if self._n_points is not None:
-            current_frame, previous_frame, flows = self.subsample_points(current_frame, previous_frame, flows)
+
 
         # G_T_C -> Global_TransformMatrix_Current
         G_T_C = np.reshape(np.array(current_frame_pose), [4, 4])
@@ -84,28 +83,40 @@ class WaymoDataset(Dataset):
             current_frame, flows = self._drop_invalid_point_function(current_frame, flows)
             previous_frame, _ = self._drop_invalid_point_function(previous_frame, None)
 
+        if self._n_points is not None:
+            current_frame, previous_frame, orig_current_frame, flows = self.subsample_points(current_frame, previous_frame, flows)
+        else:
+            orig_current_frame = current_frame
+
         # Perform the pillarization of the point_cloud
         if self._point_cloud_transform is not None and self._apply_pillarization:
             current_frame = self._point_cloud_transform(current_frame)
             previous_frame = self._point_cloud_transform(previous_frame)
+            orig_current_frame = self._point_cloud_transform(orig_current_frame)
         else:
             # output must be a tuple
             previous_frame = (previous_frame, None)
             current_frame = (current_frame, None)
+            orig_current_frame = (torch.as_tensor(orig_current_frame), None)
         # This returns a tuple of augmented pointcloud and grid indices
 
-        return (previous_frame, current_frame), flows
+        return (previous_frame, current_frame), flows, orig_current_frame
 
     def subsample_points(self, current_frame, previous_frame, flows):
         # current_frame.shape[0] == flows.shape[0]
         if current_frame.shape[0] > self._n_points:
             indexes_current_frame = np.linspace(0, current_frame.shape[0]-1, num=self._n_points).astype(int)
-            current_frame = current_frame[indexes_current_frame, :]
-            flows = flows[indexes_current_frame, :]
+            down_sampled_current_frame = current_frame[indexes_current_frame, :]
+            #flows = flows[indexes_current_frame, :]
+        else:
+            down_sampled_current_frame = current_frame
+
         if previous_frame.shape[0] > self._n_points:
             indexes_previous_frame = np.linspace(0, previous_frame.shape[0]-1, num=self._n_points).astype(int)
-            previous_frame = previous_frame[indexes_previous_frame, :]
-        return current_frame, previous_frame, flows
+            down_sampled_previous_frame = previous_frame[indexes_previous_frame, :]
+        else:
+            down_sampled_previous_frame = previous_frame
+        return down_sampled_current_frame, down_sampled_previous_frame, current_frame, flows
 
 
     def pillarize(self, apply_pillarization):

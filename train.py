@@ -123,19 +123,22 @@ def cli():
 
     apply_pillarization = True
 
+    interpolate_prediction = False if args.n_points is None else True
+
     if args.architecture == 'FastFlowNet':
         # Tested GPU memory increase from batch size 1 to 2 is 1824MiB
         model = FastFlow3DModelScatter(n_pillars_x=n_pillars_x, n_pillars_y=n_pillars_y,
                                        background_weight=args.background_weight, point_features=8,
                                        learning_rate=args.learning_rate,
-                                       use_group_norm=args.use_group_norm)
+                                       use_group_norm=args.use_group_norm,
+                                       interpolate=interpolate_prediction)
     elif args.architecture == 'FlowNet':  # baseline
         apply_pillarization = False  # FlowNet does not use pillarization
         in_channels = 6 if args.dataset == 'flying_things' else 5  # TODO create cfg file?
         from models.Flow3DModel import Flow3DModel
         model = Flow3DModel(learning_rate=args.learning_rate, n_samples_set_up_conv=args.n_samples_set_up_conv,
                             n_samples_set_conv=args.n_samples_set_conv, n_samples_flow_emb=args.n_samples_flow_emb,
-                            in_channels=in_channels)
+                            in_channels=in_channels, interpolate=interpolate_prediction)
     elif args.architecture == 'FlowNetV2':  # baseline
         apply_pillarization = False  # FlowNet does not use pillarization
         from models.Flow3DModel import Flow3DModelV2
