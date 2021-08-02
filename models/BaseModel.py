@@ -6,6 +6,7 @@ import torch
 
 from torch_geometric.nn import knn_interpolate
 from utils import str2bool
+from networks.flownet3d.utils.pointnet2_utils import QueryAndGroup
 
 
 class BaseModel(pl.LightningModule):
@@ -25,6 +26,12 @@ class BaseModel(pl.LightningModule):
         self._min_velocity = 0.5  # If velocity higher than 0.5 then it is considered as the object is moving
         self.interpolate = interpolate
         self.architecture = architecture
+
+        if self.interpolate:
+            radius = 0.5
+            n_samples = 3
+            use_xyz = False
+            self.grouper = QueryAndGroup(radius, n_samples, use_xyz=use_xyz)
 
     def compute_metrics(self, y, y_hat, labels):
         """
@@ -103,28 +110,34 @@ class BaseModel(pl.LightningModule):
         metrics.update(L2_thresholds)
         return metrics
 
-    @staticmethod
-    def _interpolate_prediction(orig_current_frame, down_sampled_curr_frame, y_hat):
-        batch_size = orig_current_frame.shape[0]
-        orig_points = orig_current_frame.shape[1]
-        n_points = y_hat.shape[1]
+    # @staticmethod
+    # def _interpolate_prediction(orig_current_frame, down_sampled_curr_frame, y_hat):
+    #     batch_size = orig_current_frame.shape[0]
+    #     orig_points = orig_current_frame.shape[1]
+    #     n_points = y_hat.shape[1]
+    #
+    #     batch_y = torch.arange(batch_size, device=orig_current_frame.device)
+    #     batch_y = batch_y.repeat_interleave(orig_points)
+    #
+    #     batch_x = torch.arange(batch_size, device=orig_current_frame.device)
+    #     batch_x = batch_x.repeat_interleave(n_points)
+    #
+    #     orig_current_frame_flatten = orig_current_frame.flatten(0, 1)
+    #     down_sampled_curr_frame_flatten = down_sampled_curr_frame.flatten(0, 1)
+    #
+    #     y_hat_flatten = y_hat.flatten(0, 1)
+    #     y_hat_interpolated_flatten = knn_interpolate(
+    #         x=y_hat_flatten, pos_x=down_sampled_curr_frame_flatten, pos_y=orig_current_frame_flatten, k=3,
+    #         batch_x=batch_x, batch_y=batch_y)
+    #
+    #     y_hat_interpolated = torch.reshape(y_hat_interpolated_flatten, (batch_size, orig_points, 3))
+    #
+    #     return y_hat_interpolated
 
-        batch_y = torch.arange(batch_size, device=orig_current_frame.device)
-        batch_y = batch_y.repeat_interleave(orig_points)
-
-        batch_x = torch.arange(batch_size, device=orig_current_frame.device)
-        batch_x = batch_x.repeat_interleave(n_points)
-
-        orig_current_frame_flatten = orig_current_frame.flatten(0, 1)
-        down_sampled_curr_frame_flatten = down_sampled_curr_frame.flatten(0, 1)
-
-        y_hat_flatten = y_hat.flatten(0, 1)
-        y_hat_interpolated_flatten = knn_interpolate(
-            x=y_hat_flatten, pos_x=down_sampled_curr_frame_flatten, pos_y=orig_current_frame_flatten, k=3,
-            batch_x=batch_x, batch_y=batch_y)
-
-        y_hat_interpolated = torch.reshape(y_hat_interpolated_flatten, (batch_size, orig_points, 3))
-
+    def _interpolate_prediction(self, orig_current_frame, down_sampled_curr_frame, y_hat):
+        y_hat = y_hat.transpose(1, 2).contiguous()
+        y_hat_interpolated = self.grouper(down_sampled_curr_frame, orig_current_frame, y_hat)
+        y_hat_interpolated = torch.mean(y_hat_interpolated, dim=3).transpose(1, 2)
         return y_hat_interpolated
 
     def compute_loss(self, y_flow, y_hat, labels):
