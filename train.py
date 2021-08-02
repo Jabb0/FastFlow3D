@@ -240,7 +240,7 @@ def cli():
     if not args.only_valid:
         trainer.fit(model, data_module)
     else:
-        trainer.validate(model)
+        trainer.validate(model=model, datamodule=data_module)
 
     # Run also the testing
     if args.test_data_available and not args.fast_dev_run:
