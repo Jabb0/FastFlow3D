@@ -61,7 +61,7 @@ def get_args():
     parser.add_argument('--wandb_run_id', default=None, type=str,
                         help="Id of an existing WnB run that should be resumed.")  # Id of the run
     # Dev parameters
-    parser.add_argument('--only_valid', type=str2bool, nargs='?', const=True, default=False,
+    parser.add_argument('--only_validate', type=str2bool, nargs='?', const=True, default=False,
                         help="Only run trainer.validate instead of trainer.fit")
     parser.add_argument('--fast_dev_run', type=str2bool, nargs='?', const=True, default=False)
     # Training machine related parameters
@@ -237,7 +237,7 @@ def cli():
                                             callbacks=[checkpoint_callback]
                                             )  # Add Trainer hparams if desired
     # The actual train loop
-    if not args.only_valid:
+    if not args.only_validate:
         trainer.fit(model, data_module)
     else:
         trainer.validate(model=model, datamodule=data_module)
