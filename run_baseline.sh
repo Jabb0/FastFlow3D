@@ -16,10 +16,9 @@ python train.py \
 ../data/preprocessed/full \
 FlowNet3D_batchSize_16_lr_0.001_BN_full \
 --architecture FlowNet \
---n_points 2048 \
 --accelerator ddp \
 --sync_batchnorm True \
---batch_size 16 \
+--batch_size 4 \
 --gpus 4 \
 --num_workers 4 \
 --wandb_enable True \
