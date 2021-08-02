@@ -40,11 +40,7 @@ class ConvDecoder(torch.nn.Module):
 
         # V: Input is U, which is the output of block_3
         self._block_4 = torch.nn.Sequential(
-            torch.nn.Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding_mode='zeros', padding=(1, 1)),
-            # TODO: These two layers are misplaced but seem to decrease the loss.
-            #  Create an experiment to test this.
-            # torch.nn.BatchNorm2d(64),
-            # torch.nn.ReLU(),
+            torch.nn.Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding_mode='zeros', padding=(1, 1))
         )
 
     def forward(self, B, F, L, R):
