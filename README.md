@@ -1,26 +1,68 @@
 # FastFlow3D Implementation
-Source: https://arxiv.org/pdf/2103.01306.pdf
+This repository contains an implementation of the FastFlow3D architecture from "Scalable Scene Flow from Point Clouds in the Real World (Jund et al. 2021)" in PyTorch (with PyTorch lightning).
 
-## Current
-- Implement dataloader to load from frame-wise files
-- Implement the pillarization such that it is fast enough:
-    - Every attempt run out of memory or was slow
-    - Tried: Use sparse matrices to compute the summation of points into the grid. Runs out of memory on 8GiB GPU.
-    - Tried: For loop over all points in cloud and add to cell. Too slow in python. Maybe try this again.
-    - Untried: Preprocess such that each pillar is represented by a list of tensors and passed into the encoder on its own.
-        - If we have a max number of points for each pillar we can allocate more memory and make this a single batch.
-    - Untried: DynamicVoxel Pytorch extension: https://github.com/AndyYuan96/PointCloudDynamicVoxel
-    - Untried: PyTorch 3D point package: https://github.com/nicolas-chaulet/torch-points3d/blob/master/torch_points3d/core/data_transform/grid_transform.py
+As a baseline the FlowNet3D architecture by Liu et al. (2019) is implemented as well.
+
+The repository allows to work with the Waymo dataset and its scene flow annotations as well as the FlyingThings3D dataset.
+
+As of now the documentation is not final. For now most documentation refers to FastFlow3D on the waymo dataset. Find early development notes below and detailed comments in the code.
+
+# Contributors
+This repository is created by [Aron](https://github.com/arndz), [Carlos](https://github.com/cmaranes) and [Felix](https://github.com/Jabb0).
+
+# Usage
+This repository contains different parts: Preprocessing, training and visualization.
+
+The hardware requirements of FastFlowNet are high due to the large size of the pseudo images. Reasonable results can be expected within a few days using 4x NVIDIA Titan X GPUs with 12GB VRAM each.
+
+## Preprocessing
+In order to use the data it needs to be preprocessed. During preprocessing the dataset is extracted and the important information is stored directly accessible on disc.
+The whole WaymoDataset has 1TB of data, the preprocessed data can be stored in 400GB. It is not necessary to use the full dataset, although recommended for best performance.
+
+Download the waymo dataset as tfrecord files from [here](https://console.cloud.google.com/storage/browser/waymo_open_dataset_scene_flow). You have to register into [Waymo](https://waymo.com/open/) to be able to see it. Then, it should be downloaded into `<raw_data_directory/train` and `<raw_data_directory/valid`, respectively.
+
+Start the preprocessing for train and val (and test) separately using:
+`python preprocess.py <raw_directory> <out_directory>`
+
+The output directory has to have a structure of `<directory>/train` for the training data and `<directory>/valid` for the validation data. If test data is available put it into `<directory>/test`.
+
+## Training
+Start an experiment with (using Tensorboard logging):
+`python train.py <data_directory> <experiment_name>`
+
+Have a look at the `run.sh` shell scripts and the available parameters of the train.py script.
+
+## Visualization
+To create a visualization of the point clouds with ground truth and predicted data use the `visualization.py` script.
+
+`python visualization.py <directory>/valid <config_file> --model_path <path_to_checkpoint>>`
+
+**NOTE:** the current code requires a WeightsAndBiases `config.yaml` thus this logger needs to be used (or the code adapted).
+
+## Data
+These are the points that are considered to be seen be the LiDAR:
+170m x 170m grid centered at the AV represented by 512 x 512 pillars (approx. 0.33m x 0.33m pillars).
+For height (z-dimensions) a valid pillar range is from -3m to 3m.
+
+#### WaymoDataset
+It reads the WaymoDataset with the extended flow information. It can be found [here](https://console.cloud.google.com/storage/browser/waymo_open_dataset_scene_flow).
+
+Each of the file is a session compressed, which has to be decompressed and parsed to access to their field. A session has a number of frames and in each frame is all the information needed. The information of each frame is available [here](https://github.com/waymo-research/waymo-open-dataset/blob/master/waymo_open_dataset/dataset.proto). Note that that may a field cannot be accessed in a direct way, so [these](https://github.com/Jabb0/FastFlowNet3D/blob/main/data/util.py) functions should be extended.
+
+Regarding general information about the fields, we are interesented in the 3D LiDAR points. The car in which this information has been logged had 3D LiDARS sensors and, per each sensor, it records the first and second return.
+
+When calling the _utils_ functions, we take into consideration both returns from the five LiDARs and concatenate all of them, so all of them are treated equally. [main.py](https://github.com/Jabb0/FastFlowNet3D/blob/main/main.py) file includes an example on how to read the data of a frame.
+
+More details: https://waymo.com/open/data/perception/
+
+## Bugs / Improvements
+If you encounter any bugs or you want to suggest any improvements feel free to create a pull request/issue.
 
 ## References
-- Jund et al.: Scalable Scene Flow from Point Clouds in the Real World (2021)
+- Jund et al.: [Scalable Scene Flow from Point Clouds in the Real World (2021)](https://arxiv.org/pdf/2103.01306.pdf)
 - Liu et al.: FlowNet3D: Learning Scene Flow in 3D Point Clouds (2019)
 - Dewan et al.: Rigid Scene Flow of 3D Lidar Scans
 - Waymo dataset: https://waymo.com/open/
-
-Not necessary because not used:
-- PointNet encoder https://openaccess.thecvf.com/content_cvpr_2017/papers/Qi_PointNet_Deep_Learning_CVPR_2017_paper.pdf
-- Dynamic voxelization onto a spatial grid http://proceedings.mlr.press/v100/zhou20a/zhou20a.pdf
 
 ## Problem Definition
 - 3D scene flow in a setting where the scene at time $t_i$ is represented as a point cloud $P_i$ as measured by a LiDAR sensor mounted on the AV.
@@ -39,7 +81,7 @@ Afterwards self movement of all the points of an object are computed.
 One could also have chosen not to remove the AV ego movement, but: You get movement of the object independent of the AV, better reasoning about the objects own movement.
 The movement of whole bounding boxes is used initially to identify the movement of their point cloud points. This includes rotations of the objects.
 This rotation and ego movement compensation is combined into a single transition matrix T.
-For each point x0 in the bounding box of a object in the current pointcloud the previous point position x-1 is computed based on this transition matrix.
+For each point x0 in the bounding box of an object in the current pointcloud the previous point position x-1 is computed based on this transition matrix.
 This, however, does not mean that the previous pointcloud actually had a point at this position, it is just a "this point has likely moved from this position and thus has this speed".
 Because of the point-wise approximation points in the same object can have different speeds.
 The label is then the change over time from the previous to the current point.
@@ -51,7 +93,7 @@ This label creation can be applied to any point cloud dataset with 3D bounding b
 - Some rare moving objects do not have bounding boxes and are belonging to the "background" class without movement. This needs to be overcome.
 
 ## Metrics
-- Common metrics are L2 error of the pointswise flow as the label is a 3D vector.
+- Common metrics are L2 error of the point wise flow as the label is a 3D vector.
 - Points with L2 error below a given threshold.
 - Metrics per object class as they have inherently different characteristics
 - Binary moving/not-moving classification based on a movement threshold. Threshold of 0.5 m/s is selected but not defined easily. Use standard binary classification metrics.
@@ -63,46 +105,24 @@ This label creation can be applied to any point cloud dataset with 3D bounding b
 
 ### Scene Encoder
 - Performed on each input point cloud
-- Every point is assigned to a fixed 512x512 grid depending on its x,y positions.
+- Every point is assigned to a fixed 512x512 grid depending on its x, y positions.
 - First each point is encoded depending on its grid cell. Each cell is a pillar in z (upwards) direction.
 1. Take each input point cloud
 2. Compute the center coordinates of all 512x512 pillars
 3. Compute the pillar that each point falls into
 4. Encode each point as 8D (pillarCenter_x, pillarCenter_y, pillarCenter_z, offset_x, offset_y, offset_y, feature_0, feature_1) with offset being the offset from the point to its pillar center and the features being the laser features of the point.
-- The authors state that they use a variant of a PointNet encoder with dynamic voxelization. However, they don't really use PointNet and dynamic voxelization.
-- Actually for each point an embedding is computed using an MLP and then all points in the pillar are summed up to get the grid cell embedding.
-5. Feed each point into an MLP to compute an embedding
-6. Sum up the embeddings for all points in a pillar with depth 64 to get pillar embedding
-7. The final point cloud embedding is a 512x512 2D image with depth 64
+5. For each point an embedding is computed based on its 8D encoding using an MLP
+7. Sum up the embeddings for all points in a pillar with depth 64 to get pillar embedding
+8. The final point cloud embedding is a 512x512 2D pseudo-image with depth 64
 
 This part is not straight forward as each point cloud has a different amount of points and thus all points clouds cannot be batched.
-#### Possible Implementations
-This section focuses on the possible implementations of the pillarization.
-The point clouds are of shape (N_points, 8). This includes the featurization that depends on the grid cell.
-We have B point clouds but those have different number of points therefore we cannot stack them into a (B, N_points, 8) batch directly.
-The second challenge is how to place/sum the N_points into the 2D grid of cell embeddings.
-
-**Approach A**
-- Do not drop any points. Each point can only be in one cell but a cell can have multiple points.
-- Preprocess the data into a (N_points, 8) point cloud and a (N_points, 2) grid cell lookup matrix
-- Now because N_points is different pass each point cloud individually into the point encoder.
-- For each batch entry (point cloud) this gives a (N_points, 64) embedding matrix.
-- Points are not passed in together. The point encoder MLP does only know of a single point.
-- A 1 hot point to grid cell (N_points, N_grid_cells) lookup matrix is constructed from the cell lookup matrix.
-- Matrix multiplication with this matrix create the (512x512, 64) 2D grid embedding.
-- Matrix needs to be sparse because it would be way to large otherwise.
-- Memory consumption should be 3*N_points, because there are 3 N_point long tensors (indices, values, cells).
-
-**Approach B**
-- The common approach in the literature is to set a maximum number of non empty pillars and maximum number of points per pillar.
-- This requires those maximum numbers to be defined up front and thus some pillars or points might be dropped.  If less pillars or points are available it is a 0 padded but the additional points are masked out afterwards.
-- Restructuring can be done as preprocessing.
-- Doing this construction efficiently is not straight forward. Most projects use C code to do it.
+This is solved without dropping any points using a scatter-gather approach in FlowNet3D
 
 ### Contextual Information Encoder
 - Convolutional Autoencoder (U-net) with first half of the architecture consists of shared weights across two frames.
 - Both inputs have the same weights in the conv net
 - The frames are not concatenated for the encoder pass. Each frame is passed on its own.
+  - However to get the highest possible batch size for BatchNorm previous and current frames are passed concatenated in the batch dimension.
 - Bottleneck convolutions have been introduced.
 - The encoder consists of blocks that each reduce to a hidden size.
 - The output of each hidden size is saved.
@@ -116,46 +136,23 @@ The second challenge is how to place/sum the N_points into the 2D grid of cell e
 
 ### Unpillar Operation
 - Select for each point the corresponding cell and the cells flow embedding
-- This lookup struggles with the different sized points clouds as well.
+- This lookup struggles with the different sized points clouds as well. A gather approach is applied to solve this issue.
 - Concatenates the point feature (the 64D embedding) of the point to predict (we predict the current timeframe t0 only, not t-1).
 - MLP to regress onto point-wise motion prediction
 
 
 ## Implementation Notes
 - Objects that not have a previous frame cannot be predicted and this need to be removed from weight updates and scene flow evaluation metrics. Their points are still part of the input but their label is not used for training.
-- Apparently the z-axis is the height.
+- The z-axis is the height.
 - Using vertical pillarization makes sense as objects can only rotate around the z-axis in the Waymo dataset. Therefore, the a pillar is a good capture of the same points in an object.
-- Use mean L2 (MSE) loss for training
+- Use mean L2-loss for training calculating the average error in speed over all points.
 - Ego motion is removed by a translation matrix that transforms the previous frame to the view of the current frame.
-- They trained their model for 19 epochs using the Adam optimizer.
-- They applied an artificial downweight of background points in the L2 loss by a factor of 0.1. This value is found using hyperparameter search. Maybe redo this with a better searcher.
+- The original authors trained their model for 19 epochs using the Adam optimizer.
+- The original authors applied an artificial downweight of background points in the L2 loss by a factor of 0.1. This value is found using hyperparameter search. Maybe redo this with a better searcher.
 
+# General pyTorch Development Notes
 
-## Data
-These are the points that are considered to be seen be the LiDAR:
-170m x 170m grid centered at the AV represented by 512 x 512 pillars (approx. 0.33m x 0.33m pillars).
-For height (z-dimensions) a valid pillar range is from -3m to 3m.
-
-#### WaymoDataset
-It reads the WaymoDataset with the extended flow information. It can be found [here](https://console.cloud.google.com/storage/browser/waymo_open_dataset_scene_flow). You have to register into Waymo to be able to see it. Then, it should be downloaded into *data/train* and *data/val*, respectively.
-
-Each of the file is a session compressed, which has to be decompressed and parsed to access to their field. A session has a number of frames and in each frame is all the information needed. The information of each frame is available [here](https://github.com/waymo-research/waymo-open-dataset/blob/master/waymo_open_dataset/dataset.proto). Note that that may a field cannot be accessed in a direct way, so [these](https://github.com/Jabb0/FastFlowNet3D/blob/main/data/util.py) functions should be extended.
-
-Regarding general information about the fields, we are interesented in the 3D LiDAR points. The car in which this information has been logged had 3D LiDARS sensors and, per each sensor, it records the first and second return:
-
-![Returns illustration](https://desktop.arcgis.com/es/arcmap/10.3/manage-data/las-dataset/GUID-0AE5C4B0-4EF6-43F1-B3EE-DC0BBEED4E9A-web.png)
-
-When calling the _utils_ functions, we take into consideration both returns from the five LiDARs and concatenate all of them, so all of them are treated equally. [main.py](https://github.com/Jabb0/FastFlowNet3D/blob/main/main.py) file includes an example on how to read the data of a frame.
-
-More details: https://waymo.com/open/data/perception/
-
-What is this? https://console.cloud.google.com/storage/browser/waymo_open_dataset_scene_flow
-And what is this? https://console.cloud.google.com/storage/browser/waymo_open_dataset_v_1_2_0
-
-
-# Template PyTorch Project Repository
-
-## References
+## Tutorials / Technical Information
 - https://github.com/PyTorchLightning/deep-learning-project-template/blob/master/project/lit_mnist.py
 - https://pytorch-lightning.readthedocs.io/en/latest/starter/introduction_guide.html
 - https://pytorch-lightning.readthedocs.io/en/latest/starter/converting.html
@@ -164,19 +161,6 @@ And what is this? https://console.cloud.google.com/storage/browser/waymo_open_da
 - https://niessner.github.io/I2DL/ Exercise 7
 
 - Do not use .cuda() or .cpu() anymore. Lightning does the handling.
-
-## Usage
-Fork this repo to start your own pyTorch based project.
-
-This repo is already structured as a python module such that every part can be used externally too.
-
-## DVC
-DVC is initialized but no included into the workflow right now.
-Have a look here: https://dvc.org/doc/start
-
-This repository uses Data Version Control (DVC) for management of datasets and results.
-DVC does not only allow to have reproducible results but also create a clean experiment process.
-The DL workflow can be modularized into different steps and these steps can be chained as desired.
 
 ## Structure
 ### Models

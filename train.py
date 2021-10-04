@@ -56,8 +56,8 @@ def get_args():
                         help="Batch size for each GPU after which the gradient update should happen.")
     # Logging related parameters
     parser.add_argument('--wandb_enable', type=str2bool, nargs='?', const=True, default=False)
-    parser.add_argument('--wandb_project', default="fastflow3d", type=str)
-    parser.add_argument('--wandb_entity', default='dllab21fastflow3d', type=str)
+    parser.add_argument('--wandb_project', type=str)
+    parser.add_argument('--wandb_entity', type=str)
     parser.add_argument('--wandb_run_id', default=None, type=str,
                         help="Id of an existing WnB run that should be resumed.")  # Id of the run
     # Dev parameters
@@ -163,6 +163,9 @@ def cli():
         wandb_api_key = os.getenv("WANDB_API_KEY")
         if not wandb_api_key:
             print("No WandB API key found in env: Set WANDB_API_KEY")
+            exit(1)
+        if not args.wandb_project or not args.wandb_entity:
+            print("No WandB project or WandB entity specified.")
             exit(1)
 
         wandb.login(key=wandb_api_key)
