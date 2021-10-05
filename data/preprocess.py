@@ -3,6 +3,7 @@ import os
 import pickle
 import re
 
+import cv2
 import numpy as np
 import tensorflow as tf
 from waymo_open_dataset import dataset_pb2, dataset_pb2 as open_dataset
@@ -359,13 +360,31 @@ def get_3d_pos_xy(y_prime, x_prime, depth, focal_length=1050., w=960, h=540):
     return [x, y, depth]
 
 
+def readFlow(name):
+    f = open(name, 'rb')
+
+    header = f.read(4)
+    if header.decode("utf-8") != 'PIEH':
+        raise Exception('Flow file header does not contain PIEH')
+
+    width = np.fromfile(f, np.int32, 1).squeeze()
+    height = np.fromfile(f, np.int32, 1).squeeze()
+
+    flow = np.fromfile(f, np.float32, width * height * 2).reshape((height, width, 2))
+
+    return flow.astype(np.float32)
+
+
 def generate_flying_things_point_cloud(fname_disparity, fname_disparity_next_frame, fname_disparity_change,
-                                       fname_optical_flow, max_cut=35, focal_length=1050., add_label=True):
+                                       fname_optical_flow, image, image_next_frame, max_cut=35, focal_length=1050.,
+                                       n = 2048, add_label=True):
     # generate needed data
     disparity_np, _ = load_pfm(fname_disparity)
     disparity_next_frame_np, _ = load_pfm(fname_disparity_next_frame)
     disparity_change_np, _ = load_pfm(fname_disparity_change)
-    optical_flow_np, _ = load_pfm(fname_optical_flow)
+    optical_flow_np = readFlow(fname_optical_flow)
+    rgb_np = cv2.imread(image)[:, :, ::-1] / 255.
+    rgb_next_frame_np = cv2.imread(image_next_frame)[:, :, ::-1] / 255.
 
     depth_np = focal_length / disparity_np
     depth_next_frame_np = focal_length / disparity_next_frame_np
@@ -378,12 +397,19 @@ def generate_flying_things_point_cloud(fname_disparity, fname_disparity_next_fra
         return None
 
     satisfy_pix1 = np.column_stack(np.where(depth_requirement))
-    sampled_pix1_x = satisfy_pix1[:, 1]
-    sampled_pix1_y = satisfy_pix1[:, 0]
+    if satisfy_pix1.shape[0] < n:
+        return None
+    sample_choice1 = np.random.choice(satisfy_pix1.shape[0], size=n, replace=False)
+    sampled_pix1_x = satisfy_pix1[sample_choice1, 1]
+    sampled_pix1_y = satisfy_pix1[sample_choice1, 0]
     n_1 = sampled_pix1_x.shape[0]
     current_pos1 = np.array([get_3d_pos_xy(sampled_pix1_y[i], sampled_pix1_x[i],
                                            depth_np[int(sampled_pix1_y[i]),
                                                     int(sampled_pix1_x[i])]) for i in range(n_1)])
+
+    current_rgb1 = np.array([[rgb_np[h - 1 - int(sampled_pix1_y[i]), int(sampled_pix1_x[i]), 0],
+                              rgb_np[h - 1 - int(sampled_pix1_y[i]), int(sampled_pix1_x[i]), 1],
+                              rgb_np[h - 1 - int(sampled_pix1_y[i]), int(sampled_pix1_x[i]), 2]] for i in range(n)])
 
     # sampled_optical_flow_x = np.array(
     #     [optical_flow_np[int(sampled_pix1_y[i]), int(sampled_pix1_x[i])][0] for i in range(n_1)])
@@ -402,15 +428,23 @@ def generate_flying_things_point_cloud(fname_disparity, fname_disparity_next_fra
         return None
 
     satisfy_pix2 = np.column_stack(np.where(depth_next_frame_np < max_cut))
-    sampled_pix2_x = satisfy_pix2[:, 1]
-    sampled_pix2_y = satisfy_pix2[:, 0]
+    if satisfy_pix2.shape[0] < n:
+        return None
+    sample_choice2 = np.random.choice(satisfy_pix2.shape[0], size=n, replace=False)
+    sampled_pix2_x = satisfy_pix2[sample_choice2, 1]
+    sampled_pix2_y = satisfy_pix2[sample_choice2, 0]
     n_2 = sampled_pix2_x.shape[0]
 
     current_pos2 = np.array([get_3d_pos_xy(sampled_pix2_y[i], sampled_pix2_x[i],
                                            depth_next_frame_np[int(sampled_pix2_y[i]), int(sampled_pix2_x[i])]) for i in
                              range(n_2)])
 
-    # TODO Check if this is correct (i would say it is correct, because we use backward optical flow instead of forward)
+    current_rgb2 = np.array([[rgb_next_frame_np[h-1-int(sampled_pix2_y[i]), int(sampled_pix2_x[i]), 0],
+                              rgb_next_frame_np[h-1-int(sampled_pix2_y[i]), int(sampled_pix2_x[i]), 1],
+                              rgb_next_frame_np[h-1-int(sampled_pix2_y[i]), int(sampled_pix2_x[i]), 2]]
+                             for i in range(n)])
+
+    # Compute backward flow
     sampled_optical_flow_x = np.array(
         [optical_flow_np[int(sampled_pix2_y[i]), int(sampled_pix2_x[i])][0] for i in range(n_2)])
     sampled_optical_flow_y = np.array(
@@ -435,20 +469,21 @@ def generate_flying_things_point_cloud(fname_disparity, fname_disparity_next_fra
 
     mask2 = valid_mask_occ2 & valid_mask_fov2
 
+    mask2 = np.ones(shape=mask2.shape)
+
     # Add redundant zero labels for each flow in order to fit the shape
     if add_label:
         labelled_flow = np.ones(shape=(flow.shape[0], flow.shape[1] + 1))
         labelled_flow[:, :-1] = flow
         flow = labelled_flow
 
-    return current_pos1, current_pos2, flow, mask2
+    return current_pos1, current_pos2, current_rgb1, current_rgb2, flow, mask2
 
 
-def get_all_flying_things_frames(input_dir, disp_dir, opt_dir, disp_change_dir):
+def get_all_flying_things_frames(input_dir, disp_dir, opt_dir, disp_change_dir, img_dir):
     all_files_disparity = glob.glob(os.path.join(input_dir, '{0}/*.pfm'.format(disp_dir)))
     all_files_disparity_change = glob.glob(os.path.join(input_dir, '{0}/*.pfm'.format(disp_change_dir)))
-    all_files_opt_flow = glob.glob(os.path.join(input_dir, '{0}/*.pfm'.format(opt_dir)))
+    all_files_opt_flow = glob.glob(os.path.join(input_dir, '{0}/*.flo'.format(opt_dir)))
+    all_files_img = glob.glob(os.path.join(input_dir, '{0}/*.png'.format(img_dir)))
 
-    assert len(all_files_disparity) == len(all_files_opt_flow) == len(all_files_disparity_change)
-
-    return all_files_disparity, all_files_disparity_change, all_files_opt_flow
+    return all_files_disparity, all_files_disparity_change, all_files_opt_flow, all_files_img

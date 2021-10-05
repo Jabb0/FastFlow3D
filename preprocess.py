@@ -4,7 +4,7 @@ import os
 import time
 from argparse import ArgumentParser
 from pathlib import Path
-
+import tensorflow as tf
 import numpy as np
 from tqdm import tqdm
 
@@ -53,22 +53,32 @@ def preprocess_flying_things(input_dir, output_dir, view='right'):
                    left
                    right
     """
-    all_files_disparity, all_files_disparity_change, all_files_opt_flow = get_all_flying_things_frames(
-        input_dir=input_dir, disp_dir='disparity/train/{}'.format(view),
-        opt_dir='optical_flow/train/backward/{}'.format(view), disp_change_dir='disparity_change/train/{}'.format(view))
-
-    for i in range(len(all_files_disparity) - 1):
-        disparity = all_files_disparity[i]
-        disparity_next_frame = all_files_disparity[i + 1]
-        disparity_change = all_files_disparity_change[i]
-        optical_flow = all_files_opt_flow[i]
-        d = generate_flying_things_point_cloud(disparity, disparity_next_frame, disparity_change, optical_flow)
-        np.savez_compressed(
-            os.path.join(output_dir, 'frame_{}.npz'.format(i)), points1=d[0], points2=d[1], flow=d[2], mask=d[3])
+    for dataset in ('val', 'train'):
+        all_files_disparity, all_files_disparity_change, all_files_opt_flow, all_files_img = get_all_flying_things_frames(
+            input_dir=input_dir, disp_dir='disparity/{}/disparity/{}'.format(dataset, view),
+            opt_dir='flow/{}/{}/into_past'.format(dataset, view), disp_change_dir='disparity_change/{}/disparity_change/{}/into_past'.format(dataset, view),
+            img_dir='FlyingThings3D_subset_image_clean/FlyingThings3D_subset/{}/image_clean/{}'.format(dataset, view))
+        for i in range(len(all_files_disparity) - 1):
+            disparity = all_files_disparity[i]
+            disparity_next_frame = all_files_disparity[i + 1]
+            disparity_change = all_files_disparity_change[i]
+            optical_flow = all_files_opt_flow[i]
+            image = all_files_img[i]
+            image_next_frame = all_files_img[i + 1]
+            d = generate_flying_things_point_cloud(disparity, disparity_next_frame, disparity_change, optical_flow,
+                                                   image, image_next_frame)
+            np.savez_compressed(
+                os.path.join(output_dir + '/' + dataset, 'frame_{}.npz'.format(i)), points1=d[0], points2=d[1], color1=d[2], color2=d[3], flow=d[4], mask=d[5])
+            if i == 1000:
+                break
 
 
 # https://github.com/tqdm/tqdm/issues/484
 if __name__ == '__main__':
+    tf.config.set_visible_devices([], 'GPU')
+    visible_devices = tf.config.get_visible_devices()
+    for device in visible_devices:
+        assert device.device_type != 'GPU'
     parser = ArgumentParser()
     parser.add_argument('input_directory', type=str)
     parser.add_argument('output_directory', type=str)
@@ -86,9 +96,9 @@ if __name__ == '__main__':
     output_directory = Path(args.output_directory)
     if not output_directory.exists():
         output_directory.mkdir(parents=True)
-    if list(output_directory.iterdir()):
-        print("Output directory not empty! Please remove existing files as there is no merge.")
-        exit(1)
+    #if list(output_directory.iterdir()):
+    #    print("Output directory not empty! Please remove existing files as there is no merge.")
+    #    exit(1)
     output_directory = os.path.abspath(output_directory)
 
     # TODO also use multiple cores for preprocessing flying things dataset (?)
