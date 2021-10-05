@@ -1,3 +1,6 @@
+# Source code adapted from:
+# https://github.com/waymo-research/waymo-open-dataset/blob/bbcd77fc503622a292f0928bfa455f190ca5946e/waymo_open_dataset/utils/frame_utils.py
+
 import glob
 import os
 import pickle
