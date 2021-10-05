@@ -6,8 +6,8 @@ torchvision
 # torch-sparse
 # torch-cluster
 numpy
-waymo-open-dataset-tf-2-4-0
-tensorflow==2.4.0
+waymo-open-dataset-tf-2-6-0
+tensorflow==2.6.0
 open3d
 wandb
 ffmpeg-python

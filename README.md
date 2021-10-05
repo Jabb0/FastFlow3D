@@ -15,6 +15,9 @@ This repository contains different parts: Preprocessing, training and visualizat
 
 The hardware requirements of FastFlowNet are high due to the large size of the pseudo images. Reasonable results can be expected within a few days using 4x NVIDIA Titan X GPUs with 12GB VRAM each.
 
+### Compatibility Note
+Some dependencies still require Python 3.8 as the 3.9 versions are not available via pip. This is the case for open3d which is used for visualization.
+
 ## Preprocessing
 In order to use the data it needs to be preprocessed. During preprocessing the dataset is extracted and the important information is stored directly accessible on disc.
 The whole WaymoDataset has 1TB of data, the preprocessed data can be stored in 400GB. It is not necessary to use the full dataset, although recommended for best performance.
