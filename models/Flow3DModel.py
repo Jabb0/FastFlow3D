@@ -40,6 +40,36 @@ class Flow3DModel(BaseModel):
     .. FlowNet3D: Learning Scene Flow in 3D Point Clouds: Xingyu Liu, Charles R. Qi, Leonidas J. Guibas
        https://arxiv.org/pdf/1806.01411.pdf
     """
+
+    def general_step(self, batch, batch_idx, mode):
+        # NOTE: The loss used for FastFlow3D did not work FlowNet3D.
+        # This loss metric given here was able to train
+        # TODO: This is not good coding and the issue needs to be investigated and changed.
+
+        x, y = batch
+        y_hat = self(x)
+        # x is a list of input batches with the necessary data
+        # For loss calculation we need to know which elements are actually present and not padding
+        # Therefore we need the mast of the current frame as batch tensor
+        # It is True for all points that just are NOT padded and of size (batch_size, max_points)
+        current_frame_masks = x[1][2]
+
+        # This will yield a (n_real_points, 3) tensor with the batch size being included already
+
+        # The first 3 dimensions are the actual flow. The last dimension is the class id.
+        y_flow = y[:, :, :3]
+        # Loss computation
+        labels = y[:, :, -1].int()
+        weights = torch.ones(size=(y.shape[0], y.shape[1], 1), device=y.device)
+        weights[labels == 0] = self._background_weight
+        k = weights * ((y_hat - y_flow) * (y_hat - y_flow))
+        loss = torch.mean(current_frame_masks * torch.sum(k, -1) / 2.0)
+
+        # Calculate the metrics the same way as for the all models
+        _, metrics = super().general_step(batch, batch_idx, mode)
+
+        return loss, metrics
+
     def __init__(self,
                  learning_rate=1e-6,
                  adam_beta_1=0.9,
