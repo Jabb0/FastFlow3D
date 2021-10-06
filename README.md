@@ -7,6 +7,9 @@ The repository allows to work with the Waymo dataset and its scene flow annotati
 
 As of now the documentation is not final. For now most documentation refers to FastFlow3D on the waymo dataset. Find early development notes below and detailed comments in the code.
 
+# LICENSE
+See [LICENSE](https://github.com/Jabb0/FastFlow3D/blob/main/LICENSE)
+
 # Contributors
 This repository is created by [Aron](https://github.com/arndz), [Carlos](https://github.com/cmaranes) and [Felix](https://github.com/Jabb0).
 
