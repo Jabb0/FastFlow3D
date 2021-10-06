@@ -13,6 +13,9 @@ See [LICENSE](https://github.com/Jabb0/FastFlow3D/blob/main/LICENSE)
 # Contributors
 This repository is created by [Aron](https://github.com/arndz), [Carlos](https://github.com/cmaranes) and [Felix](https://github.com/Jabb0).
 
+## Bugs / Improvements
+If you encounter any bugs or you want to suggest any improvements feel free to create a pull request/issue.
+
 # Usage
 This repository contains different parts: Preprocessing, training and visualization.
 
@@ -60,9 +63,6 @@ Regarding general information about the fields, we are interesented in the 3D Li
 When calling the _utils_ functions, we take into consideration both returns from the five LiDARs and concatenate all of them, so all of them are treated equally. [main.py](https://github.com/Jabb0/FastFlowNet3D/blob/main/main.py) file includes an example on how to read the data of a frame.
 
 More details: https://waymo.com/open/data/perception/
-
-## Bugs / Improvements
-If you encounter any bugs or you want to suggest any improvements feel free to create a pull request/issue.
 
 ## References
 - Jund et al.: [Scalable Scene Flow from Point Clouds in the Real World (2021)](https://arxiv.org/pdf/2103.01306.pdf)
