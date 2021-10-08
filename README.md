@@ -59,6 +59,9 @@ Here we present two error metrics from the original paper. Same as Jund et. al w
 ## Quantitative Results
 ### Waymo Dataset
 Comparison of "our" experiment as describe above using this code against the results reported by Jund et. al.
+
+**Note:** Difference in performance are likely due to the different batch size used (16 vs. 64).
+
 ![image](https://user-images.githubusercontent.com/33359018/136538870-27f11117-adfe-4cbe-a901-cc6ac90b8bfa.png)
 
 
