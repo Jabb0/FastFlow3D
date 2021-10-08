@@ -1,20 +1,66 @@
 # FastFlow3D Implementation
 This repository contains an implementation of the FastFlow3D architecture from "Scalable Scene Flow from Point Clouds in the Real World (Jund et al. 2021)" in PyTorch (with PyTorch lightning).
 
-As a baseline the FlowNet3D architecture by Liu et al. (2019) is implemented as well but is in an experimental stage.
+As a baseline the FlowNet3D architecture by Liu et al. (2019) is implemented as well.
 
 The repository allows to work with the Waymo dataset and its scene flow annotations as well as the FlyingThings3D dataset.
 
 As of now the documentation is not final. For now most documentation refers to FastFlow3D on the waymo dataset. Find early development notes below and detailed comments in the code.
 
+See [USAGE](#usage) for how to jump right in and [RESULTS](#results) for our results.
+
 # LICENSE
 See [LICENSE](https://github.com/Jabb0/FastFlow3D/blob/main/LICENSE)
+
+## Cite
+
+If you use this code in your own work, please use the following bibtex entries:
+
+```bibtex
+@misc{fastflow3d-pytorch-2021, 
+  title={FastFlow3D-PyTorch: Implementation of the FastFlow3D scene flow architecture (Jund et. al 2021) in PyTorch.}, 
+  author={Jablonski, Felix and Distelzweig, Aron and Maranes, Carlos}, 
+  year={2021}, publisher={GitHub}, 
+  howpublished={\url{https://github.com/Jabb0/FastFlow3D}} }
+ ``` 
+ 
+ Please don't forget to cite the underlying papers as well!
 
 # Contributors
 This repository is created by [Aron](https://github.com/arndz), [Carlos](https://github.com/cmaranes) and [Felix](https://github.com/Jabb0).
 
 ## Bugs / Improvements
 If you encounter any bugs or you want to suggest any improvements feel free to create a pull request/issue.
+
+# Results
+## Experimental Setup
+Trained the network for 19 epochs (3 days) on the full waymo train set (157,283 samples) and validated on the full waymo validation set.  
+87% of the points in the Waymo dataset are background points with no flow.
+
+Training is done as close as possible to the original paper but because of hardware limitations the batch size is set to 16 instead of 64.
+Loss function is the average L2-error in m/s over all points with downweighting of the points belonging to the background class.
+
+### Waymo Dataset Distribution
+The distribution of points per label in the waymo dataset has been analyzed.
+
+|       | Total Samples | Total Points | Unlabeled | Background | Vehicle | Pedestrian | Sign  | Cyclist |
+|-------|---------------|--------------|-----------|------------|---------|------------|-------|---------|
+| Train | 157,283       | 24,265M      | 1.03%     | 87.36%     | 10.52%  | 0.78%      | 0.28% | 0.03%   |
+| Valid | 39,785        | 6,193M       | 1.02%     | 88%        | 9.98%   | 0.71%      | 0.25% | 0.03%   |
+
+
+## Metrics
+Here we present two error metrics from the original paper. Same as Jund et. al we have used grouping based on classes (vehicle, pedestrian, background,...) to show inbalances in the performance.
+
+**mean L2 error in m/s** L2 error between the 3D velocity vector for prediction and target averaged over all points. Lower is better.
+
+**<= 1.0 m/s** Percentage of points that are predicted correctly up to 1.0 m/s. Higher is better.
+
+## Quantitative Results
+### Waymo Dataset
+Comparison of "our" experiment as describe above using this code against the results reported by Jund et. al.
+![image](https://user-images.githubusercontent.com/33359018/136538870-27f11117-adfe-4cbe-a901-cc6ac90b8bfa.png)
+
 
 # Usage
 This repository contains different parts: Preprocessing, training and visualization.
@@ -31,20 +77,26 @@ The whole WaymoDataset has 1TB of data, the preprocessed data can be stored in 4
 Download the waymo dataset as tfrecord files from [here](https://console.cloud.google.com/storage/browser/waymo_open_dataset_scene_flow). You have to register into [Waymo](https://waymo.com/open/) to be able to see it. Then, it should be downloaded into `<raw_data_directory/train` and `<raw_data_directory/valid`, respectively.
 
 Start the preprocessing for train and val (and test) separately using:
-`python preprocess.py <raw_directory> <out_directory>`
+```bash
+python preprocess.py <raw_directory> <out_directory>
+```
 
 The output directory has to have a structure of `<directory>/train` for the training data and `<directory>/valid` for the validation data. If test data is available put it into `<directory>/test`.
 
 ## Training
 Start an experiment with (using Tensorboard logging):
-`python train.py <data_directory> <experiment_name>`
+```bash
+python train.py <data_directory> <experiment_name>
+```
 
 Have a look at the `run.sh` shell scripts and the available parameters of the train.py script.
 
 ## Visualization
 To create a visualization of the point clouds with ground truth and predicted data use the `visualization.py` script.
 
-`python visualization.py <directory>/valid <config_file> --model_path <path_to_checkpoint>>`
+```bash
+python visualization.py <directory>/valid <config_file> --model_path <path_to_checkpoint>>
+```
 
 **NOTE:** the current code requires a WeightsAndBiases `config.yaml` thus this logger needs to be used (or the code adapted).
 
