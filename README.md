@@ -91,6 +91,8 @@ python train.py <data_directory> <experiment_name>
 
 Have a look at the `run.sh` shell scripts and the available parameters of the train.py script.
 
+This project has been built for usage with Weights & Biases as a logging service, thus logging with WnB is supported via command line arguments.
+
 ## Visualization
 To create a visualization of the point clouds with ground truth and predicted data use the `visualization.py` script.
 
