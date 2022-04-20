@@ -2,11 +2,13 @@ import numpy as np
 
 
 def remove_out_of_bounds_points(pc, y, x_min, x_max, y_min, y_max, z_min, z_max):
-    # Calculate the cell id that this entry falls into
-    # Store the X, Y indices of the grid cells for each point cloud point
-    mask = (pc[:, 0] >= x_min) & (pc[:, 0] <= x_max) \
-           & (pc[:, 1] >= y_min) & (pc[:, 1] <= y_max) \
-           & (pc[:, 2] >= z_min) & (pc[:, 2] <= z_max)
+    # Max needs to be exclusive because the last grid cell on each axis contains
+    # [((grid_size - 1) * cell_size) + *_min, *_max).
+    #   E.g grid_size=512, cell_size = 170/512 with min=-85 and max=85
+    # For z-axis this is not necessary, but we do it for consistency
+    mask = (pc[:, 0] >= x_min) & (pc[:, 0] < x_max) \
+           & (pc[:, 1] >= y_min) & (pc[:, 1] < y_max) \
+           & (pc[:, 2] >= z_min) & (pc[:, 2] < z_max)
     pc_valid = pc[mask]
     y_valid = None
     if y is not None:
@@ -22,6 +24,8 @@ def create_pillars_matrix(pc_valid, grid_cell_size, x_min, y_min, z_min, z_max, 
     """
     num_laser_features = pc_valid.shape[1] - 3  # Calculate the number of laser features that are not the coordinates.
 
+    # Calculate the cell id that this entry falls into
+    # Store the X, Y indices of the grid cells for each point cloud point
     grid_cell_indices = np.zeros((pc_valid.shape[0], 2), dtype=int)
     grid_cell_indices[:, 0] = ((pc_valid[:, 0] - x_min) / grid_cell_size).astype(int)
     grid_cell_indices[:, 1] = ((pc_valid[:, 1] - y_min) / grid_cell_size).astype(int)
