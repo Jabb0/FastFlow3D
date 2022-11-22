@@ -173,7 +173,7 @@ This label creation can be applied to any point cloud dataset with 3D bounding b
 1. Take each input point cloud
 2. Compute the center coordinates of all 512x512 pillars
 3. Compute the pillar that each point falls into
-4. Encode each point as 8D (pillarCenter_x, pillarCenter_y, pillarCenter_z, offset_x, offset_y, offset_y, feature_0, feature_1) with offset being the offset from the point to its pillar center and the features being the laser features of the point.
+4. Encode each point as 8D (pillarCenter_x, pillarCenter_y, pillarCenter_z, offset_x, offset_y, offset_z, feature_0, feature_1) with offset being the offset from the point to its pillar center and the features being the laser features of the point.
 5. For each point an embedding is computed based on its 8D encoding using an MLP
 7. Sum up the embeddings for all points in a pillar with depth 64 to get pillar embedding
 8. The final point cloud embedding is a 512x512 2D pseudo-image with depth 64
