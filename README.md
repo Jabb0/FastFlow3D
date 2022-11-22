@@ -1,5 +1,5 @@
 # FastFlow3D Implementation
-This repository contains an implementation of the FastFlow3D architecture from "Scalable Scene Flow from Point Clouds in the Real World (Jund et al. 2021)" in PyTorch (with PyTorch lightning).
+This repository contains an implementation of the FastFlow3D architecture from "Scalable Scene Flow from Point Clouds in the Real World (Jund et al. 2021)" in PyTorch (with PyTorch lightning). [Paper on arxiv](https://arxiv.org/abs/2103.01306v1).
 
 As a baseline the FlowNet3D architecture by Liu et al. (2019) is implemented as well.
 
